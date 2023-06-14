@@ -31,7 +31,13 @@ typedef struct _fwp_classify_parameters
 typedef class _fwp_engine
 {
   public:
-    _fwp_engine() = default;
+    _fwp_engine() : _default_sublayer(GUID{})
+    {
+    }
+
+    _fwp_engine(const GUID& default_sublayer) : _default_sublayer(default_sublayer)
+    {
+    }
 
     uint32_t
     add_fwpm_callout(_In_ const FWPM_CALLOUT0* callout)
@@ -285,4 +291,5 @@ typedef class _fwp_engine
     std::unordered_map<size_t, FWPM_FILTER0> fwpm_filters;
     std::unordered_map<size_t, FWPM_SUBLAYER0> fwpm_sub_layers;
     std::unordered_map<uint64_t, uint64_t> fwpm_flow_contexts;
+    const GUID& _default_sublayer;
 } fwp_engine;
