@@ -4,7 +4,7 @@
 #include "fault_injection.h"
 #include "platform.h"
 #include "kernel_um.h"
-#include "rtl.h"
+#include "usersim/rtl.h"
 
 // Rtl* functions.
 

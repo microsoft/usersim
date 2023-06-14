@@ -4,7 +4,7 @@
 #include "fault_injection.h"
 #include "kernel_um.h"
 #include "platform.h"
-#include "mm.h"
+#include "usersim/mm.h"
 
 // Mm* functions.
 

@@ -3,8 +3,9 @@
 
 #include "fault_injection.h"
 #include "net_platform.h"
-#include "io.h"
-#include "mm.h"
+#include "ndis.h"
+#include "usersim/io.h"
+#include "usersim/mm.h"
 
 typedef struct _NDIS_GENERIC_OBJECT
 {

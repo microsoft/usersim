@@ -76,7 +76,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\inc;$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -92,7 +92,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\inc;$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -108,7 +108,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\inc;$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -124,7 +124,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\inc;$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -153,20 +153,21 @@
     <ClCompile Include="tracelog.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ex.h" />
+    <ClInclude Include="..\inc\usersim\ex.h" />
     <ClInclude Include="fault_injection.h" />
+    <ClInclude Include="framework.h" />
     <ClInclude Include="fwp_um.h" />
-    <ClInclude Include="io.h" />
-    <ClInclude Include="ke.h" />
+    <ClInclude Include="..\inc\usersim\io.h" />
+    <ClInclude Include="..\inc\usersim\ke.h" />
     <ClInclude Include="kernel_um.h" />
     <ClInclude Include="leak_detector.h" />
-    <ClInclude Include="mm.h" />
-    <ClInclude Include="ndis.h" />
+    <ClInclude Include="..\inc\usersim\mm.h" />
+    <ClInclude Include="..\inc\ndis.h" />
     <ClInclude Include="net_platform.h" />
     <ClInclude Include="nmr_impl.h" />
-    <ClInclude Include="ps.h" />
-    <ClInclude Include="rtl.h" />
-    <ClInclude Include="se.h" />
+    <ClInclude Include="..\inc\usersim\ps.h" />
+    <ClInclude Include="..\inc\usersim\rtl.h" />
+    <ClInclude Include="..\inc\usersim\se.h" />
     <ClInclude Include="tracelog.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

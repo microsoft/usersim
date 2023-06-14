@@ -60,20 +60,6 @@ extern "C"
         MaximumMode
     } MODE;
 
-    typedef _Enum_is_bitflag_ enum _WORK_QUEUE_TYPE {
-        CriticalWorkQueue,
-        DelayedWorkQueue,
-        HyperCriticalWorkQueue,
-        NormalWorkQueue,
-        BackgroundWorkQueue,
-        RealTimeWorkQueue,
-        SuperCriticalWorkQueue,
-        MaximumWorkQueue,
-        CustomPriorityWorkQueue = 32
-    } WORK_QUEUE_TYPE;
-
-    typedef struct _IRP IRP;
-
     // Functions
 
     unsigned long __cdecl DbgPrintEx(

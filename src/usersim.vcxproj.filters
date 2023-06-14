@@ -80,34 +80,37 @@
     <ClInclude Include="net_platform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ndis.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="leak_detector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="tracelog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ex.h">
+    <ClInclude Include="..\inc\usersim\ex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="io.h">
+    <ClInclude Include="..\inc\usersim\io.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ke.h">
+    <ClInclude Include="..\inc\usersim\ke.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="mm.h">
+    <ClInclude Include="..\inc\usersim\mm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ps.h">
+    <ClInclude Include="..\inc\usersim\ps.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="rtl.h">
+    <ClInclude Include="..\inc\usersim\se.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="se.h">
+    <ClInclude Include="..\inc\ndis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\usersim\rtl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="framework.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

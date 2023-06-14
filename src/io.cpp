@@ -3,7 +3,7 @@
 
 #include "platform.h"
 #include "kernel_um.h"
-#include "io.h"
+#include "usersim/io.h"
 
 // Io* functions.
 

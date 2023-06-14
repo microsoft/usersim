@@ -3,8 +3,8 @@
 #pragma once
 
 #define _NDIS_
-#include "kernel_um.h"
-#include "io.h"
+#include "../src/kernel_um.h"
+#include "usersim/io.h"
 
 #include <ndis/objectheader.h>
 #include <ndis/types.h>

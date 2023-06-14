@@ -6,7 +6,7 @@
 #include "symbol_decoder.h"
 #include "tracelog.h"
 #include "utilities.h"
-#include "ex.h"
+#include "usersim/ex.h"
 
 #include <TraceLoggingProvider.h>
 #include <functional>

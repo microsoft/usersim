@@ -10,6 +10,18 @@ extern "C"
 {
 #endif
 
+    typedef _Enum_is_bitflag_ enum _WORK_QUEUE_TYPE {
+        CriticalWorkQueue,
+        DelayedWorkQueue,
+        HyperCriticalWorkQueue,
+        NormalWorkQueue,
+        BackgroundWorkQueue,
+        RealTimeWorkQueue,
+        SuperCriticalWorkQueue,
+        MaximumWorkQueue,
+        CustomPriorityWorkQueue = 32
+    } WORK_QUEUE_TYPE;
+
     typedef struct _DEVICE_OBJECT DEVICE_OBJECT;
 
     typedef struct _DRIVER_OBJECT DRIVER_OBJECT;
@@ -18,6 +30,8 @@ extern "C"
 
     typedef void
     IO_WORKITEM_ROUTINE(_In_ DEVICE_OBJECT* device_object, _In_opt_ void* context);
+
+    typedef struct _IRP IRP;
 
     MDL*
     IoAllocateMdl(

@@ -3,7 +3,7 @@
 
 #include "platform.h"
 #include "kernel_um.h"
-#include "ke.h"
+#include "usersim/ke.h"
 
 // Ke* functions.
 

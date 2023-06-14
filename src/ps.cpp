@@ -3,7 +3,7 @@
 
 #include "platform.h"
 #include "kernel_um.h"
-#include "ps.h"
+#include "usersim/ps.h"
 
 // Ps* functions.
 

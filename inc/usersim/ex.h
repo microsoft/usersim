@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "platform.h"
+#include "..\src\platform.h"
 #include <synchapi.h>
 #include "ke.h"
 

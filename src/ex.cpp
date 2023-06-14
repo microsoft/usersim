@@ -4,7 +4,7 @@
 #include "fault_injection.h"
 #include "platform.h"
 #include "kernel_um.h"
-#include "ex.h"
+#include "usersim/ex.h"
 
 #include <condition_variable>
 #include <map>

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "platform.h"
+#include "..\src\platform.h"
 
 #if defined(__cplusplus)
 extern "C"
@@ -48,6 +48,9 @@ extern "C"
     NTKERNELAPI
     ULONG
     KeQueryMaximumProcessorCountEx(_In_ USHORT GroupNumber);
+
+    unsigned long long
+    KeQueryInterruptTime();
 
 #if defined(__cplusplus)
 }

@@ -15,8 +15,8 @@ extern "C"
      *
      * @param[in] stack_depth Number of stack frames to capture when a fault is
      * injected.
-     * @retval EBPF_SUCCESS The operation was successful.
-     * @retval EBPF_NO_MEMORY Operation failed due to memory allocation failure.
+     * @retval STATUS_SUCCESS The operation was successful.
+     * @retval STATUS_NO_MEMORY Operation failed due to memory allocation failure.
      */
     NTSTATUS
     usersim_fault_injection_initialize(size_t stack_depth) noexcept;
