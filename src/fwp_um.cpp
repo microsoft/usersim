@@ -328,11 +328,9 @@ _fwp_engine::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameter
     incoming_value[FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_ALE_APP_ID].value.byteBlob = &parameters->app_id;
     incoming_value[FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_ALE_USER_ID].value.byteBlob = &parameters->user_id;
 
+    // TODO: why does this use _connect_v6_sublayer but test_cgroup_inet4_connect uses _default_sublayer?
     action = test_callout(
-        FWPS_LAYER_ALE_CONNECT_REDIRECT_V6,
-        FWPM_LAYER_ALE_CONNECT_REDIRECT_V6,
-        _default_sublayer, // was USERSIM_HOOK_CGROUP_CONNECT_V6_SUBLAYER
-        incoming_value);
+        FWPS_LAYER_ALE_CONNECT_REDIRECT_V6, FWPM_LAYER_ALE_CONNECT_REDIRECT_V6, _connect_v6_sublayer, incoming_value);
     usersim_assert(action == FWP_ACTION_PERMIT || fault_injection_enabled);
 
     if (_fwp_um_connect_request != nullptr) {

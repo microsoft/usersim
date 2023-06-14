@@ -31,12 +31,14 @@ typedef struct _fwp_classify_parameters
 typedef class _fwp_engine
 {
   public:
-    _fwp_engine() : _default_sublayer(GUID{})
-    {
-    }
+    _fwp_engine() = default;
 
-    _fwp_engine(const GUID& default_sublayer) : _default_sublayer(default_sublayer)
+    void
+    set_sublayer_guids(_In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer)
     {
+        _default_sublayer = default_sublayer;
+        _connect_v4_sublayer = connect_v4_sublayer;
+        _connect_v6_sublayer = connect_v6_sublayer;
     }
 
     uint32_t
@@ -224,8 +226,9 @@ typedef class _fwp_engine
     static _fwp_engine*
     get()
     {
-        if (!_engine)
+        if (!_engine) {
             _engine = std::make_unique<_fwp_engine>();
+        }
         return _engine.get();
     }
 
@@ -291,5 +294,7 @@ typedef class _fwp_engine
     std::unordered_map<size_t, FWPM_FILTER0> fwpm_filters;
     std::unordered_map<size_t, FWPM_SUBLAYER0> fwpm_sub_layers;
     std::unordered_map<uint64_t, uint64_t> fwpm_flow_contexts;
-    const GUID& _default_sublayer;
+    GUID _default_sublayer;
+    GUID _connect_v4_sublayer;
+    GUID _connect_v6_sublayer;
 } fwp_engine;
