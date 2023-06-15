@@ -7,6 +7,8 @@
 .*\.bmp$
 .*\.png$
 .*\.proj$
+.*\.vcxproj$
+.*\.vcxproj.filters$
 .*\.rc$
 .*\.sln$
 .*\.vsdx$
