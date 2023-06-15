@@ -1,0 +1,92 @@
+# For documentation on the github environment, see
+# https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners
+#
+# For documentation on the syntax of this file, see
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+name: MSBuild
+
+on: pull_request
+
+concurrency:
+  # Cancel any builds currently in progress for the same PR.
+  # Allow running concurrently for with any other commits.
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  build-vs:
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        configurations: [Debug, Release]
+        platforms: [Win32, x64]
+    runs-on: windows-2022
+    env:
+      # Configuration type to build.
+      # You can convert this to a build matrix if you need coverage of multiple configuration types.
+      # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+      BUILD_CONFIGURATION: ${{matrix.configurations}}
+
+      BUILD_PLATFORM: ${{matrix.platforms}}
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Restore NuGet packages
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} /p:Analysis='True' ${{env.SOLUTION_FILE_PATH}}
+
+  build-cmake:
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        configurations: [Debug, Release]
+        platforms: [Win32, x64]
+    runs-on: windows-2022
+    env:
+      # Configuration type to build.
+      # You can convert this to a build matrix if you need coverage of multiple configuration types.
+      # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+      BUILD_CONFIGURATION: ${{matrix.configurations}}
+
+      BUILD_PLATFORM: ${{matrix.platforms}}
+      CMAKE_GENERATOR: Visual Studio 17 2022
+      PLATFORM_TOOLSET: v143
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Restore NuGet packages
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Configure the project
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      shell: cmd
+      run: |
+        cmake -S . -B build -G "${{env.CMAKE_GENERATOR}}" -A ${{env.BUILD_PLATFORM}} -T ${{env.PLATFORM_TOOLSET}}
+
+    - name: Build the project
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      shell: cmd
+      run: |
+        cmake --build build --config ${{env.BUILD_CONFIGURATION }}
+
