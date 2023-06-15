@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 if (IS_DIRECTORY "${PROJECT_SOURCE_DIR}/.git")
   # Install Git pre-commit hook
-  file(COPY scripts/pre-commit scripts/commit-msg
+  file(COPY scripts/git_hooks/pre-commit scripts/git_hooks/commit-msg
        DESTINATION "${PROJECT_SOURCE_DIR}/.git/hooks")
 endif ()
 
