@@ -1,0 +1,6 @@
+/**/[Bb]uild/**
+/**/Debug/**
+/**/Release/**
+/**/FuzzerDebug/**
+/**/.vs/
+/**/*.user
