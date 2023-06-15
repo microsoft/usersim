@@ -20,7 +20,6 @@ jobs:
     strategy:
       matrix:
         configurations: [Debug, Release]
-        platforms: [Win32, x64]
     runs-on: windows-2022
     env:
       # Configuration type to build.
@@ -28,7 +27,7 @@ jobs:
       # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
       BUILD_CONFIGURATION: ${{matrix.configurations}}
 
-      BUILD_PLATFORM: ${{matrix.platforms}}
+      BUILD_PLATFORM: x64
 
     steps:
     - uses: actions/checkout@v3
@@ -54,7 +53,6 @@ jobs:
     strategy:
       matrix:
         configurations: [Debug, Release]
-        platforms: [Win32, x64]
     runs-on: windows-2022
     env:
       # Configuration type to build.
@@ -62,7 +60,7 @@ jobs:
       # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
       BUILD_CONFIGURATION: ${{matrix.configurations}}
 
-      BUILD_PLATFORM: ${{matrix.platforms}}
+      BUILD_PLATFORM: x64
       CMAKE_GENERATOR: Visual Studio 17 2022
       PLATFORM_TOOLSET: v143
 
@@ -73,10 +71,6 @@ jobs:
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1
-
-    - name: Restore NuGet packages
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
 
     - name: Configure the project
       working-directory: ${{env.GITHUB_WORKSPACE}}
