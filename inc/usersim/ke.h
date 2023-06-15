@@ -14,8 +14,7 @@ extern "C"
     typedef KIRQL* PKIRQL;
 
     _Requires_lock_not_held_(*spin_lock) _Acquires_lock_(*spin_lock) _IRQL_requires_max_(DISPATCH_LEVEL)
-    void
-    KeAcquireSpinLock(_Inout_ PKSPIN_LOCK SpinLock, _Out_ PKIRQL OldIrql);
+    void KeAcquireSpinLock(_Inout_ PKSPIN_LOCK spin_lock, _Out_ PKIRQL old_irql);
 
     void
     KeEnterCriticalRegion(void);
@@ -37,17 +36,17 @@ extern "C"
     KeGetCurrentIrql();
 
     VOID
-    KeRaiseIrql(_In_ KIRQL NewIrql, _Out_ PKIRQL OldIrql);
+    KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql);
 
     KIRQL
     KeRaiseIrqlToDpcLevel();
 
     void
-    KeLowerIrql(_In_ KIRQL NewIrql);
+    KeLowerIrql(_In_ KIRQL new_irql);
 
     NTKERNELAPI
     ULONG
-    KeQueryMaximumProcessorCountEx(_In_ USHORT GroupNumber);
+    KeQueryMaximumProcessorCountEx(_In_ USHORT group_number);
 
     unsigned long long
     KeQueryInterruptTime();
