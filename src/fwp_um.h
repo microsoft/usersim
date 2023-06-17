@@ -294,7 +294,7 @@ typedef class _fwp_engine
     std::unordered_map<size_t, FWPM_FILTER0> fwpm_filters;
     std::unordered_map<size_t, FWPM_SUBLAYER0> fwpm_sub_layers;
     std::unordered_map<uint64_t, uint64_t> fwpm_flow_contexts;
-    GUID _default_sublayer;
-    GUID _connect_v4_sublayer;
-    GUID _connect_v6_sublayer;
+    GUID _default_sublayer = {};
+    GUID _connect_v4_sublayer = {};
+    GUID _connect_v6_sublayer = {};
 } fwp_engine;
