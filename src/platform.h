@@ -65,9 +65,6 @@ extern "C"
     typedef struct _usersim_non_preemptible_work_item usersim_non_preemptible_work_item_t;
     typedef struct _usersim_preemptible_work_item usersim_preemptible_work_item_t;
     typedef struct _usersim_timer_work_item usersim_timer_work_item_t;
-    #if 0
-    typedef struct _usersim_helper_function_prototype usersim_helper_function_prototype_t;
-    #endif
 
     typedef struct _usersim_trampoline_table usersim_trampoline_table_t;
 
@@ -80,9 +77,6 @@ extern "C"
     typedef struct _SECURITY_DESCRIPTOR usersim_security_descriptor_t;
     typedef struct _GENERIC_MAPPING usersim_security_generic_mapping_t;
     typedef uint32_t usersim_security_access_mask_t;
-    #if 0
-    typedef struct _usersim_helper_function_addresses usersim_helper_function_addresses_t;
-    #endif
 
     extern bool usersim_fuzzing_enabled;
 
@@ -740,16 +734,7 @@ extern "C"
     typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
 
     /**
-     * @brief Map an usersim_result_t to a generic NTSTATUS code.
-     *
-     * @param[in] result usersim_result_t to map.
-     * @return The generic NTSTATUS code.
-     */
-    NTSTATUS
-    usersim_result_to_ntstatus(usersim_result_t result);
-
-    /**
-     * @brief Map an usersim_result_t to a generic Win32 error code.
+     * @brief Map a usersim_result_t to a generic Win32 error code.
      *
      * @param[in] result usersim_result_t to map.
      * @return The generic Win32 error code.
@@ -808,20 +793,6 @@ extern "C"
 
     void
     usersim_trace_terminate();
-
-#if 0
-    /**
-     * @brief Update global helper information in usersim store.
-     *
-     * @param[in] helper_info Pointer to an array of helper function prototypes.
-     * @param[in] helper_info_count Count of helper function prototypes.
-     *
-     * @returns Status of the operation.
-     */
-    _Must_inspect_result_ usersim_result_t
-    usersim_update_global_helpers(
-        _In_reads_(helper_info_count) usersim_helper_function_prototype_t* helper_info, uint32_t helper_info_count);
-#endif
 
     typedef struct _usersim_cryptographic_hash usersim_cryptographic_hash_t;
 

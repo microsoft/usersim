@@ -10,7 +10,10 @@ extern "C"
 #endif
 
     typedef CCHAR KPROCESSOR_MODE;
-    typedef HANDLE KSEMAPHORE;
+    typedef struct _ksemaphore
+    {
+        HANDLE handle;
+    } KSEMAPHORE;
     typedef KSEMAPHORE* PKSEMAPHORE;
     typedef KSEMAPHORE* PRKSEMAPHORE;
     typedef struct _kprocess KPROCESS;
@@ -79,8 +82,8 @@ extern "C"
 
     typedef ULONG KPRIORITY;
 
-    _When_(Wait == 0, _IRQL_requires_max_(DISPATCH_LEVEL))
-    _When_(Wait == 1, _IRQL_requires_max_(APC_LEVEL))
+    _When_(wait == 0, _IRQL_requires_max_(DISPATCH_LEVEL))
+    _When_(wait == 1, _IRQL_requires_max_(APC_LEVEL))
     NTKERNELAPI LONG
     KeReleaseSemaphore(
         _Inout_ PRKSEMAPHORE semaphore,
@@ -94,8 +97,8 @@ extern "C"
     _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID KeUnstackDetachProcess(_In_ PRKAPC_STATE api_state);
 
     _IRQL_requires_min_(PASSIVE_LEVEL)
-    _When_((Timeout == NULL || Timeout->QuadPart != 0), _IRQL_requires_max_(APC_LEVEL))
-    _When_((Timeout != NULL && Timeout->QuadPart == 0), _IRQL_requires_max_(DISPATCH_LEVEL))
+    _When_((timeout == NULL || timeout->QuadPart != 0), _IRQL_requires_max_(APC_LEVEL))
+    _When_((timeout != NULL && timeout->QuadPart == 0), _IRQL_requires_max_(DISPATCH_LEVEL))
     NTKERNELAPI NTSTATUS KeWaitForSingleObject(
         _In_ _Points_to_data_ PVOID object,
         _In_ _Strict_type_match_ KWAIT_REASON wait_reason,
