@@ -3,11 +3,14 @@
 
 #pragma once
 #include "..\src\platform.h"
+#include "usersim\io.h"
 
 #if defined(__cplusplus)
 extern "C"
 {
 #endif
+
+    #define PsGetCurrentProcess IoGetCurrentProcess
 
 	HANDLE
     PsGetCurrentProcessId();

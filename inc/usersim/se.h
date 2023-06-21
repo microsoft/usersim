@@ -4,6 +4,7 @@
 #pragma once
 
 #include <winnt.h>
+#include "ke.h"
 
 #if defined(__cplusplus)
 extern "C"
