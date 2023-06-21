@@ -769,15 +769,6 @@ extern "C"
     usersim_platform_printk(_In_z_ const char* format, va_list arg_list);
 
     /**
-     * @brief Allocate memory for process state. Caller needs to call usersim_free()
-     *  to free the memory.
-     *
-     * @return Pointer to the process state.
-     */
-    _Ret_maybenull_ usersim_process_state_t*
-    usersim_allocate_process_state();
-
-    /**
      * @brief Get a handle to the current process.
      *
      * @return Handle to the current process.

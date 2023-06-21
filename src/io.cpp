@@ -113,3 +113,8 @@ IoFreeMdl(MDL* mdl)
 {
     usersim_free(mdl);
 }
+
+_IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI PEPROCESS IoGetCurrentProcess(VOID)
+{
+    return (PEPROCESS)GetCurrentProcess();
+}

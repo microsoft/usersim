@@ -51,7 +51,7 @@ extern "C"
 
     // Typedefs
 
-    typedef CCHAR KPROCESSOR_MODE;
+    typedef ULONG LOGICAL;
 
     typedef enum _MODE
     {
@@ -168,6 +168,9 @@ extern "C"
         list_to_append->Blink->Flink = list_head;
         list_to_append->Blink = list_end;
     }
+
+#define ObReferenceObject(process) UNREFERENCED_PARAMETER(process)
+#define ObDereferenceObject(process) UNREFERENCED_PARAMETER(process)
 
 #if defined(__cplusplus)
 }

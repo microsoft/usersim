@@ -39,11 +39,6 @@ static EX_RUNDOWN_REF _usersim_platform_preemptible_work_items_rundown;
 
 usersim_leak_detector_ptr _usersim_leak_detector_ptr;
 
-typedef struct _usersim_process_state
-{
-    uint8_t unused;
-} usersim_process_state_t;
-
 /**
  * @brief Environment variable to enable fault injection testing.
  *
@@ -1407,18 +1402,9 @@ Done:
     return retval;
 }
 
-_Ret_maybenull_ usersim_process_state_t*
-usersim_allocate_process_state()
-{
-    // Skipping fault injection as call to usersim_allocate() covers it.
-    usersim_process_state_t* state = (usersim_process_state_t*)usersim_allocate(sizeof(usersim_process_state_t));
-    return state;
-}
-
 intptr_t
 usersim_platform_reference_process()
 {
-
     HANDLE process = GetCurrentProcess();
     return (intptr_t)process;
 }

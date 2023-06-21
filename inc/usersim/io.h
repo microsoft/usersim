@@ -3,6 +3,7 @@
 
 #pragma once
 #include <sal.h>
+#include "ke.h"
 #include "mm.h"
 
 #if defined(__cplusplus)
@@ -59,6 +60,8 @@ extern "C"
 
     PGENERIC_MAPPING
     IoGetFileObjectGenericMapping();
+
+    _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI PEPROCESS IoGetCurrentProcess(VOID);
 
 #if defined(__cplusplus)
 }
