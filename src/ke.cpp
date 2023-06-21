@@ -116,12 +116,12 @@ KeGetCurrentThread(VOID) { return (PKTHREAD)usersim_get_current_thread_id(); }
 _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI VOID
 KeInitializeSemaphore(_Out_ PRKSEMAPHORE semaphore, _In_ LONG count, _In_ LONG limit)
 {
-    *semaphore = CreateSemaphore(nullptr, count, limit, nullptr);
-    ASSERT(*semaphore != INVALID_HANDLE_VALUE);
+    semaphore->handle = CreateSemaphore(nullptr, count, limit, nullptr);
+    ASSERT(semaphore->handle != INVALID_HANDLE_VALUE);
 }
 
-_When_(Wait == 0, _IRQL_requires_max_(DISPATCH_LEVEL))
-_When_(Wait == 1, _IRQL_requires_max_(APC_LEVEL))
+_When_(wait == 0, _IRQL_requires_max_(DISPATCH_LEVEL))
+_When_(wait == 1, _IRQL_requires_max_(APC_LEVEL))
 NTKERNELAPI LONG
 KeReleaseSemaphore(
     _Inout_ PRKSEMAPHORE semaphore, _In_ KPRIORITY increment, _In_ LONG adjustment, _In_ _Literal_ BOOLEAN wait)
@@ -129,29 +129,44 @@ KeReleaseSemaphore(
     UNREFERENCED_PARAMETER(increment);
     UNREFERENCED_PARAMETER(wait);
     LONG previous_count;
-    ReleaseSemaphore(semaphore, adjustment, &previous_count);
+    ReleaseSemaphore(semaphore->handle, adjustment, &previous_count);
     return previous_count;
 }
 
-_IRQL_requires_min_(PASSIVE_LEVEL) _When_((Timeout == NULL || Timeout->QuadPart != 0), _IRQL_requires_max_(APC_LEVEL))
-    _When_((Timeout != NULL && Timeout->QuadPart == 0), _IRQL_requires_max_(DISPATCH_LEVEL)) NTKERNELAPI NTSTATUS
-    KeWaitForSingleObject(
-        _In_ _Points_to_data_ PVOID object,
-        _In_ _Strict_type_match_ KWAIT_REASON wait_reason,
-        _In_ __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE wait_mode,
-        _In_ BOOLEAN alertable,
-        _In_opt_ PLARGE_INTEGER timeout)
+_IRQL_requires_min_(PASSIVE_LEVEL)
+_When_((timeout == NULL || timeout->QuadPart != 0), _IRQL_requires_max_(APC_LEVEL))
+_When_((timeout != NULL && timeout->QuadPart == 0), _IRQL_requires_max_(DISPATCH_LEVEL))
+NTKERNELAPI NTSTATUS
+KeWaitForSingleObject(
+    _In_ _Points_to_data_ PVOID object,
+    _In_ _Strict_type_match_ KWAIT_REASON wait_reason,
+    _In_ __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE wait_mode,
+    _In_ BOOLEAN alertable,
+    _In_opt_ PLARGE_INTEGER timeout)
 {
     UNREFERENCED_PARAMETER(wait_reason);
     UNREFERENCED_PARAMETER(wait_mode);
     UNREFERENCED_PARAMETER(alertable);
 
-    KSEMAPHORE semaphore = (KSEMAPHORE)object;
+    DWORD timeout_ms = INFINITE;
     if (timeout != nullptr) {
-        // Not yet implemented.
-        return STATUS_NOT_SUPPORTED;
+        // Timeout is in 100-ns units.
+        // 1 ms == 1000000 ns == 10000 units of 100 ns.
+        timeout_ms = (DWORD)(timeout->QuadPart / 10000);
     }
-    WaitForSingleObject(semaphore, INFINITE);
+
+    PRKSEMAPHORE semaphore = (PRKSEMAPHORE)object;
+    DWORD result = WaitForSingleObject(semaphore->handle, timeout_ms);
+    switch (result) {
+    case WAIT_OBJECT_0:
+        return STATUS_SUCCESS;
+    case WAIT_TIMEOUT:
+        return STATUS_TIMEOUT;
+    case WAIT_ABANDONED:
+    case WAIT_FAILED:
+    default:
+        return STATUS_UNSUCCESSFUL;
+    }
 }
 
 #pragma endregion semaphores
