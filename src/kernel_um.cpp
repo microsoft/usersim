@@ -2,15 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 #include "fault_injection.h"
-#include "platform.h"
 #include "kernel_um.h"
+#include "platform.h"
+
+#include <stdio.h>
 
 unsigned long __cdecl DbgPrintEx(
     _In_ unsigned long component_id, _In_ unsigned long level, _In_z_ _Printf_format_string_ PCSTR format, ...)
 {
     UNREFERENCED_PARAMETER(component_id);
     UNREFERENCED_PARAMETER(level);
-    UNREFERENCED_PARAMETER(format);
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
     return MAXULONG32;
 }
 

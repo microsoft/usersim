@@ -16,7 +16,9 @@ WdfDriverCreate(
     _Out_opt_ WDFDRIVER* driver)
 {
     g_CurrentDriver.config = *driver_config;
-    *driver = g_CurrentDriver;
+    if (driver != nullptr) {
+        *driver = g_CurrentDriver;
+    }
     return STATUS_SUCCESS;
 }
 

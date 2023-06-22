@@ -189,6 +189,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="dll_skeleton.c" />
     <ClCompile Include="ex.cpp" />
     <ClCompile Include="fault_injection.cpp" />
     <ClCompile Include="fwp_um.cpp" />

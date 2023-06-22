@@ -4,6 +4,18 @@ This project is designed to allow a Windows kernel driver developer to
 compile their code as a user-mode DLL for testing purposes, so that it
 can be used for code coverage, fuzzers, etc.
 
+## Using
+
+To use this repository from another project:
+* Include this repository as a git submodule
+* Build your driver files as a DLL.  See the "sample" project as an example, which builds the
+  [KMDF sample driver](https://learn.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/writing-a-very-small-kmdf--driver)
+  as a DLL.
+* Define the preprocessor symbol USERSIM_DLLMAIN when building one file (typically the one containing your DriverEntry)
+  that includes wdf.h.  The sample project does this not in the driver.c source file itself but rather in the sample.vcxproj that
+  builds it.
+* Add a reference from your DLL project to the usersim project.
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
