@@ -63,6 +63,9 @@
     <ClCompile Include="ex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="wdf.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fwp_um.h">
@@ -111,6 +114,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="framework.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\ntddk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\wdf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

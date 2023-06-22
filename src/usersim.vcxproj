@@ -205,9 +205,12 @@
     <ClCompile Include="rtl.cpp" />
     <ClCompile Include="se.cpp" />
     <ClCompile Include="tracelog.c" />
+    <ClCompile Include="wdf.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\inc\ntddk.h" />
     <ClInclude Include="..\inc\usersim\ex.h" />
+    <ClInclude Include="..\inc\wdf.h" />
     <ClInclude Include="fault_injection.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="fwp_um.h" />

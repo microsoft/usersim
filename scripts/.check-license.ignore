@@ -12,6 +12,7 @@
 .*\.rc$
 .*\.sln$
 .*\.vsdx$
+.*\.inf$
 
 # Directories with files that don't support embedding license info
 .*corpus
