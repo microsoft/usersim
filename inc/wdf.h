@@ -56,6 +56,27 @@ extern "C"
     void
     WDF_DRIVER_CONFIG_INIT(_Out_ PWDF_DRIVER_CONFIG config, _In_opt_ PFN_WDF_DRIVER_DEVICE_ADD evt_driver_device_add);
 
+#ifdef USERSIM_DLLMAIN
+    bool APIENTRY
+    DllMain(HMODULE hModule, unsigned long ul_reason_for_call, void* lpReserved)
+    {
+        UNREFERENCED_PARAMETER(hModule);
+        UNREFERENCED_PARAMETER(lpReserved);
+        switch (ul_reason_for_call) {
+        case DLL_PROCESS_ATTACH:
+            return NT_SUCCESS(UsersimStartDriver());
+        case DLL_THREAD_ATTACH:
+            break;
+        case DLL_THREAD_DETACH:
+            break;
+        case DLL_PROCESS_DETACH:
+            UsersimStopDriver();
+            break;
+        }
+        return TRUE;
+    }
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

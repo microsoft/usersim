@@ -1,7 +1,8 @@
 # Copyright (c) Microsoft Corporation
 # SPDX-License-Identifier: MIT
 
-add_library("usersim" STATIC
+add_library(usersim STATIC
+  dll_skeleton.c
   ex.cpp
   fault_injection.cpp
   fault_injection.h
@@ -29,12 +30,13 @@ add_library("usersim" STATIC
   tracelog.c
   tracelog.h
   utilities.h
+  wdf.cpp
 )
 
-target_include_directories("usersim" PRIVATE
+target_include_directories(usersim PRIVATE
   "../inc"
   "${WDK_ROOT}/include/${WDK_VERSION}/km"
 )
 
 set(defs UNICODE _UNICODE)
-target_compile_definitions("usersim" PRIVATE ${defs})
+target_compile_definitions(usersim PRIVATE ${defs})
