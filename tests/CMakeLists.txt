@@ -11,14 +11,14 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-add_executable(tests
+add_executable(usersim_tests
   tests.cpp
 )
 
-target_include_directories(tests PRIVATE
+target_include_directories(usersim_tests PRIVATE
   "${CMAKE_BINARY_DIR}/generated-includes/"
   "${CMAKE_BINARY_DIR}/_deps/catch2-src/src/"
 )
 
-target_link_libraries(tests PRIVATE
+target_link_libraries(usersim_tests PRIVATE
     Catch2::Catch2WithMain)
