@@ -15,6 +15,10 @@ WdfDriverCreate(
     _In_ PWDF_DRIVER_CONFIG driver_config,
     _Out_opt_ WDFDRIVER* driver)
 {
+    UNREFERENCED_PARAMETER(driver_object);
+    UNREFERENCED_PARAMETER(registry_path);
+    UNREFERENCED_PARAMETER(driver_attributes);
+
     g_CurrentDriver.config = *driver_config;
     if (driver != nullptr) {
         *driver = g_CurrentDriver;
@@ -26,6 +30,10 @@ NTSTATUS
 WdfDeviceCreate(
     _Inout_ PWDFDEVICE_INIT* device_init, _In_opt_ PWDF_OBJECT_ATTRIBUTES device_attributes, _Out_ WDFDEVICE* device)
 {
+    UNREFERENCED_PARAMETER(device_init);
+    UNREFERENCED_PARAMETER(device_attributes);
+
+    *device = nullptr;
     return STATUS_SUCCESS;
 }
 

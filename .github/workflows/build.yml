@@ -51,7 +51,7 @@ jobs:
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
-        .\tests -d yes
+        .\usersim_tests -d yes
 
   build-cmake:
     timeout-minutes: 15
@@ -94,4 +94,4 @@ jobs:
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
-        .\tests -d yes
+        .\usersim_tests -d yes
