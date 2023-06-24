@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #include "platform.h"
-#include "kernel_um.h"
 #include "usersim/ke.h"
+
+#pragma comment(lib, "mincore.lib")
 
 // Ke* functions.
 
@@ -16,10 +17,7 @@ KeQueryMaximumProcessorCountEx(_In_ USHORT group_number) { return GetMaximumProc
 thread_local KIRQL _usersim_current_irql = PASSIVE_LEVEL;
 
 KIRQL
-KeGetCurrentIrql() 
-{
-    return _usersim_current_irql;
-}
+KeGetCurrentIrql() { return _usersim_current_irql; }
 
 VOID
 KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
@@ -48,13 +46,11 @@ _IRQL_requires_min_(DISPATCH_LEVEL) NTKERNELAPI LOGICAL KeShouldYieldProcessor(V
 
 void
 KeEnterCriticalRegion(void)
-{
-}
+{}
 
 void
 KeLeaveCriticalRegion(void)
-{
-}
+{}
 
 #pragma region spin_locks
 
@@ -65,7 +61,6 @@ KeInitializeSpinLock(_Out_ PKSPIN_LOCK spin_lock)
     *lock = SRWLOCK_INIT;
 }
 
-
 _Requires_lock_not_held_(*spin_lock) _Acquires_lock_(*spin_lock)
     _IRQL_requires_max_(DISPATCH_LEVEL) void KeAcquireSpinLock(_Inout_ PKSPIN_LOCK spin_lock, _Out_ PKIRQL OldIrql)
 {
@@ -73,21 +68,33 @@ _Requires_lock_not_held_(*spin_lock) _Acquires_lock_(*spin_lock)
 }
 
 _Requires_lock_not_held_(*spin_lock) _Acquires_lock_(*spin_lock) _IRQL_requires_max_(DISPATCH_LEVEL) KIRQL
-KeAcquireSpinLockRaiseToDpc(_Inout_ PKSPIN_LOCK spin_lock)
+    KeAcquireSpinLockRaiseToDpc(_Inout_ PKSPIN_LOCK spin_lock)
+{
+    KIRQL old_irql = KeRaiseIrqlToDpcLevel();
+    KeAcquireSpinLockAtDpcLevel(spin_lock);
+    return old_irql;
+}
+
+_Requires_lock_not_held_(*spin_lock) _Acquires_lock_(*spin_lock)
+    _IRQL_requires_(DISPATCH_LEVEL) void KeAcquireSpinLockAtDpcLevel(_Inout_ PKSPIN_LOCK spin_lock)
 {
     // Skip Fault Injection.
     auto lock = reinterpret_cast<SRWLOCK*>(spin_lock);
     AcquireSRWLockExclusive(lock);
-    return KeRaiseIrqlToDpcLevel();
 }
 
-_Requires_lock_held_(*spin_lock) _Releases_lock_(*spin_lock) _IRQL_requires_(DISPATCH_LEVEL) void
-KeReleaseSpinLock(
-    _Inout_ PKSPIN_LOCK spin_lock, _In_ _IRQL_restores_ KIRQL new_irql)
+_Requires_lock_held_(*spin_lock) _Releases_lock_(*spin_lock)
+    _IRQL_requires_(DISPATCH_LEVEL) void KeReleaseSpinLockFromDpcLevel(_Inout_ PKSPIN_LOCK spin_lock)
 {
-    KeLowerIrql(new_irql);
     auto lock = reinterpret_cast<SRWLOCK*>(spin_lock);
     ReleaseSRWLockExclusive(lock);
+}
+
+_Requires_lock_held_(*spin_lock) _Releases_lock_(*spin_lock) _IRQL_requires_(DISPATCH_LEVEL) void KeReleaseSpinLock(
+    _Inout_ PKSPIN_LOCK spin_lock, _In_ _IRQL_restores_ KIRQL new_irql)
+{
+    KeReleaseSpinLockFromDpcLevel(spin_lock);
+    KeLowerIrql(new_irql);
 }
 
 #pragma endregion spin_locks
@@ -102,7 +109,7 @@ KeQueryInterruptTime()
 }
 
 _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
-KeRevertToUserAffinityThreadEx(_In_ KAFFINITY affinity)
+    KeRevertToUserAffinityThreadEx(_In_ KAFFINITY affinity)
 {
     SetThreadAffinityMask(GetCurrentThread(), affinity);
 }
@@ -114,17 +121,15 @@ KeGetCurrentThread(VOID) { return (PKTHREAD)usersim_get_current_thread_id(); }
 #pragma region semaphores
 
 _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI VOID
-KeInitializeSemaphore(_Out_ PRKSEMAPHORE semaphore, _In_ LONG count, _In_ LONG limit)
+    KeInitializeSemaphore(_Out_ PRKSEMAPHORE semaphore, _In_ LONG count, _In_ LONG limit)
 {
     semaphore->handle = CreateSemaphore(nullptr, count, limit, nullptr);
     ASSERT(semaphore->handle != INVALID_HANDLE_VALUE);
 }
 
 _When_(wait == 0, _IRQL_requires_max_(DISPATCH_LEVEL))
-_When_(wait == 1, _IRQL_requires_max_(APC_LEVEL))
-NTKERNELAPI LONG
-KeReleaseSemaphore(
-    _Inout_ PRKSEMAPHORE semaphore, _In_ KPRIORITY increment, _In_ LONG adjustment, _In_ _Literal_ BOOLEAN wait)
+    _When_(wait == 1, _IRQL_requires_max_(APC_LEVEL)) NTKERNELAPI LONG KeReleaseSemaphore(
+        _Inout_ PRKSEMAPHORE semaphore, _In_ KPRIORITY increment, _In_ LONG adjustment, _In_ _Literal_ BOOLEAN wait)
 {
     UNREFERENCED_PARAMETER(increment);
     UNREFERENCED_PARAMETER(wait);
@@ -133,16 +138,14 @@ KeReleaseSemaphore(
     return previous_count;
 }
 
-_IRQL_requires_min_(PASSIVE_LEVEL)
-_When_((timeout == NULL || timeout->QuadPart != 0), _IRQL_requires_max_(APC_LEVEL))
-_When_((timeout != NULL && timeout->QuadPart == 0), _IRQL_requires_max_(DISPATCH_LEVEL))
-NTKERNELAPI NTSTATUS
-KeWaitForSingleObject(
-    _In_ _Points_to_data_ PVOID object,
-    _In_ _Strict_type_match_ KWAIT_REASON wait_reason,
-    _In_ __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE wait_mode,
-    _In_ BOOLEAN alertable,
-    _In_opt_ PLARGE_INTEGER timeout)
+_IRQL_requires_min_(PASSIVE_LEVEL) _When_((timeout == NULL || timeout->QuadPart != 0), _IRQL_requires_max_(APC_LEVEL))
+    _When_((timeout != NULL && timeout->QuadPart == 0), _IRQL_requires_max_(DISPATCH_LEVEL)) NTKERNELAPI NTSTATUS
+    KeWaitForSingleObject(
+        _In_ _Points_to_data_ PVOID object,
+        _In_ _Strict_type_match_ KWAIT_REASON wait_reason,
+        _In_ __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE wait_mode,
+        _In_ BOOLEAN alertable,
+        _In_opt_ PLARGE_INTEGER timeout)
 {
     UNREFERENCED_PARAMETER(wait_reason);
     UNREFERENCED_PARAMETER(wait_mode);

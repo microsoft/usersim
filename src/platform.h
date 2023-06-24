@@ -3,6 +3,7 @@
 #pragma once
 
 #include "framework.h"
+#include "kernel_um.h"
 
 typedef NTSTATUS usersim_result_t;
 
@@ -21,12 +22,13 @@ extern "C"
 #define USERSIM_FROM_FIELD(s, m, o) (s*)((uint8_t*)o - USERSIM_OFFSET_OF(s, m))
 
 #define USERSIM_UTF8_STRING_FROM_CONST_STRING(x) \
-    {                                         \
-        ((uint8_t*)(x)), sizeof((x)) - 1      \
+    {                                            \
+        ((uint8_t*)(x)), sizeof((x)) - 1         \
     }
 
 #define USERSIM_CACHE_LINE_SIZE 64
-#define USERSIM_CACHE_ALIGN_POINTER(P) (void*)(((uintptr_t)P + USERSIM_CACHE_LINE_SIZE - 1) & ~(USERSIM_CACHE_LINE_SIZE - 1))
+#define USERSIM_CACHE_ALIGN_POINTER(P) \
+    (void*)(((uintptr_t)P + USERSIM_CACHE_LINE_SIZE - 1) & ~(USERSIM_CACHE_LINE_SIZE - 1))
 #define USERSIM_PAD_CACHE(X) ((X + USERSIM_CACHE_LINE_SIZE - 1) & ~(USERSIM_CACHE_LINE_SIZE - 1))
 #define USERSIM_PAD_8(X) ((X + 7) & ~7)
 
@@ -204,7 +206,8 @@ extern "C"
      * @retval USERSIM_INVALID_ARGUMENT An invalid argument was supplied.
      */
     _Must_inspect_result_ NTSTATUS
-    usersim_protect_memory(_In_ const usersim_memory_descriptor_t* memory_descriptor, usersim_page_protection_t protection);
+    usersim_protect_memory(
+        _In_ const usersim_memory_descriptor_t* memory_descriptor, usersim_page_protection_t protection);
 
     /**
      * @brief Given an usersim_memory_descriptor_t allocated via usersim_map_memory
@@ -576,7 +579,8 @@ extern "C"
      *  destination.
      */
     int32_t
-    usersim_interlocked_compare_exchange_int32(_Inout_ volatile int32_t* destination, int32_t exchange, int32_t comparand);
+    usersim_interlocked_compare_exchange_int32(
+        _Inout_ volatile int32_t* destination, int32_t exchange, int32_t comparand);
 
     /**
      * @brief Performs an atomic operation that compares the input value pointed
@@ -594,7 +598,8 @@ extern "C"
      *  destination.
      */
     int64_t
-    usersim_interlocked_compare_exchange_int64(_Inout_ volatile int64_t* destination, int64_t exchange, int64_t comparand);
+    usersim_interlocked_compare_exchange_int64(
+        _Inout_ volatile int64_t* destination, int64_t exchange, int64_t comparand);
 
     /**
      * @brief Performs an atomic operation that compares the input value pointed
@@ -808,7 +813,8 @@ extern "C"
      * @return USERSIM_INVALID_ARGUMENT The algorithm is not supported.
      */
     _Must_inspect_result_ usersim_result_t
-    usersim_cryptographic_hash_create(_In_ const usersim_utf8_string_t* algorithm, _Outptr_ usersim_cryptographic_hash_t** hash);
+    usersim_cryptographic_hash_create(
+        _In_ const usersim_utf8_string_t* algorithm, _Outptr_ usersim_cryptographic_hash_t** hash);
 
     /**
      * @brief Destroy a cryptographic hash object.

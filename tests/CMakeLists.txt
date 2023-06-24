@@ -18,7 +18,17 @@ add_executable(usersim_tests
 target_include_directories(usersim_tests PRIVATE
   "${CMAKE_BINARY_DIR}/generated-includes/"
   "${CMAKE_BINARY_DIR}/_deps/catch2-src/src/"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../inc/"
+  "${WDK_ROOT}/include/${WDK_VERSION}/km"
+)
+
+target_link_directories(usersim_tests PRIVATE
+  "${CMAKE_BINARY_DIR}/lib/${CONFIG}"
 )
 
 target_link_libraries(usersim_tests PRIVATE
-    Catch2::Catch2WithMain)
+  "usersim.lib"
+  Catch2::Catch2WithMain
+)
+
+add_dependencies(usersim_tests usersim)
