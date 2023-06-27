@@ -10,16 +10,13 @@
 // Windows Header Files
 #include <windows.h>
 
-_When_(error != ERROR_SUCCESS, _Ret_range_(1, 65535)) __forceinline usersim_result_t
-    win32_error_code_to_usersim_result(uint32_t error)
+// Convert a Win32 failure error code to an NTSTATUS failure.
+_Ret_range_(LONG_MIN, -1) __forceinline usersim_result_t
+win32_error_to_usersim_error(uint32_t error)
 {
     usersim_result_t result;
 
     switch (error) {
-    case ERROR_SUCCESS:
-        result = STATUS_SUCCESS;
-        break;
-
     case ERROR_OUTOFMEMORY:
     case ERROR_NOT_ENOUGH_MEMORY:
         result = STATUS_NO_MEMORY;
@@ -66,10 +63,6 @@ _When_(error != ERROR_SUCCESS, _Ret_range_(1, 65535)) __forceinline usersim_resu
         result = STATUS_OBJECTID_EXISTS;
         break;
 
-    case ERROR_IO_PENDING:
-        result = STATUS_PENDING;
-        break;
-
     case ERROR_VERIFIER_STOP:
         result = STATUS_VERIFIER_STOP;
         break;
@@ -84,10 +77,6 @@ _When_(error != ERROR_SUCCESS, _Ret_range_(1, 65535)) __forceinline usersim_resu
 
     case ERROR_INVALID_FUNCTION:
         result = STATUS_INVALID_DEVICE_REQUEST;
-        break;
-
-    case ERROR_OBJECT_NAME_EXISTS:
-        result = STATUS_OBJECT_NAME_EXISTS;
         break;
 
     case ERROR_TOO_MANY_CMDS:
@@ -147,6 +136,35 @@ _When_(error != ERROR_SUCCESS, _Ret_range_(1, 65535)) __forceinline usersim_resu
 
     default:
         result = STATUS_UNSUCCESSFUL;
+        break;
+    }
+
+    return result;
+}
+
+// Convert a Win32 error code (whether success or failure) to an NTSTATUS value.
+_When_(
+    error != ERROR_SUCCESS && error != ERROR_IO_PENDING && error != ERROR_OBJECT_NAME_EXISTS,
+    _Ret_range_(LONG_MIN, -1)) __forceinline usersim_result_t
+    win32_error_code_to_usersim_result(uint32_t error)
+{
+    usersim_result_t result;
+
+    switch (error) {
+    case ERROR_SUCCESS:
+        result = STATUS_SUCCESS;
+        break;
+
+    case ERROR_IO_PENDING:
+        result = STATUS_PENDING;
+        break;
+
+    case ERROR_OBJECT_NAME_EXISTS:
+        result = STATUS_OBJECT_NAME_EXISTS;
+        break;
+
+    default:
+        result = win32_error_to_usersim_error(error);
         break;
     }
 

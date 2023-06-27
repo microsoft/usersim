@@ -31,6 +31,13 @@ extern "C"
     typedef uint8_t KIRQL;
     typedef KIRQL* PKIRQL;
 
+#undef PASSIVE_LEVEL
+#undef APC_LEVEL
+#undef DISPATCH_LEVEL
+#define PASSIVE_LEVEL THREAD_PRIORITY_NORMAL   // Passive release level.
+#define APC_LEVEL THREAD_PRIORITY_ABOVE_NORMAL // APC interrupt level.
+#define DISPATCH_LEVEL THREAD_PRIORITY_HIGHEST // Dispatcher level.
+
     KIRQL
     KeGetCurrentIrql();
 
@@ -66,9 +73,14 @@ extern "C"
 
 #pragma endregion spin_locks
 
-    NTKERNELAPI
+    ULONG
+    KeQueryMaximumProcessorCount();
+
     ULONG
     KeQueryMaximumProcessorCountEx(_In_ USHORT group_number);
+
+#define KeQueryActiveProcessorCount KeQueryMaximumProcessorCount
+#define KeQueryActiveProcessorCountEx KeQueryMaximumProcessorCountEx
 
     unsigned long long
     KeQueryInterruptTime();

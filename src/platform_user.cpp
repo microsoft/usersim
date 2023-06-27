@@ -908,7 +908,7 @@ usersim_allocate_preemptible_work_item(
     // initialize the _callback_environment structure before calling CreateThreadpoolWork.
     (*work_item)->work = CreateThreadpoolWork(_usersim_preemptible_routine, *work_item, &_callback_environment);
     if ((*work_item)->work == nullptr) {
-        result = win32_error_code_to_usersim_result(GetLastError());
+        result = win32_error_to_usersim_error(GetLastError());
         goto Done;
     }
     (*work_item)->work_item_routine = work_item_routine;
@@ -1186,7 +1186,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSTATUS
     error = GetLastError();
     if (error != ERROR_INSUFFICIENT_BUFFER) {
         USERSIM_LOG_WIN32_API_FAILURE(USERSIM_TRACELOG_KEYWORD_BASE, GetTokenInformation);
-        return win32_error_code_to_usersim_result(GetLastError());
+        return win32_error_to_usersim_error(GetLastError());
     }
 
     privileges = (TOKEN_GROUPS_AND_PRIVILEGES*)usersim_allocate(size);
@@ -1198,7 +1198,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSTATUS
         GetTokenInformation(thread_token_handle, TokenGroupsAndPrivileges, privileges, size, (unsigned long*)&size);
     if (result == false) {
         USERSIM_LOG_WIN32_API_FAILURE(USERSIM_TRACELOG_KEYWORD_BASE, GetTokenInformation);
-        return_value = win32_error_code_to_usersim_result(GetLastError());
+        return_value = win32_error_to_usersim_error(GetLastError());
         goto Exit;
     }
 

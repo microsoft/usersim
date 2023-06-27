@@ -14,6 +14,7 @@
 #include <rpc.h>
 #include <winioctl.h>
 typedef _Return_type_success_(return >= 0) long NTSTATUS;
+#define NT_SUCCESS(status) (((NTSTATUS)(status)) >= 0)
 #include <../km/netioddk.h>
 #include "kernel_um.h"
 #include <netiodef.h>

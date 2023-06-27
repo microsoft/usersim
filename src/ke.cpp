@@ -8,7 +8,9 @@
 
 // Ke* functions.
 
-NTKERNELAPI
+ULONG
+KeQueryMaximumProcessorCount() { return GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS); }
+
 ULONG
 KeQueryMaximumProcessorCountEx(_In_ USHORT group_number) { return GetMaximumProcessorCount(group_number); }
 
@@ -24,6 +26,8 @@ KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
 {
     *old_irql = KeGetCurrentIrql();
     _usersim_current_irql = new_irql;
+    BOOL result = SetThreadPriority(GetCurrentThread(), new_irql);
+    ASSERT(result);
 }
 
 KIRQL
@@ -38,6 +42,8 @@ void
 KeLowerIrql(_In_ KIRQL new_irql)
 {
     _usersim_current_irql = new_irql;
+    BOOL result = SetThreadPriority(GetCurrentThread(), new_irql);
+    ASSERT(result);
 }
 
 _IRQL_requires_min_(DISPATCH_LEVEL) NTKERNELAPI LOGICAL KeShouldYieldProcessor(VOID) { return false; }
@@ -179,7 +185,7 @@ _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
 {
     // This is a no-op for the user mode implementation.
     UNREFERENCED_PARAMETER(process);
-    UNREFERENCED_PARAMETER(apc_state);
+    *apc_state = nullptr;
 }
 
 _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID KeUnstackDetachProcess(_In_ PRKAPC_STATE apc_state)
