@@ -148,3 +148,15 @@ extern "C"
 #if defined(__cplusplus)
 }
 #endif
+
+// The bug check functions below throw C++ exceptions so tests can catch them to verify error behavior.
+void
+KeBugCheck(ULONG bug_check_code);
+
+void
+KeBugCheckEx(
+    ULONG bug_check_code,
+    ULONG_PTR bug_check_parameter1,
+    ULONG_PTR bug_check_parameter2,
+    ULONG_PTR bug_check_parameter3,
+    ULONG_PTR bug_check_parameter4);
