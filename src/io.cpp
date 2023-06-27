@@ -8,7 +8,6 @@
 // Io* functions.
 
 typedef unsigned long PFN_NUMBER;
-#define PAGE_SIZE 4096
 #define PAGE_SHIFT 12L
 
 #define PAGE_ALIGN(Va) ((void*)((ULONG_PTR)(Va) & ~(PAGE_SIZE - 1)))

@@ -172,53 +172,7 @@ extern "C"
         USERSIM_PAGE_PROTECT_READ_EXECUTE,
     } usersim_page_protection_t;
 
-    typedef struct _usersim_memory_descriptor usersim_memory_descriptor_t;
     typedef struct _usersim_ring_descriptor usersim_ring_descriptor_t;
-
-    /**
-     * @brief Allocate pages from physical memory and create a mapping into the
-     * system address space.
-     *
-     * @param[in] length Size of memory to allocate (internally this gets rounded
-     * up to a page boundary).
-     * @return Pointer to an usersim_memory_descriptor_t on success, NULL on failure.
-     */
-    usersim_memory_descriptor_t*
-    usersim_map_memory(size_t length);
-
-    /**
-     * @brief Release physical memory previously allocated via usersim_map_memory.
-     *
-     * @param[in] memory_descriptor Pointer to usersim_memory_descriptor_t describing
-     * allocated pages.
-     */
-    void
-    usersim_unmap_memory(_Frees_ptr_opt_ usersim_memory_descriptor_t* memory_descriptor);
-
-    /**
-     * @brief Change the page protection on memory allocated via
-     * usersim_map_memory.
-     *
-     * @param[in] memory_descriptor Pointer to an usersim_memory_descriptor_t
-     * describing allocated pages.
-     * @param[in] protection The new page protection to apply.
-     * @retval USERSIM_SUCCESS The operation was successful.
-     * @retval USERSIM_INVALID_ARGUMENT An invalid argument was supplied.
-     */
-    _Must_inspect_result_ NTSTATUS
-    usersim_protect_memory(
-        _In_ const usersim_memory_descriptor_t* memory_descriptor, usersim_page_protection_t protection);
-
-    /**
-     * @brief Given an usersim_memory_descriptor_t allocated via usersim_map_memory
-     * obtain the base virtual address.
-     *
-     * @param[in] memory_descriptor Pointer to an usersim_memory_descriptor_t
-     * describing allocated pages.
-     * @return Base virtual address of pages that have been allocated.
-     */
-    void*
-    usersim_memory_descriptor_get_base_address(usersim_memory_descriptor_t* memory_descriptor);
 
     /**
      * @brief Allocate pages from physical memory and create a mapping into the

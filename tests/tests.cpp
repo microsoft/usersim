@@ -7,7 +7,9 @@
 #else
 #include <catch2/catch.hpp>
 #endif
+#include "usersim/ex.h"
 #include "usersim/ke.h"
+#include "usersim/mm.h"
 
 TEST_CASE("DriverEntry", "[wdf]")
 {
@@ -72,4 +74,24 @@ TEST_CASE("spin lock", "[ke]")
     KeAcquireSpinLockAtDpcLevel(&lock);
     KeReleaseSpinLockFromDpcLevel(&lock);
     KeLowerIrql(old_irql);
+}
+
+TEST_CASE("mdl", "[mm]")
+{
+    PHYSICAL_ADDRESS start_address{.QuadPart = 0};
+    PHYSICAL_ADDRESS end_address{.QuadPart = -1};
+    PHYSICAL_ADDRESS page_size{.QuadPart = PAGE_SIZE};
+    size_t length = 256;
+    MDL* mdl =
+        MmAllocatePagesForMdlEx(start_address, end_address, page_size, length, MmCached, MM_ALLOCATE_FULLY_REQUIRED);
+    REQUIRE(mdl != nullptr);
+
+    void* base_address = MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority);
+    REQUIRE(base_address != nullptr);
+
+    REQUIRE(MmGetMdlByteCount(mdl) == length);
+
+    MmUnmapLockedPages(base_address, mdl);
+    MmFreePagesFromMdl(mdl);
+    ExFreePool(mdl);
 }
