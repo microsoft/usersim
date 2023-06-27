@@ -133,8 +133,15 @@ extern "C"
     void*
     ExAllocatePoolUninitialized(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag);
 
+    void*
+    ExAllocatePoolWithTag(
+        _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag);
+
     void
-    ExFreePool(void* p);
+    ExFreePool(_In_ __drv_freesMem(Mem) void* p);
+
+    void
+    ExFreePoolWithTag(_In_ __drv_freesMem(Mem) void* p, ULONG tag);
 
     void
     ExInitializePushLock(_Out_ EX_PUSH_LOCK* push_lock);

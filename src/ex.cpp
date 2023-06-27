@@ -289,7 +289,21 @@ _Releases_shared_lock_(spin_lock->lock) void ExReleaseSpinLockSharedEx(
 }
 
 void*
-ExAllocatePoolUninitialized(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag)
+ExAllocatePoolUninitialized(
+    _In_ POOL_TYPE pool_type,
+    _In_ size_t number_of_bytes,
+    _In_ unsigned long tag)
+{
+    UNREFERENCED_PARAMETER(pool_type);
+    UNREFERENCED_PARAMETER(tag);
+    return usersim_allocate(number_of_bytes);
+}
+
+void*
+ExAllocatePoolWithTag(
+    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type,
+    SIZE_T number_of_bytes,
+    ULONG tag)
 {
     UNREFERENCED_PARAMETER(pool_type);
     UNREFERENCED_PARAMETER(tag);
@@ -297,8 +311,15 @@ ExAllocatePoolUninitialized(_In_ POOL_TYPE pool_type, _In_ size_t number_of_byte
 }
 
 void
-ExFreePool(void* p)
+ExFreePool(_In_ __drv_freesMem(Mem) void* p)
 {
+    usersim_free(p);
+}
+
+void
+ExFreePoolWithTag(_In_ __drv_freesMem(Mem) void* p, ULONG tag)
+{
+    UNREFERENCED_PARAMETER(tag);
     usersim_free(p);
 }
 

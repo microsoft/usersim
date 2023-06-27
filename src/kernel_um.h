@@ -16,7 +16,6 @@ extern "C"
 // Defines
 
 #define KdPrintEx(_x_) DbgPrintEx _x_
-#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #define PAGED_CODE()
 
 #define STATUS_SUCCESS 0
@@ -46,8 +45,6 @@ extern "C"
 #define STATUS_GENERIC_COMMAND_FAILED ((NTSTATUS)0xC0150026L)
 #define STATUS_CONTENT_BLOCKED ((NTSTATUS)0xC0000804L)
 #define STATUS_RESOURCE_NOT_OWNED ((NTSTATUS)0xC0000264L)
-#define PASSIVE_LEVEL 0
-#define DISPATCH_LEVEL 2
 
     // Typedefs
 

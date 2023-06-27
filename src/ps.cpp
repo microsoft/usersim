@@ -10,5 +10,5 @@
 HANDLE
 PsGetCurrentProcessId() { return (HANDLE)(uintptr_t)GetCurrentProcessId(); }
 
-HANDLE
+_IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE
 PsGetCurrentThreadId() { return (HANDLE)(uintptr_t)GetCurrentThreadId(); }

@@ -8,6 +8,7 @@
 #include <catch2/catch.hpp>
 #endif
 #include "usersim/ex.h"
+#include "usersim/io.h"
 #include "usersim/ke.h"
 #include "usersim/mm.h"
 
@@ -76,22 +77,53 @@ TEST_CASE("spin lock", "[ke]")
     KeLowerIrql(old_irql);
 }
 
-TEST_CASE("mdl", "[mm]")
+TEST_CASE("MmAllocatePagesForMdlEx", "[mm]")
 {
     PHYSICAL_ADDRESS start_address{.QuadPart = 0};
     PHYSICAL_ADDRESS end_address{.QuadPart = -1};
     PHYSICAL_ADDRESS page_size{.QuadPart = PAGE_SIZE};
-    size_t length = 256;
-    MDL* mdl =
-        MmAllocatePagesForMdlEx(start_address, end_address, page_size, length, MmCached, MM_ALLOCATE_FULLY_REQUIRED);
+    const size_t byte_count = 256;
+    MDL* mdl = MmAllocatePagesForMdlEx(
+        start_address, end_address, page_size, byte_count, MmCached, MM_ALLOCATE_FULLY_REQUIRED);
     REQUIRE(mdl != nullptr);
 
     void* base_address = MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority);
     REQUIRE(base_address != nullptr);
 
-    REQUIRE(MmGetMdlByteCount(mdl) == length);
+    REQUIRE(MmGetMdlByteCount(mdl) == byte_count);
 
     MmUnmapLockedPages(base_address, mdl);
     MmFreePagesFromMdl(mdl);
     ExFreePool(mdl);
+}
+
+TEST_CASE("IoAllocateMdl", "[mm]")
+{
+    const size_t byte_count = 256;
+    ULONG tag = 'tset';
+    void* buffer = ExAllocatePoolWithTag(NonPagedPool, byte_count, tag);
+    REQUIRE(buffer != nullptr);
+
+    MDL* mdl = IoAllocateMdl(buffer, byte_count, FALSE, FALSE, nullptr);
+    REQUIRE(mdl != nullptr);
+
+    MmBuildMdlForNonPagedPool(mdl);
+
+    void* base_address = MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority);
+    REQUIRE(base_address == buffer);
+
+    REQUIRE(MmGetMdlByteCount(mdl) == byte_count);
+
+    IoFreeMdl(mdl);
+    ExFreePoolWithTag(buffer, tag);
+}
+
+TEST_CASE("processor count", "[ke]")
+{
+    ULONG count = KeQueryMaximumProcessorCount();
+    REQUIRE(count > 0);
+
+    REQUIRE(KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS) == count);
+    REQUIRE(KeQueryActiveProcessorCount() == count);
+    REQUIRE(KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS) == count);
 }
