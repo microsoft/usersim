@@ -140,6 +140,11 @@ extern "C"
     _IRQL_requires_same_ ULONG64
     KeQueryInterruptTimePrecise(_Out_ PULONG64 qpc_time_stamp);
 
+    void
+    KeFlushQueuedDpcs();
+
+    LARGE_INTEGER KeQueryPerformanceCounter(_Out_opt_ PLARGE_INTEGER performance_frequency);
+
 #if defined(__cplusplus)
 }
 #endif

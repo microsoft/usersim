@@ -382,8 +382,6 @@ usersim_platform_terminate()
     if (count != 0) {
         return;
     }
-
-    KeFlushQueuedDpcs();
 }
 
 _Must_inspect_result_ usersim_result_t
@@ -678,26 +676,6 @@ usersim_ring_map_readonly_user(_In_ const usersim_ring_descriptor_t* ring)
 {
     USERSIM_LOG_ENTRY();
     USERSIM_RETURN_POINTER(void*, usersim_ring_descriptor_get_base_address(ring));
-}
-
-_Must_inspect_result_ usersim_result_t
-usersim_safe_size_t_multiply(
-    size_t multiplicand, size_t multiplier, _Out_ _Deref_out_range_(==, multiplicand* multiplier) size_t* result)
-{
-    return SUCCEEDED(SizeTMult(multiplicand, multiplier, result)) ? STATUS_SUCCESS : STATUS_INTEGER_OVERFLOW;
-}
-
-_Must_inspect_result_ usersim_result_t
-usersim_safe_size_t_add(size_t augend, size_t addend, _Out_ _Deref_out_range_(==, augend + addend) size_t* result)
-{
-    return SUCCEEDED(SizeTAdd(augend, addend, result)) ? STATUS_SUCCESS : STATUS_INTEGER_OVERFLOW;
-}
-
-_Must_inspect_result_ usersim_result_t
-usersim_safe_size_t_subtract(
-    size_t minuend, size_t subtrahend, _Out_ _Deref_out_range_(==, minuend - subtrahend) size_t* result)
-{
-    return SUCCEEDED(SizeTSub(minuend, subtrahend, result)) ? STATUS_SUCCESS : STATUS_INTEGER_OVERFLOW;
 }
 
 void

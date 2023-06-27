@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
+#ifndef ASSERT
 #define ASSERT(x) assert(x)
+#endif
 #include "framework.h"
 #include "kernel_um.h"
 

@@ -5,6 +5,10 @@
 #include "platform.h"
 #include "kernel_um.h"
 #include "usersim/rtl.h"
+#include "utilities.h"
+#include <intsafe.h>
+#include <random>
+#include <windows.h>
 
 // Rtl* functions.
 
@@ -91,3 +95,25 @@ RtlCreateSecurityDescriptor(_Out_ PSECURITY_DESCRIPTOR SecurityDescriptor, _In_ 
 
     return STATUS_SUCCESS;
 }
+
+_Must_inspect_result_ NTSTATUS
+RtlSizeTMult(size_t multiplicand, size_t multiplier, _Out_ size_t* result)
+{
+    return SUCCEEDED(SizeTMult(multiplicand, multiplier, result)) ? STATUS_SUCCESS : STATUS_INTEGER_OVERFLOW;
+}
+
+_Must_inspect_result_ NTSTATUS
+RtlSizeTAdd(size_t augend, size_t addend, _Out_ _Deref_out_range_(==, augend + addend) size_t* result)
+{
+    return SUCCEEDED(SizeTAdd(augend, addend, result)) ? STATUS_SUCCESS : STATUS_INTEGER_OVERFLOW;
+}
+
+_Must_inspect_result_ NTSTATUS
+RtlSizeTSub(
+    size_t minuend, size_t subtrahend, _Out_ _Deref_out_range_(==, minuend - subtrahend) size_t* result)
+{
+    return SUCCEEDED(SizeTSub(minuend, subtrahend, result)) ? STATUS_SUCCESS : STATUS_INTEGER_OVERFLOW;
+}
+
+// Include Rtl* implementations from ntdll.lib.
+#pragma comment(lib, "ntdll.lib")
