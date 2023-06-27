@@ -7,6 +7,7 @@
 #include "tracelog.h"
 #include "utilities.h"
 #include "usersim/ex.h"
+#include "usersim/mm.h"
 
 #include <TraceLoggingProvider.h>
 #include <functional>
@@ -505,13 +506,6 @@ usersim_free_cache_aligned(_Frees_ptr_opt_ void* memory)
     _aligned_free(memory);
 }
 
-struct _usersim_memory_descriptor
-{
-    void* base;
-    size_t length;
-};
-typedef struct _usersim_memory_descriptor usersim_memory_descriptor_t;
-
 struct _usersim_ring_descriptor
 {
     void* primary_view;
@@ -519,37 +513,6 @@ struct _usersim_ring_descriptor
     size_t length;
 };
 typedef struct _usersim_ring_descriptor usersim_ring_descriptor_t;
-
-usersim_memory_descriptor_t*
-usersim_map_memory(size_t length)
-{
-    // Skip fault injection for this VirtualAlloc OS API, as usersim_allocate already does that.
-    usersim_memory_descriptor_t* descriptor = (usersim_memory_descriptor_t*)usersim_allocate(sizeof(usersim_memory_descriptor_t));
-    if (!descriptor) {
-        return nullptr;
-    }
-
-    descriptor->base = VirtualAlloc(0, length, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-    descriptor->length = length;
-
-    if (!descriptor->base) {
-        USERSIM_LOG_WIN32_API_FAILURE(USERSIM_TRACELOG_KEYWORD_BASE, VirtualAlloc);
-        usersim_free(descriptor);
-        descriptor = nullptr;
-    }
-    return descriptor;
-}
-
-void
-usersim_unmap_memory(_Frees_ptr_opt_ usersim_memory_descriptor_t* memory_descriptor)
-{
-    if (memory_descriptor) {
-        if (!VirtualFree(memory_descriptor->base, 0, MEM_RELEASE)) {
-            USERSIM_LOG_WIN32_API_FAILURE(USERSIM_TRACELOG_KEYWORD_BASE, VirtualFree);
-        }
-        usersim_free(memory_descriptor);
-    }
-}
 
 // This code is derived from the sample at:
 // https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc2
@@ -715,46 +678,6 @@ usersim_ring_map_readonly_user(_In_ const usersim_ring_descriptor_t* ring)
 {
     USERSIM_LOG_ENTRY();
     USERSIM_RETURN_POINTER(void*, usersim_ring_descriptor_get_base_address(ring));
-}
-
-_Must_inspect_result_ usersim_result_t
-usersim_protect_memory(_In_ const usersim_memory_descriptor_t* memory_descriptor, usersim_page_protection_t protection)
-{
-    // VirtualProtect OS API can return nullptr.
-    if (usersim_fault_injection_inject_fault()) {
-        USERSIM_RETURN_RESULT(STATUS_NO_MEMORY);
-    }
-
-    USERSIM_LOG_ENTRY();
-    unsigned long mm_protection_state = 0;
-    unsigned long old_mm_protection_state = 0;
-    switch (protection) {
-    case USERSIM_PAGE_PROTECT_READ_ONLY:
-        mm_protection_state = PAGE_READONLY;
-        break;
-    case USERSIM_PAGE_PROTECT_READ_WRITE:
-        mm_protection_state = PAGE_READWRITE;
-        break;
-    case USERSIM_PAGE_PROTECT_READ_EXECUTE:
-        mm_protection_state = PAGE_EXECUTE_READ;
-        break;
-    default:
-        USERSIM_RETURN_RESULT(STATUS_INVALID_PARAMETER);
-    }
-
-    if (!VirtualProtect(
-            memory_descriptor->base, memory_descriptor->length, mm_protection_state, &old_mm_protection_state)) {
-        USERSIM_LOG_WIN32_API_FAILURE(USERSIM_TRACELOG_KEYWORD_BASE, VirtualProtect);
-        USERSIM_RETURN_RESULT(STATUS_INVALID_PARAMETER);
-    }
-
-    USERSIM_RETURN_RESULT(STATUS_SUCCESS);
-}
-
-void*
-usersim_memory_descriptor_get_base_address(usersim_memory_descriptor_t* memory_descriptor)
-{
-    return memory_descriptor->base;
 }
 
 _Must_inspect_result_ usersim_result_t

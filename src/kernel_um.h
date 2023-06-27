@@ -53,13 +53,6 @@ extern "C"
 
     typedef ULONG LOGICAL;
 
-    typedef enum _MODE
-    {
-        KernelMode,
-        UserMode,
-        MaximumMode
-    } MODE;
-
     // Functions
 
     unsigned long __cdecl DbgPrintEx(
