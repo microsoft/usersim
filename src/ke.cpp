@@ -206,3 +206,16 @@ KeQueryInterruptTimePrecise(_Out_ PULONG64 qpc_time_stamp)
     QueryInterruptTimePrecise(qpc_time_stamp);
     return *qpc_time_stamp;
 }
+
+LARGE_INTEGER
+KeQueryPerformanceCounter(_Out_opt_ PLARGE_INTEGER performance_frequency)
+{
+    LARGE_INTEGER counter;
+    BOOL ok = QueryPerformanceCounter(&counter);
+    ASSERT(ok);
+    if (performance_frequency != nullptr) {
+        ok = QueryPerformanceFrequency(performance_frequency);
+        ASSERT(ok);
+    }
+    return counter;
+}
