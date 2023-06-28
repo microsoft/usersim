@@ -84,9 +84,9 @@ extern "C"
 
     NTSTATUS WINAPI
     RtlUTF8ToUnicodeN(
-        _Out_ PWSTR unicode_string_destination,
+        _Out_opt_ PWSTR unicode_string_destination,
         _In_ ULONG unicode_string_max_byte_count,
-        _Out_opt_ PULONG unicode_string_actual_byte_count,
+        _Out_ PULONG unicode_string_actual_byte_count,
         _In_ PCCH utf8_string_source,
         _In_ ULONG utf8_string_byte_count);
 

@@ -3,6 +3,10 @@
 
 #include "platform.h"
 #include "usersim/ke.h"
+#include <format>
+#include <sstream>
+#undef ASSERT
+#define ASSERT(x) if (!(x)) KeBugCheck(0)
 
 #pragma comment(lib, "mincore.lib")
 
@@ -218,4 +222,35 @@ KeQueryPerformanceCounter(_Out_opt_ PLARGE_INTEGER performance_frequency)
         ASSERT(ok);
     }
     return counter;
+}
+
+void
+KeBugCheck(ULONG bug_check_code)
+{
+    KeBugCheckEx(bug_check_code, 0, 0, 0, 0);
+}
+
+static void
+_throw_exception(_In_ std::string message)
+{
+    throw std::exception(message.c_str());
+}
+
+void
+KeBugCheckEx(
+    ULONG bug_check_code,
+    ULONG_PTR bug_check_parameter1,
+    ULONG_PTR bug_check_parameter2,
+    ULONG_PTR bug_check_parameter3,
+    ULONG_PTR bug_check_parameter4)
+{
+    std::ostringstream ss;
+    ss << std::format(
+        "*** STOP {:#08x} ({:#016x},{:#016x},{:#016x},{:#016x})",
+        bug_check_code,
+        bug_check_parameter1,
+        bug_check_parameter2,
+        bug_check_parameter3,
+        bug_check_parameter4);
+    _throw_exception(ss.str());
 }

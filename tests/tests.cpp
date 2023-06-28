@@ -127,3 +127,29 @@ TEST_CASE("processor count", "[ke]")
     REQUIRE(KeQueryActiveProcessorCount() == count);
     REQUIRE(KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS) == count);
 }
+
+TEST_CASE("KeBugCheck", "[ke]")
+{
+    try {
+        KeBugCheck(17);
+        REQUIRE(FALSE);
+    } catch (std::exception e) {
+        REQUIRE(
+            strcmp(
+                e.what(), "*** STOP 0x000011 (0x00000000000000,0x00000000000000,0x00000000000000,0x00000000000000)") ==
+            0);
+    }
+}
+
+TEST_CASE("KeBugCheckEx", "[ke]")
+{
+    try {
+        KeBugCheckEx(17, 1, 2, 3, 4);
+        REQUIRE(FALSE);
+    } catch (std::exception e) {
+        REQUIRE(
+            strcmp(
+                e.what(), "*** STOP 0x000011 (0x00000000000001,0x00000000000002,0x00000000000003,0x00000000000004)") ==
+            0);
+    }
+}
