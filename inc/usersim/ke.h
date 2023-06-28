@@ -145,16 +145,27 @@ extern "C"
 
     LARGE_INTEGER KeQueryPerformanceCounter(_Out_opt_ PLARGE_INTEGER performance_frequency);
 
+    void
+    KeBugCheck(ULONG bug_check_code);
+
+    void
+    KeBugCheckEx(
+        ULONG bug_check_code,
+        ULONG_PTR bug_check_parameter1,
+        ULONG_PTR bug_check_parameter2,
+        ULONG_PTR bug_check_parameter3,
+        ULONG_PTR bug_check_parameter4);
+
 #if defined(__cplusplus)
 }
 #endif
 
 // The bug check functions below throw C++ exceptions so tests can catch them to verify error behavior.
 void
-KeBugCheck(ULONG bug_check_code);
+KeBugCheckCPP(ULONG bug_check_code);
 
 void
-KeBugCheckEx(
+KeBugCheckExCPP(
     ULONG bug_check_code,
     ULONG_PTR bug_check_parameter1,
     ULONG_PTR bug_check_parameter2,

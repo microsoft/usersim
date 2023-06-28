@@ -5,6 +5,7 @@
 #include "platform.h"
 #include "kernel_um.h"
 #include "usersim/ex.h"
+#include "usersim/ke.h"
 
 #include <condition_variable>
 #include <map>
@@ -288,39 +289,72 @@ _Releases_shared_lock_(spin_lock->lock) void ExReleaseSpinLockSharedEx(
     ReleaseSRWLockShared(&spin_lock->lock);
 }
 
-void*
-ExAllocatePoolUninitialized(
+ _Ret_maybenull_ void*
+ExAllocatePoolUninitializedCPP(
     _In_ POOL_TYPE pool_type,
     _In_ size_t number_of_bytes,
     _In_ unsigned long tag)
 {
-    UNREFERENCED_PARAMETER(pool_type);
-    UNREFERENCED_PARAMETER(tag);
-    return usersim_allocate(number_of_bytes);
+    if (tag == 0) {
+        KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_type, number_of_bytes, 0);
+    }
+    return usersim_allocate_with_tag(number_of_bytes, tag, false);
 }
 
-void*
-ExAllocatePoolWithTag(
+_Ret_maybenull_ void*
+ExAllocatePoolUninitialized(
+    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag)
+{
+    return ExAllocatePoolUninitializedCPP(pool_type, number_of_bytes, tag);
+}
+
+_Ret_maybenull_ void*
+ExAllocatePoolWithTagCPP(
     _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type,
     SIZE_T number_of_bytes,
     ULONG tag)
 {
-    UNREFERENCED_PARAMETER(pool_type);
-    UNREFERENCED_PARAMETER(tag);
-    return usersim_allocate(number_of_bytes);
+    if (tag == 0) {
+        KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_type, number_of_bytes, 0);
+    }
+    return usersim_allocate_with_tag(number_of_bytes, tag, true);
+}
+
+_Ret_maybenull_ void*
+ExAllocatePoolWithTag(_In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag)
+{
+    return ExAllocatePoolWithTagCPP(pool_type, number_of_bytes, tag);
 }
 
 void
-ExFreePool(_In_ __drv_freesMem(Mem) void* p)
+ExFreePoolCPP(_Frees_ptr_ void* p)
 {
+    if (p == nullptr) {
+        KeBugCheckExCPP(BAD_POOL_CALLER, 0x46, 0, 0, 0);
+    }
     usersim_free(p);
 }
 
 void
-ExFreePoolWithTag(_In_ __drv_freesMem(Mem) void* p, ULONG tag)
+ExFreePool(_Frees_ptr_ void* p)
+{
+    ExFreePoolCPP(p);
+}
+
+void
+ExFreePoolWithTagCPP(_Frees_ptr_ void* p, ULONG tag)
 {
     UNREFERENCED_PARAMETER(tag);
+    if (p == nullptr) {
+        KeBugCheckExCPP(BAD_POOL_CALLER, 0x46, 0, 0, 0);
+    }
     usersim_free(p);
+}
+
+void
+ExFreePoolWithTag(_Frees_ptr_ void* p, ULONG tag)
+{
+    ExFreePoolWithTagCPP(p, tag);
 }
 
 void

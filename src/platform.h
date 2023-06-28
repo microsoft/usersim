@@ -108,10 +108,11 @@ extern "C"
      * @brief Allocate memory.
      * @param[in] size Size of memory to allocate.
      * @param[in] tag Pool tag to use.
+     * @param[in] initialize False to return "uninitialized" memory.
      * @returns Pointer to memory block allocated, or null on failure.
      */
     __drv_allocatesMem(Mem) _Must_inspect_result_
-        _Ret_writes_maybenull_(size) void* usersim_allocate_with_tag(size_t size, uint32_t tag);
+        _Ret_writes_maybenull_(size) void* usersim_allocate_with_tag(size_t size, uint32_t tag, bool initialize);
 
     /**
      * @brief Reallocate memory.
