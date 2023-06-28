@@ -131,7 +131,7 @@ TEST_CASE("processor count", "[ke]")
 TEST_CASE("KeBugCheck", "[ke]")
 {
     try {
-        KeBugCheck(17);
+        KeBugCheckCPP(17);
         REQUIRE(FALSE);
     } catch (std::exception e) {
         REQUIRE(
@@ -144,12 +144,52 @@ TEST_CASE("KeBugCheck", "[ke]")
 TEST_CASE("KeBugCheckEx", "[ke]")
 {
     try {
-        KeBugCheckEx(17, 1, 2, 3, 4);
+        KeBugCheckExCPP(17, 1, 2, 3, 4);
         REQUIRE(FALSE);
     } catch (std::exception e) {
         REQUIRE(
             strcmp(
                 e.what(), "*** STOP 0x000011 (0x00000000000001,0x00000000000002,0x00000000000003,0x00000000000004)") ==
+            0);
+    }
+}
+
+TEST_CASE("ExAllocatePool", "[ex]")
+{
+    uint64_t* buffer = (uint64_t*)ExAllocatePoolUninitialized(NonPagedPool, 8, 'tset');
+    REQUIRE(buffer != nullptr);
+    REQUIRE(*buffer != 0);
+    *buffer = 0;
+    ExFreePool(buffer);
+
+    buffer = (uint64_t*)ExAllocatePoolWithTag(NonPagedPool, 8, 'tset');
+    REQUIRE(buffer != nullptr);
+    REQUIRE(*buffer == 0);
+    *buffer = 42;
+    ExFreePool(buffer);
+}
+
+TEST_CASE("ExFreePool null", "[ex]")
+{
+    try {
+        ExFreePoolCPP(nullptr);
+        REQUIRE(FALSE);
+    } catch (std::exception e) {
+        REQUIRE(
+            strcmp(
+                e.what(), "*** STOP 0x0000c2 (0x00000000000046,0x00000000000000,0x00000000000000,0x00000000000000)") ==
+            0);
+    } catch (...) {
+        REQUIRE(FALSE);
+    }
+
+    try {
+        ExFreePoolWithTagCPP(nullptr, 'tset');
+        REQUIRE(FALSE);
+    } catch (std::exception e) {
+        REQUIRE(
+            strcmp(
+                e.what(), "*** STOP 0x0000c2 (0x00000000000046,0x00000000000000,0x00000000000000,0x00000000000000)") ==
             0);
     }
 }

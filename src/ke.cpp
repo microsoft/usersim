@@ -6,7 +6,7 @@
 #include <format>
 #include <sstream>
 #undef ASSERT
-#define ASSERT(x) if (!(x)) KeBugCheck(0)
+#define ASSERT(x) if (!(x)) KeBugCheckCPP(0)
 
 #pragma comment(lib, "mincore.lib")
 
@@ -230,6 +230,12 @@ KeBugCheck(ULONG bug_check_code)
     KeBugCheckEx(bug_check_code, 0, 0, 0, 0);
 }
 
+void
+KeBugCheckCPP(ULONG bug_check_code)
+{
+    KeBugCheckExCPP(bug_check_code, 0, 0, 0, 0);
+}
+
 static void
 _throw_exception(_In_ std::string message)
 {
@@ -237,7 +243,7 @@ _throw_exception(_In_ std::string message)
 }
 
 void
-KeBugCheckEx(
+KeBugCheckExCPP(
     ULONG bug_check_code,
     ULONG_PTR bug_check_parameter1,
     ULONG_PTR bug_check_parameter2,
@@ -253,4 +259,16 @@ KeBugCheckEx(
         bug_check_parameter3,
         bug_check_parameter4);
     _throw_exception(ss.str());
+}
+
+void
+KeBugCheckEx(
+    ULONG bug_check_code,
+    ULONG_PTR bug_check_parameter1,
+    ULONG_PTR bug_check_parameter2,
+    ULONG_PTR bug_check_parameter3,
+    ULONG_PTR bug_check_parameter4)
+{
+    KeBugCheckExCPP(
+        bug_check_code, bug_check_parameter1, bug_check_parameter2, bug_check_parameter3, bug_check_parameter4);
 }

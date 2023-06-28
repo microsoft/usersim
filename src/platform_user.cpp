@@ -400,7 +400,16 @@ usersim_get_code_integrity_state(_Out_ usersim_code_integrity_state_t* state)
 
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* usersim_allocate(size_t size)
 {
-    usersim_assert(size);
+    return usersim_allocate_with_tag(size, 'tset', true);
+}
+
+__drv_allocatesMem(Mem) _Must_inspect_result_
+    _Ret_writes_maybenull_(size) void* usersim_allocate_with_tag(size_t size, uint32_t tag, bool initialize)
+{
+    UNREFERENCED_PARAMETER(tag);
+    if (size == 0) {
+        KeBugCheckEx(BAD_POOL_CALLER, 0x00, 0, 0, 0);
+    }
     if (size > usersim_fuzzing_memory_limit) {
         return nullptr;
     }
@@ -409,10 +418,11 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
         return nullptr;
     }
 
-    void* memory;
-    memory = calloc(size, 1);
-    if (memory != nullptr) {
-        memset(memory, 0, size);
+    void* memory = calloc(size, 1);
+    if (!initialize) {
+        // The calloc call always zero-initializes memory.  To test
+        // returning uninitialized memory, we explicitly fill it with 0xcc.
+        memset(memory, 0xcc, size);
     }
 
     if (memory && _usersim_leak_detector_ptr) {
@@ -420,14 +430,6 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
     }
 
     return memory;
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* usersim_allocate_with_tag(size_t size, uint32_t tag)
-{
-    UNREFERENCED_PARAMETER(tag);
-
-    return usersim_allocate(size);
 }
 
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* usersim_reallocate(

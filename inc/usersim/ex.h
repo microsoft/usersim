@@ -22,6 +22,12 @@ extern "C"
 #define ExReleaseSpinLockExclusive(Lock, Irql) ExReleaseSpinLockExclusiveEx(Lock, Irql)
 #define ExReleaseSpinLockShared(Lock, Irql) ExReleaseSpinLockSharedEx(Lock, Irql)
 #define ExReleaseSpinLockExclusiveFromDpcLevel(Lock) ExReleaseSpinLockExclusiveFromDpcLevelEx(Lock)
+
+    // Bug check codes.
+    typedef enum
+    {
+        BAD_POOL_CALLER = 0xC2,
+    } bug_check_code_t;
 	
     typedef struct _EX_PUSH_LOCK
     {
@@ -130,18 +136,20 @@ extern "C"
     _Releases_exclusive_lock_(spin_lock->lock) void ExReleaseSpinLockExclusiveFromDpcLevelEx(
         _Inout_ _Requires_lock_held_(*_Curr_) _Releases_lock_(*_Curr_) EX_SPIN_LOCK* spin_lock);
 
+    _Ret_maybenull_
     void*
     ExAllocatePoolUninitialized(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag);
 
+    _Ret_maybenull_
     void*
     ExAllocatePoolWithTag(
         _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag);
 
     void
-    ExFreePool(_In_ __drv_freesMem(Mem) void* p);
+    ExFreePool(_Frees_ptr_ void* p);
 
     void
-    ExFreePoolWithTag(_In_ __drv_freesMem(Mem) void* p, ULONG tag);
+    ExFreePoolWithTag(_Frees_ptr_ void* p, ULONG tag);
 
     void
     ExInitializePushLock(_Out_ EX_PUSH_LOCK* push_lock);
@@ -151,3 +159,17 @@ extern "C"
 #if defined(__cplusplus)
 }
 #endif
+
+// The bug check functions below throw C++ exceptions so tests can catch them to verify error behavior.
+void
+ExFreePoolCPP(_Frees_ptr_ void* p);
+
+void
+ExFreePoolWithTagCPP(_Frees_ptr_ void* p, ULONG tag);
+
+_Ret_maybenull_ void*
+ExAllocatePoolWithTagCPP(
+    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag);
+
+_Ret_maybenull_ void*
+ExAllocatePoolUninitializedCPP(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag);
