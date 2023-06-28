@@ -59,7 +59,7 @@ MmAllocatePagesForMdlEx(
     if (!descriptor) {
         return nullptr;
     }
-    memset(descriptor, 0, sizeof(descriptor));
+    memset(descriptor, 0, sizeof(*descriptor));
 
     descriptor->start_va = VirtualAlloc(0, total_bytes, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     descriptor->byte_count = (ULONG)total_bytes;

@@ -91,6 +91,7 @@ TEST_CASE("MmAllocatePagesForMdlEx", "[mm]")
     REQUIRE(base_address != nullptr);
 
     REQUIRE(MmGetMdlByteCount(mdl) == byte_count);
+    REQUIRE(MmGetMdlByteOffset(mdl) == 0);
 
     MmUnmapLockedPages(base_address, mdl);
     MmFreePagesFromMdl(mdl);
