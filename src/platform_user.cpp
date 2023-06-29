@@ -155,7 +155,7 @@ class _usersim_emulated_dpc
      *
      * @param[in] i CPU to run on.
      */
-    _usersim_emulated_dpc(size_t i) : head({}), terminate(false)
+    _usersim_emulated_dpc(size_t i) : head({}), terminate(false), old_irql(PASSIVE_LEVEL)
     {
         usersim_list_initialize(&head);
         thread = std::thread([i, this]() {
