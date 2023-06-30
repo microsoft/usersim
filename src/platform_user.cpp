@@ -9,7 +9,7 @@
 #include "usersim/ex.h"
 #include "usersim/mm.h"
 
-#include <TraceLoggingProvider.h>
+#include "../inc/TraceLoggingProvider.h"
 #include <functional>
 #include <intsafe.h>
 #include <map>
@@ -1111,43 +1111,6 @@ usersim_result_to_win32_error_code(NTSTATUS result)
     return RtlNtStatusToDosError(result);
 }
 
-static std::vector<std::string> _usersim_platform_printk_output;
-static std::mutex _usersim_platform_printk_output_lock;
-
-/**
- * @brief Get the strings written via bpf_printk.
- *
- * @return Vector of strings written via bpf_printk.
- */
-std::vector<std::string>
-usersim_platform_printk_output()
-{
-    std::unique_lock<std::mutex> lock(_usersim_platform_printk_output_lock);
-    return std::move(_usersim_platform_printk_output);
-}
-
-long
-usersim_platform_printk(_In_z_ const char* format, va_list arg_list)
-{
-    int bytes_written = vprintf(format, arg_list);
-    if (bytes_written >= 0) {
-        putchar('\n');
-        bytes_written++;
-    }
-
-    std::string output;
-    output.resize(bytes_written);
-
-    vsprintf_s(output.data(), output.size(), format, arg_list);
-    // Remove the trailing null.
-    output.pop_back();
-
-    std::unique_lock<std::mutex> lock(_usersim_platform_printk_output_lock);
-    _usersim_platform_printk_output.emplace_back(std::move(output));
-
-    return bytes_written;
-}
-
 _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSTATUS
     usersim_platform_get_authentication_id(_Out_ uint64_t* authentication_id)
 {
@@ -1332,4 +1295,134 @@ usersim_platform_detach_process(_In_ usersim_process_state_t* state)
 {
     // This is a no-op for the user mode implementation.
     UNREFERENCED_PARAMETER(state);
+}
+
+#define HANDLE_VARIABLE_TYPE(type, fmt) \
+     { \
+        int count = va_arg(valist, int); \
+        i++; \
+        if (count > 0) { \
+            type value = va_arg(valist, type); \
+            printf("," fmt, value); \
+        } \
+        for (int j = 1; j < count; j++) { \
+            const char* str = va_arg(valist, const char*); \
+            printf(",\"%s\"", str); \
+        } \
+        i += count; \
+    }
+
+static bool _usersim_trace_logging_enabled = false;
+static UCHAR _usersim_trace_logging_event_level = 0;
+static ULONGLONG _usersim_trace_logging_event_keyword = 0;
+
+BOOLEAN
+usersim_trace_logging_provider_enabled(
+    _In_ const TraceLoggingHProvider hProvider, UCHAR event_level, ULONGLONG event_keyword)
+{
+    UNREFERENCED_PARAMETER(hProvider);
+    return (event_level <= _usersim_trace_logging_event_level) &&
+           (_usersim_trace_logging_event_keyword & event_keyword);
+}
+
+void
+usersim_trace_logging_set_enabled(bool enabled, UCHAR event_level, ULONGLONG event_keyword)
+{
+    _usersim_trace_logging_enabled = enabled;
+    _usersim_trace_logging_event_level = event_level;
+    _usersim_trace_logging_event_keyword = event_keyword;
+}
+
+void
+usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ const char* eventName, size_t argc, ...)
+{
+    UNREFERENCED_PARAMETER(hProvider);
+
+    if (!_usersim_trace_logging_enabled) {
+        return;
+    }
+    
+    printf("{%s", eventName);
+
+    va_list valist;
+    va_start(valist, argc);
+    int level = 0;
+    int keyword = 0;
+    int opcode = 0;
+    for (size_t i = 0; i < argc; i++) {
+        usersim_tlg_type_t type = va_arg(valist, usersim_tlg_type_t);
+        switch (type) {
+        case _tlgLevel:
+            level = va_arg(valist, int);
+            i++;
+            break;
+        case _tlgKeyword:
+            keyword = va_arg(valist, int);
+            i++;
+            break;
+        case _tlgOpcode:
+            opcode = va_arg(valist, int);
+            i++;
+            break;
+        case _tlgCountedUtf8String:
+            {
+            const char* value = va_arg(valist, const char*);
+            i++;
+            int size = va_arg(valist, int);
+            i++;
+            std::string result(value, size);
+            printf(",%s", result.c_str());
+
+            int count = va_arg(valist, int);
+            i++;
+            for (int j = 0; j < count; j++) {
+                const char* str = va_arg(valist, const char*);
+                printf(",\"%s\"", str);
+            }
+            i += count;
+            break;
+            }
+        case _tlgPsz: 
+            HANDLE_VARIABLE_TYPE(const char*, "\"%s\"");
+            break;
+        case _tlgPwsz:
+            HANDLE_VARIABLE_TYPE(const WCHAR*, "\"%ls\"");
+            break;
+        case _tlgPointer:
+            HANDLE_VARIABLE_TYPE(const void*, "%p");
+            break;
+        case _tlgUInt32:
+            HANDLE_VARIABLE_TYPE(uint32_t, "%u");
+            break;
+        case _tlgWinError:
+        case _tlgInt32:
+        case _tlgBool:
+            HANDLE_VARIABLE_TYPE(int32_t, "%d");
+            break;
+        case _tlgGuid: {
+            int count = va_arg(valist, int);
+            i++;
+            if (count > 0) {
+                GUID value = va_arg(valist, GUID);
+                char* guid_string = nullptr;
+                if (UuidToStringA(&value, (RPC_CSTR*)&guid_string) == RPC_S_OK) {
+                    printf(",%s", guid_string);
+                    RpcStringFreeA((RPC_CSTR*)&guid_string);
+                }
+            }
+            for (int j = 1; j < count; j++) {
+                const char* str = va_arg(valist, const char*);
+                printf(",\"%s\"", str);
+            }
+            i += count;
+            break;
+        }
+        default:
+            printf("<type %x>", type);
+            break;
+        }
+    }
+    va_end(valist);
+
+    printf("}\n");
 }

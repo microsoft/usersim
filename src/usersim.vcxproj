@@ -210,6 +210,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\inc\ntddk.h" />
+    <ClInclude Include="..\inc\TraceLoggingProvider.h" />
     <ClInclude Include="..\inc\usersim\ex.h" />
     <ClInclude Include="..\inc\wdf.h" />
     <ClInclude Include="fault_injection.h" />
