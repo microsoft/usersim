@@ -18,20 +18,22 @@ extern "C"
     {
         _tlgLevel = 0,
         _tlgKeyword,
-        _tlgPsz,
-        _tlgScalarVal,
-        _tlgNTStatus,
+        _tlgOpcode,
         _tlgCountedUtf8String,
+        _tlgPsz,
         _tlgPwsz,
-        _tlgGuid,
+        _tlgPointer,
         _tlgUInt64,
         _tlgUInt32,
+        _tlgUInt16,
+        _tlgIPv4Address,
+        _tlgNTStatus,
+        _tlgWinError,
         _tlgInt32,
         _tlgLong,
-        _tlgWinError,
-        _tlgOpcode,
-        _tlgPointer,
         _tlgBool,
+        _tlgGuid,
+        _tlgIPv6Address,
     } usersim_tlg_type_t;
 
     void
@@ -79,6 +81,15 @@ extern "C"
 
 #undef TraceLoggingInt32
 #define TraceLoggingInt32(...) _tlgInt32, USERSIM_VA_ARGC(__VA_ARGS__), __VA_ARGS__
+
+#undef TraceLoggingUInt16
+#define TraceLoggingUInt16(...) _tlgUInt16, USERSIM_VA_ARGC(__VA_ARGS__), __VA_ARGS__
+
+#undef TraceLoggingIPv4Address
+#define TraceLoggingIPv4Address(...) _tlgIPv4Address, USERSIM_VA_ARGC(__VA_ARGS__), __VA_ARGS__
+
+#undef TraceLoggingIPv6Address
+#define TraceLoggingIPv6Address(...) _tlgIPv6Address, USERSIM_VA_ARGC(__VA_ARGS__), __VA_ARGS__
 
 #undef TraceLoggingLong
 #define TraceLoggingLong(...) _tlgLong, USERSIM_VA_ARGC(__VA_ARGS__), __VA_ARGS__

@@ -1333,6 +1333,8 @@ usersim_trace_logging_set_enabled(bool enabled, UCHAR event_level, ULONGLONG eve
     _usersim_trace_logging_event_keyword = event_keyword;
 }
 
+#pragma comment(lib, "ntdll.lib")
+
 void
 usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ const char* eventName, size_t argc, ...)
 {
@@ -1391,11 +1393,21 @@ usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ c
         case _tlgPointer:
             HANDLE_VARIABLE_TYPE(const void*, "%p");
             break;
+        case _tlgUInt64:
+            HANDLE_VARIABLE_TYPE(uint64_t, "%I64u");
+            break;
         case _tlgUInt32:
             HANDLE_VARIABLE_TYPE(uint32_t, "%u");
             break;
+        case _tlgUInt16:
+            HANDLE_VARIABLE_TYPE(uint16_t, "%u");
+            break;
+        case _tlgNTStatus:
+            HANDLE_VARIABLE_TYPE(uint32_t, "%x");
+            break;
         case _tlgWinError:
         case _tlgInt32:
+        case _tlgLong:
         case _tlgBool:
             HANDLE_VARIABLE_TYPE(int32_t, "%d");
             break;
@@ -1409,6 +1421,40 @@ usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ c
                     printf(",%s", guid_string);
                     RpcStringFreeA((RPC_CSTR*)&guid_string);
                 }
+            }
+            for (int j = 1; j < count; j++) {
+                const char* str = va_arg(valist, const char*);
+                printf(",\"%s\"", str);
+            }
+            i += count;
+            break;
+        }
+        case _tlgIPv4Address:
+        {
+            int count = va_arg(valist, int);
+            i++;
+            if (count > 0) {
+                uint32_t ipv4 = va_arg(valist, uint32_t);
+                char buffer[50];
+                RtlIpv4AddressToStringA((const in_addr*)&ipv4, buffer);
+                printf(",\"%s\"", buffer);
+            }
+            for (int j = 1; j < count; j++) {
+                const char* str = va_arg(valist, const char*);
+                printf(",\"%s\"", str);
+            }
+            i += count;
+            break;
+        }
+        case _tlgIPv6Address:
+        {
+            int count = va_arg(valist, int);
+            i++;
+            if (count > 0) {
+                uint32_t* ipv6 = va_arg(valist, uint32_t*);
+                char buffer[50];
+                RtlIpv6AddressToStringA((const in6_addr*)ipv6, buffer);
+                printf(",\"%s\"", buffer);
             }
             for (int j = 1; j < count; j++) {
                 const char* str = va_arg(valist, const char*);
