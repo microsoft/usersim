@@ -1333,8 +1333,6 @@ usersim_trace_logging_set_enabled(bool enabled, UCHAR event_level, ULONGLONG eve
     _usersim_trace_logging_event_keyword = event_keyword;
 }
 
-#pragma comment(lib, "ntdll.lib")
-
 void
 usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ const char* eventName, size_t argc, ...)
 {

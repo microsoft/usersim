@@ -28,6 +28,7 @@ target_link_directories(usersim_tests PRIVATE
 
 target_link_libraries(usersim_tests PRIVATE
   "usersim.lib"
+  "ntdll.lib"
   Catch2::Catch2WithMain
 )
 
