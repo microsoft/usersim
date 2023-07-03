@@ -13,12 +13,6 @@
 
 // Ke* functions.
 
-ULONG
-KeQueryMaximumProcessorCount() { return GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS); }
-
-ULONG
-KeQueryMaximumProcessorCountEx(_In_ USHORT group_number) { return GetMaximumProcessorCount(group_number); }
-
 #pragma region irqls
 
 thread_local KIRQL _usersim_current_irql = PASSIVE_LEVEL;
@@ -119,6 +113,25 @@ KeQueryInterruptTime()
     return time;
 }
 
+#pragma region threads
+
+ULONG
+KeQueryMaximumProcessorCount() { return GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS); }
+
+ULONG
+KeQueryMaximumProcessorCountEx(_In_ USHORT group_number) { return GetMaximumProcessorCount(group_number); }
+
+KAFFINITY
+KeSetSystemAffinityThreadEx(KAFFINITY affinity)
+{
+    uintptr_t old_affinity = SetThreadAffinityMask(GetCurrentThread(), affinity);
+    if (old_affinity == 0) {
+        unsigned long error = GetLastError();
+        KeBugCheckEx(0, error, 0, 0, 0);
+    }
+    return (KAFFINITY)old_affinity;
+}
+
 _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
     KeRevertToUserAffinityThreadEx(_In_ KAFFINITY affinity)
 {
@@ -128,6 +141,8 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VO
 PKTHREAD
 NTAPI
 KeGetCurrentThread(VOID) { return (PKTHREAD)usersim_get_current_thread_id(); }
+
+#pragma endregion threads
 
 #pragma region semaphores
 

@@ -49,6 +49,9 @@ extern "C"
 
     void
     KeLowerIrql(_In_ KIRQL new_irql);
+
+    _IRQL_requires_min_(DISPATCH_LEVEL) NTKERNELAPI LOGICAL KeShouldYieldProcessor(VOID);
+
 #pragma endregion irqls
 
 #pragma region spin_locks
@@ -73,6 +76,11 @@ extern "C"
 
 #pragma endregion spin_locks
 
+    unsigned long long
+    KeQueryInterruptTime();
+
+#pragma region threads
+
     ULONG
     KeQueryMaximumProcessorCount();
 
@@ -82,8 +90,8 @@ extern "C"
 #define KeQueryActiveProcessorCount KeQueryMaximumProcessorCount
 #define KeQueryActiveProcessorCountEx KeQueryMaximumProcessorCountEx
 
-    unsigned long long
-    KeQueryInterruptTime();
+    KAFFINITY
+    KeSetSystemAffinityThreadEx(KAFFINITY affinity);
 
     _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
         KeRevertToUserAffinityThreadEx(_In_ KAFFINITY affinity);
@@ -94,7 +102,7 @@ extern "C"
     NTAPI
     KeGetCurrentThread(VOID);
 
-    _IRQL_requires_min_(DISPATCH_LEVEL) NTKERNELAPI LOGICAL KeShouldYieldProcessor(VOID);
+#pragma endregion threads
 
 #pragma region semaphores
 
