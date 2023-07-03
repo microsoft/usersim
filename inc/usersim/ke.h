@@ -117,6 +117,12 @@ extern "C"
             _In_ LONG adjustment,
             _In_ _Literal_ BOOLEAN wait);
 
+    LONG
+    KeReadStateSemaphore(_In_ PRKSEMAPHORE semaphore);
+
+    void
+    usersim_free_semaphores();
+
 #pragma endregion semaphores
 
     _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID

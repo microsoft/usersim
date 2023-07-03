@@ -129,6 +129,48 @@ TEST_CASE("processor count", "[ke]")
     REQUIRE(KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS) == count);
 }
 
+TEST_CASE("semaphore", "[ke]")
+{
+    REQUIRE(usersim_platform_initiate() == STATUS_SUCCESS);
+    KSEMAPHORE semaphore;
+
+    // Create a semaphore that is ready to be signaled twice.
+    KeInitializeSemaphore(&semaphore, 2, 2);
+
+    // Verify that it is signaled.
+    REQUIRE(KeReadStateSemaphore(&semaphore) != 0);
+
+    // Verify that it is still signaled after calling KeReadStateSemaphore.
+    REQUIRE(KeReadStateSemaphore(&semaphore) != 0);
+
+    // Verify we can take a reference.
+    LARGE_INTEGER timeout = {0};
+    REQUIRE(KeWaitForSingleObject(&semaphore, Executive, KernelMode, TRUE, &timeout) == STATUS_SUCCESS);
+
+    // Verify that it is still signaled, since the count should now be 1.
+    REQUIRE(KeReadStateSemaphore(&semaphore) != 0);
+
+    // Verify we can take a second reference.
+    REQUIRE(KeWaitForSingleObject(&semaphore, Executive, KernelMode, TRUE, &timeout) == STATUS_SUCCESS);
+
+    // The semaphore should now be not-signaled.
+    REQUIRE(KeReadStateSemaphore(&semaphore) == 0);
+
+    // Release one reference.
+    KeReleaseSemaphore(&semaphore, 1, 1, FALSE);
+
+    // It should now be signaled again.
+    REQUIRE(KeReadStateSemaphore(&semaphore) != 0);
+
+    // Release a second reference.
+    KeReleaseSemaphore(&semaphore, 1, 1, FALSE);
+
+    // It should still be signaled.
+    REQUIRE(KeReadStateSemaphore(&semaphore) != 0);
+
+    usersim_platform_terminate();
+}
+
 TEST_CASE("KeBugCheck", "[ke]")
 {
     try {
