@@ -7,14 +7,16 @@ can be used for code coverage, fuzzers, etc.
 ## Using
 
 To use this repository from another project:
-* Include this repository as a git submodule
-* Build your driver files as a DLL.  See the "sample" project as an example, which builds the
-  [KMDF sample driver](https://learn.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/writing-a-very-small-kmdf--driver)
-  as a DLL.
-* Define the preprocessor symbol USERSIM_DLLMAIN when building one file (typically the one containing your DriverEntry)
+1. Include this repository as a git submodule from your project.
+2. Build your driver files as a DLL.  That is, create a new project or directory, and have it include
+   the same source files as your driver does, but set the configuration type to be a Dynamic Library.
+   See the "sample" project as an example, which builds the
+   [KMDF sample driver](https://learn.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/writing-a-very-small-kmdf--driver)
+   as a DLL (the sample project can be built either using Visual Studio or using cmake).
+3. Define the preprocessor symbol USERSIM_DLLMAIN when building one file (typically the one containing your DriverEntry)
   that includes wdf.h.  The sample project does this not in the driver.c source file itself but rather in the sample.vcxproj that
-  builds it.
-* Add a reference from your DLL project to the usersim project.
+  builds it, but all that is important is defining it before including wdf.h.
+4. Add a reference from your DLL project to the usersim project.
 
 ## Contributing
 
