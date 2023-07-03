@@ -7,6 +7,7 @@
 #include "tracelog.h"
 #include "utilities.h"
 #include "usersim/ex.h"
+#include "usersim/ke.h"
 #include "usersim/mm.h"
 
 #include "../inc/TraceLoggingProvider.h"
@@ -378,9 +379,11 @@ KeFlushQueuedDpcs()
 void
 usersim_platform_terminate()
 {
+    usersim_free_semaphores();
+
     int32_t count = InterlockedDecrement((volatile long*)&_usersim_platform_initiate_count);
-    if (count != 0) {
-        return;
+    if (count < 0) {
+        KeBugCheckCPP(0);
     }
 }
 

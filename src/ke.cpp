@@ -5,6 +5,7 @@
 #include "usersim/ke.h"
 #include <format>
 #include <sstream>
+#include <vector>
 #undef ASSERT
 #define ASSERT(x) if (!(x)) KeBugCheckCPP(0)
 
@@ -130,11 +131,32 @@ KeGetCurrentThread(VOID) { return (PKTHREAD)usersim_get_current_thread_id(); }
 
 #pragma region semaphores
 
+static std::vector<HANDLE>* g_usersim_semaphore_handles = nullptr;
+
 _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI VOID
     KeInitializeSemaphore(_Out_ PRKSEMAPHORE semaphore, _In_ LONG count, _In_ LONG limit)
 {
     semaphore->handle = CreateSemaphore(nullptr, count, limit, nullptr);
     ASSERT(semaphore->handle != INVALID_HANDLE_VALUE);
+
+    // There is no kernel function to uninitialize a semaphore, but there is in user mode,
+    // so add the handle to a list we can clean up later.
+    if (g_usersim_semaphore_handles == nullptr) {
+        g_usersim_semaphore_handles = new std::vector<HANDLE>();
+    }
+    g_usersim_semaphore_handles->push_back(semaphore->handle);
+}
+
+void
+usersim_free_semaphores()
+{
+    if (g_usersim_semaphore_handles) {
+        for (auto handle : *g_usersim_semaphore_handles) {
+            ::CloseHandle(handle);
+        }
+        usersim_free(g_usersim_semaphore_handles);
+        g_usersim_semaphore_handles = nullptr;
+    }
 }
 
 _When_(wait == 0, _IRQL_requires_max_(DISPATCH_LEVEL))
@@ -145,6 +167,7 @@ _When_(wait == 0, _IRQL_requires_max_(DISPATCH_LEVEL))
     UNREFERENCED_PARAMETER(wait);
     LONG previous_count;
     ReleaseSemaphore(semaphore->handle, adjustment, &previous_count);
+    ASSERT(previous_count >= 0);
     return previous_count;
 }
 
@@ -180,6 +203,22 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _When_((timeout == NULL || timeout->QuadPart 
     default:
         return STATUS_UNSUCCESSFUL;
     }
+}
+
+// Returns 0 for non-signaled, non-zero for signaled.
+LONG
+KeReadStateSemaphore(_In_ PRKSEMAPHORE semaphore)
+{
+    DWORD result = WaitForSingleObject(semaphore->handle, 0);
+    if (result == WAIT_TIMEOUT) {
+        return 0; // Not signaled.
+    }
+
+    // Release the reference we just acquired.
+    ReleaseSemaphore(semaphore->handle, 1, nullptr);
+
+    // Report that the semaphore is signaled.
+    return 1;
 }
 
 #pragma endregion semaphores
