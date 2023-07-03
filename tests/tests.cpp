@@ -171,6 +171,21 @@ TEST_CASE("semaphore", "[ke]")
     usersim_platform_terminate();
 }
 
+TEST_CASE("threads", "[ke]")
+{
+    PKTHREAD thread = KeGetCurrentThread();
+    REQUIRE(thread != nullptr);
+
+    ULONG processor_count = KeQueryActiveProcessorCount();
+    REQUIRE(processor_count > 0);
+
+    KAFFINITY new_affinity = (1 << processor_count) - 1;
+    KAFFINITY old_affinity = KeSetSystemAffinityThreadEx(new_affinity);
+    REQUIRE(old_affinity != 0);
+
+    KeRevertToUserAffinityThreadEx(old_affinity);
+}
+
 TEST_CASE("KeBugCheck", "[ke]")
 {
     try {
