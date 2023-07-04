@@ -186,6 +186,37 @@ TEST_CASE("threads", "[ke]")
     KeRevertToUserAffinityThreadEx(old_affinity);
 }
 
+void
+dpc_routine(
+    _In_ PRKDPC dpc, _In_opt_ void* deferred_context, _In_opt_ void* system_argument1, _In_opt_ void* system_argument2)
+{
+    uint64_t argument1 = (uintptr_t)system_argument1;
+    uint64_t argument2 = (uintptr_t)system_argument2;
+    (*(uint64_t*)deferred_context) += argument1 + argument2;
+}
+
+TEST_CASE("dpcs", "[ke]")
+{
+    REQUIRE(usersim_platform_initiate() == STATUS_SUCCESS);
+
+    uint64_t context = 1;
+    KDPC dpc;
+    KeInitializeDpc(&dpc, dpc_routine, &context);
+    REQUIRE(KeRemoveQueueDpc(&dpc) == FALSE);
+    KeSetTargetProcessorDpc(&dpc, 0);
+
+    REQUIRE(KeInsertQueueDpc(&dpc, (void*)(uintptr_t)0, (void*)(uintptr_t)1) == TRUE);
+    REQUIRE(KeRemoveQueueDpc(&dpc) == TRUE);
+    REQUIRE(KeRemoveQueueDpc(&dpc) == FALSE);
+
+    REQUIRE(KeInsertQueueDpc(&dpc, (void*)(uintptr_t)1, (void*)(uintptr_t)2) == TRUE);
+    REQUIRE(KeInsertQueueDpc(&dpc, (void*)(uintptr_t)2, (void*)(uintptr_t)3) == FALSE);
+    KeFlushQueuedDpcs();
+    REQUIRE(context == 1 + 1 + 2);
+
+    usersim_platform_terminate();
+}
+
 TEST_CASE("KeBugCheck", "[ke]")
 {
     try {

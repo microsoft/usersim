@@ -154,8 +154,40 @@ extern "C"
     _IRQL_requires_same_ ULONG64
     KeQueryInterruptTimePrecise(_Out_ PULONG64 qpc_time_stamp);
 
+#pragma region dpcs
+
+    typedef struct _KDPC KDPC;
+    typedef KDPC* PRKDPC;
+
+    typedef void (*PKDEFERRED_ROUTINE)(
+        _In_ KDPC* dpc,
+        _In_opt_ void* deferred_context,
+        _In_opt_ void* system_argument1,
+        _In_opt_ void* system_argument2);
+
+    struct _KDPC
+    {
+        usersim_list_entry_t entry;
+        void* context;
+        CCHAR cpu_id;
+        void* parameter_1;
+        void* parameter_2;
+        PKDEFERRED_ROUTINE work_item_routine;
+    };
+
+    void
+    KeInitializeDpc(_Out_ __drv_aliasesMem PRKDPC dpc, _In_ PKDEFERRED_ROUTINE deferred_routine, _In_opt_ __drv_aliasesMem PVOID deferred_context);
+
+    BOOLEAN KeInsertQueueDpc(_Inout_ PRKDPC dpc, _In_opt_ PVOID system_argument1, _In_opt_ __drv_aliasesMem PVOID system_argument2);
+
+    BOOLEAN KeRemoveQueueDpc(_Inout_ PRKDPC dpc);
+
     void
     KeFlushQueuedDpcs();
+
+    void KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number);
+
+#pragma endregion dpcs
 
     LARGE_INTEGER KeQueryPerformanceCounter(_Out_opt_ PLARGE_INTEGER performance_frequency);
 

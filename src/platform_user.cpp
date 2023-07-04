@@ -127,127 +127,6 @@ _clean_up_thread_pool()
     _pool = nullptr;
 }
 
-class _usersim_emulated_dpc;
-
-typedef struct _usersim_non_preemptible_work_item
-{
-    usersim_list_entry_t entry;
-    void* context;
-    _usersim_emulated_dpc* queue;
-    void* parameter_1;
-    void (*work_item_routine)(_Inout_opt_ void* work_item_context, _Inout_opt_ void* parameter_1);
-} usersim_non_preemptible_work_item_t;
-
-class _usersim_emulated_dpc;
-static std::vector<std::shared_ptr<_usersim_emulated_dpc>> _usersim_emulated_dpcs;
-
-/**
- * @brief This class emulates kernel mode DPCs by maintaining a per-CPU thread running at maximum priority.
- * Work items can be queued to this thread, which then executes them without being interrupted by lower
- * priority threads.
- */
-class _usersim_emulated_dpc
-{
-  public:
-    _usersim_emulated_dpc() = delete;
-
-    /**
-     * @brief Construct a new emulated dpc object for CPU i.
-     *
-     * @param[in] i CPU to run on.
-     */
-    _usersim_emulated_dpc(size_t i) : head({}), terminate(false), old_irql(PASSIVE_LEVEL)
-    {
-        usersim_list_initialize(&head);
-        thread = std::thread([i, this]() {
-            old_irql = KeRaiseIrqlToDpcLevel();
-            std::unique_lock<std::mutex> l(mutex);
-            uintptr_t old_thread_affinity;
-            usersim_assert_success(usersim_set_current_thread_affinity(1ull << i, &old_thread_affinity));
-            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-            for (;;) {
-                if (terminate) {
-                    return;
-                }
-                if (!usersim_list_is_empty(&head)) {
-                    auto entry = usersim_list_remove_head_entry(&head);
-                    if (entry == &flush_entry) {
-                        usersim_list_initialize(&flush_entry);
-                        condition_variable.notify_all();
-                    } else {
-                        l.unlock();
-                        usersim_list_initialize(entry);
-                        auto work_item = reinterpret_cast<usersim_non_preemptible_work_item_t*>(entry);
-                        work_item->work_item_routine(work_item->context, work_item->parameter_1);
-                        l.lock();
-                    }
-                }
-                condition_variable.wait(l, [this]() { return terminate || !usersim_list_is_empty(&head); });
-            }
-        });
-    }
-
-    /**
-     * @brief Destroy the emulated dpc object.
-     *
-     */
-    ~_usersim_emulated_dpc()
-    {
-        KeLowerIrql(old_irql);
-        terminate = true;
-        condition_variable.notify_all();
-        thread.join();
-    }
-
-    /**
-     * @brief Wait for all currently queued work items to complete.
-     *
-     */
-    void
-    flush_queue()
-    {
-        std::unique_lock<std::mutex> l(mutex);
-        // Insert a marker in the queue.
-        usersim_list_initialize(&flush_entry);
-        usersim_list_insert_tail(&head, &flush_entry);
-        condition_variable.notify_all();
-        // Wait until the marker is processed.
-        condition_variable.wait(l, [this]() { return terminate || usersim_list_is_empty(&flush_entry); });
-    }
-
-    /**
-     * @brief Insert a work item into its associated queue.
-     *
-     * @param[in, out] work_item Work item to be enqueued.
-     * @param[in] parameter_1 Parameter to pass to worker function.
-     * @retval true Work item wasn't already queued.
-     * @retval false Work item is already queued.
-     */
-    static bool
-    insert(_Inout_ usersim_non_preemptible_work_item_t* work_item, _Inout_opt_ void* parameter_1)
-    {
-        auto& dpc_queue = *(work_item->queue);
-        std::unique_lock<std::mutex> l(dpc_queue.mutex);
-        if (!usersim_list_is_empty(&work_item->entry)) {
-            return false;
-        } else {
-            work_item->parameter_1 = parameter_1;
-            usersim_list_insert_tail(&dpc_queue.head, &work_item->entry);
-            dpc_queue.condition_variable.notify_all();
-            return true;
-        }
-    }
-
-  private:
-    usersim_list_entry_t flush_entry;
-    usersim_list_entry_t head;
-    std::thread thread;
-    std::mutex mutex;
-    std::condition_variable condition_variable;
-    bool terminate;
-    KIRQL old_irql;
-};
-
 /**
  * @brief Get an environment variable as a string.
  *
@@ -314,6 +193,8 @@ _get_environment_variable_as_size_t(const std::string& name)
     }
 }
 
+void usersim_initialize_dpcs();
+
 _Must_inspect_result_ usersim_result_t
 usersim_platform_initiate()
 {
@@ -344,9 +225,8 @@ usersim_platform_initiate()
             _usersim_leak_detector_ptr = std::make_unique<usersim_leak_detector_t>();
         }
 
-        for (size_t i = 0; i < usersim_get_cpu_count(); i++) {
-            _usersim_emulated_dpcs.push_back(std::make_shared<_usersim_emulated_dpc>(i));
-        }
+        usersim_initialize_dpcs();
+
         // Compute the starting index of each processor group.
         _usersim_platform_group_to_index_map.resize(_usersim_platform_maximum_group_count);
         uint32_t base_index = 0;
@@ -364,21 +244,16 @@ usersim_platform_initiate()
 }
 
 void
-KeFlushQueuedDpcs()
+usersim_platform_terminate()
 {
     ExWaitForRundownProtectionRelease(&_usersim_platform_preemptible_work_items_rundown);
 
     _clean_up_thread_pool();
-    _usersim_emulated_dpcs.resize(0);
     if (_usersim_leak_detector_ptr) {
         _usersim_leak_detector_ptr->dump_leaks();
         _usersim_leak_detector_ptr.reset();
     }
-}
 
-void
-usersim_platform_terminate()
-{
     usersim_free_semaphores();
 
     int32_t count = InterlockedDecrement((volatile long*)&_usersim_platform_initiate_count);
@@ -793,39 +668,6 @@ usersim_get_current_thread_id()
     return GetCurrentThreadId();
 }
 
-_Must_inspect_result_ usersim_result_t
-usersim_allocate_non_preemptible_work_item(
-    _Outptr_ usersim_non_preemptible_work_item_t** work_item,
-    uint32_t cpu_id,
-    _In_ void (*work_item_routine)(_Inout_opt_ void* work_item_context, _Inout_opt_ void* parameter_1),
-    _Inout_opt_ void* work_item_context)
-{
-    auto local_work_item =
-        reinterpret_cast<usersim_non_preemptible_work_item_t*>(usersim_allocate(sizeof(usersim_non_preemptible_work_item_t)));
-    if (!local_work_item) {
-        return STATUS_NO_MEMORY;
-    }
-    usersim_list_initialize(&local_work_item->entry);
-    local_work_item->queue = _usersim_emulated_dpcs[cpu_id].get();
-    local_work_item->work_item_routine = work_item_routine;
-    local_work_item->context = work_item_context;
-    *work_item = local_work_item;
-    local_work_item = nullptr;
-    return STATUS_SUCCESS;
-}
-
-void
-usersim_free_non_preemptible_work_item(_Frees_ptr_opt_ usersim_non_preemptible_work_item_t* work_item)
-{
-    usersim_free(work_item);
-}
-
-bool
-usersim_queue_non_preemptible_work_item(_Inout_ usersim_non_preemptible_work_item_t* work_item, _Inout_opt_ void* parameter_1)
-{
-    return _usersim_emulated_dpc::insert(work_item, parameter_1);
-}
-
 typedef struct _usersim_preemptible_work_item
 {
     PTP_WORK work;
@@ -982,9 +824,6 @@ usersim_free_timer_work_item(_Frees_ptr_opt_ usersim_timer_work_item_t* work_ite
 
     WaitForThreadpoolTimerCallbacks(work_item->threadpool_timer, true);
     CloseThreadpoolTimer(work_item->threadpool_timer);
-    for (auto& dpc : _usersim_emulated_dpcs) {
-        dpc->flush_queue();
-    }
     usersim_free(work_item);
 }
 

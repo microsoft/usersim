@@ -81,6 +81,10 @@ extern "C"
 
         previous_entry->Flink = next_entry;
         next_entry->Blink = previous_entry;
+
+        // Mark this entry as not in a list, for use by KeRemoveQueueDpc.
+        entry->Flink = entry->Blink = entry;
+
         return (previous_entry == next_entry);
     }
 
