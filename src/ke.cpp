@@ -326,3 +326,186 @@ KeBugCheckEx(
     KeBugCheckExCPP(
         bug_check_code, bug_check_parameter1, bug_check_parameter2, bug_check_parameter3, bug_check_parameter4);
 }
+
+#pragma region dpcs
+
+class _usersim_emulated_dpc;
+static std::vector<std::shared_ptr<_usersim_emulated_dpc>> _usersim_emulated_dpcs;
+
+/**
+ * @brief This class emulates kernel mode DPCs by maintaining a per-CPU thread running at maximum priority.
+ * Work items can be queued to this thread, which then executes them without being interrupted by lower
+ * priority threads.
+ */
+class _usersim_emulated_dpc
+{
+  public:
+    _usersim_emulated_dpc() = delete;
+
+    /**
+     * @brief Construct a new emulated dpc object for CPU i.
+     *
+     * @param[in] i CPU to run on.
+     */
+    _usersim_emulated_dpc(size_t i) : head({}), terminate(false), old_irql(PASSIVE_LEVEL)
+    {
+        usersim_list_initialize(&head);
+        thread = std::thread([i, this]() {
+            old_irql = KeRaiseIrqlToDpcLevel();
+            std::unique_lock<std::mutex> l(mutex);
+            uintptr_t old_thread_affinity;
+            usersim_assert_success(usersim_set_current_thread_affinity(1ull << i, &old_thread_affinity));
+            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+            for (;;) {
+                if (terminate) {
+                    return;
+                }
+                if (!usersim_list_is_empty(&head)) {
+                    auto entry = usersim_list_remove_head_entry(&head);
+                    if (entry == &flush_entry) {
+                        usersim_list_initialize(&flush_entry);
+                        condition_variable.notify_all();
+                    } else {
+                        l.unlock();
+                        usersim_list_initialize(entry);
+                        KDPC* work_item = reinterpret_cast<KDPC*>(entry);
+                        work_item->work_item_routine(
+                            work_item, work_item->context, work_item->parameter_1, work_item->parameter_2);
+                        l.lock();
+                    }
+                }
+                condition_variable.wait(l, [this]() { return terminate || !usersim_list_is_empty(&head); });
+            }
+        });
+    }
+
+    /**
+     * @brief Destroy the emulated dpc object.
+     *
+     */
+    ~_usersim_emulated_dpc()
+    {
+        KeLowerIrql(old_irql);
+        terminate = true;
+        condition_variable.notify_all();
+        thread.join();
+    }
+
+    /**
+     * @brief Wait for all currently queued work items to complete.
+     *
+     */
+    void
+    flush_queue()
+    {
+        std::unique_lock<std::mutex> l(mutex);
+        // Insert a marker in the queue.
+        usersim_list_initialize(&flush_entry);
+        usersim_list_insert_tail(&head, &flush_entry);
+        condition_variable.notify_all();
+        // Wait until the marker is processed.
+        condition_variable.wait(l, [this]() { return terminate || usersim_list_is_empty(&flush_entry); });
+    }
+
+    /**
+     * @brief Insert a work item into its associated queue.
+     *
+     * @param[in, out] work_item Work item to be enqueued.
+     * @param[in] parameter_1 Parameter to pass to worker function.
+     * @param[in] parameter_2 Parameter to pass to worker function.
+     * @retval true Work item wasn't already queued.
+     * @retval false Work item is already queued.
+     */
+    static bool
+    insert(_Inout_ KDPC* work_item, _Inout_opt_ void* parameter_1, _Inout_opt_ void* parameter_2)
+    {
+        _usersim_emulated_dpc& dpc_queue = *_usersim_emulated_dpcs[work_item->cpu_id].get();
+        std::unique_lock<std::mutex> l(dpc_queue.mutex);
+        if (!usersim_list_is_empty(&work_item->entry)) {
+            return false;
+        } else {
+            work_item->parameter_1 = parameter_1;
+            work_item->parameter_2 = parameter_2;
+            usersim_list_insert_tail(&dpc_queue.head, &work_item->entry);
+            dpc_queue.condition_variable.notify_all();
+            return true;
+        }
+    }
+
+    /**
+     * @brief Remove a work item from its associated queue, if any.
+     *
+     * @param[in, out] work_item Work item to be dequeued.
+     * @retval false Work item wasn't queued.
+     * @retval true Work item was queued.
+     */
+    static bool
+    remove(_Inout_ KDPC* work_item)
+    {
+        _usersim_emulated_dpc& dpc_queue = *_usersim_emulated_dpcs[work_item->cpu_id].get();
+        std::unique_lock<std::mutex> l(dpc_queue.mutex);
+        if (usersim_list_is_empty(&work_item->entry)) {
+            return false;
+        }
+        usersim_list_remove_entry(&work_item->entry);
+        return true;
+    }
+
+  private:
+    usersim_list_entry_t flush_entry;
+    usersim_list_entry_t head;
+    std::thread thread;
+    std::mutex mutex;
+    std::condition_variable condition_variable;
+    bool terminate;
+    KIRQL old_irql;
+};
+
+void
+KeInitializeDpc(
+    _Out_ __drv_aliasesMem PRKDPC dpc,
+    _In_ PKDEFERRED_ROUTINE deferred_routine,
+    _In_opt_ __drv_aliasesMem PVOID deferred_context)
+{
+    usersim_list_initialize(&dpc->entry);
+    dpc->cpu_id = 0;
+    dpc->work_item_routine = deferred_routine;
+    dpc->context = deferred_context;
+}
+
+void
+KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number)
+{
+    dpc->cpu_id = number;
+}
+
+BOOLEAN
+KeInsertQueueDpc(_Inout_ PRKDPC dpc, _In_opt_ PVOID system_argument1, _In_opt_ __drv_aliasesMem PVOID system_argument2)
+{
+    return _usersim_emulated_dpc::insert(dpc, system_argument1, system_argument2);
+}
+
+BOOLEAN
+KeRemoveQueueDpc(_Inout_ PRKDPC dpc)
+{
+    return _usersim_emulated_dpc::remove(dpc);
+}
+
+void
+KeFlushQueuedDpcs()
+{
+    for (auto& dpc : _usersim_emulated_dpcs) {
+        dpc->flush_queue();
+    }
+    _usersim_emulated_dpcs.resize(0);
+}
+
+void
+usersim_initialize_dpcs()
+{
+    for (size_t i = 0; i < usersim_get_cpu_count(); i++) {
+        _usersim_emulated_dpcs.push_back(std::make_shared<_usersim_emulated_dpc>(i));
+    }
+}
+
+#pragma endregion dpcs
