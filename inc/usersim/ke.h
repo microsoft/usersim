@@ -159,11 +159,12 @@ extern "C"
     typedef struct _KDPC KDPC;
     typedef KDPC* PRKDPC;
 
-    typedef void (*PKDEFERRED_ROUTINE)(
+    typedef void (KDEFERRED_ROUTINE)(
         _In_ KDPC* dpc,
         _In_opt_ void* deferred_context,
         _In_opt_ void* system_argument1,
         _In_opt_ void* system_argument2);
+    typedef KDEFERRED_ROUTINE* PKDEFERRED_ROUTINE;
 
     struct _KDPC
     {
