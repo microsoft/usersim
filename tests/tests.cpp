@@ -186,8 +186,8 @@ TEST_CASE("threads", "[ke]")
     KeRevertToUserAffinityThreadEx(old_affinity);
 }
 
-void
-dpc_routine(
+static void
+_dpc_routine(
     _In_ PRKDPC dpc, _In_opt_ void* deferred_context, _In_opt_ void* system_argument1, _In_opt_ void* system_argument2)
 {
     uint64_t argument1 = (uintptr_t)system_argument1;
@@ -201,7 +201,7 @@ TEST_CASE("dpcs", "[ke]")
 
     uint64_t context = 1;
     KDPC dpc;
-    KeInitializeDpc(&dpc, dpc_routine, &context);
+    KeInitializeDpc(&dpc, _dpc_routine, &context);
     REQUIRE(KeRemoveQueueDpc(&dpc) == FALSE);
     KeSetTargetProcessorDpc(&dpc, 0);
 
@@ -213,6 +213,81 @@ TEST_CASE("dpcs", "[ke]")
     REQUIRE(KeInsertQueueDpc(&dpc, (void*)(uintptr_t)2, (void*)(uintptr_t)3) == FALSE);
     KeFlushQueuedDpcs();
     REQUIRE(context == 1 + 1 + 2);
+
+    usersim_platform_terminate();
+}
+
+static void
+_timer_routine(
+    _In_ PRKDPC dpc, _In_opt_ void* deferred_context, _In_opt_ void* system_argument1, _In_opt_ void* system_argument2)
+{
+    UNREFERENCED_PARAMETER(system_argument1);
+    UNREFERENCED_PARAMETER(system_argument2);
+    (*(uint64_t*)deferred_context)++;
+}
+
+TEST_CASE("one-shot timers", "[ke]")
+{
+    REQUIRE(usersim_platform_initiate() == STATUS_SUCCESS);
+
+    uint64_t context = 1;
+    KTIMER timer;
+    KeInitializeTimer(&timer);
+    KDPC dpc;
+    KeInitializeDpc(&dpc, _timer_routine, &context);
+
+    // Test canceling a non-running timer.
+    REQUIRE(KeCancelTimer(&timer) == FALSE);
+
+    // Test a timer expiring immediately.
+    LARGE_INTEGER due_time = {.QuadPart = -1};
+    REQUIRE(KeSetTimer(&timer, due_time, &dpc) == FALSE);
+    Sleep(1000); // Wait 1 second to make sure it has time to expire.
+    REQUIRE(KeReadStateTimer(&timer) == TRUE); // Verify signaled.
+    REQUIRE(context == 2);
+
+    // Test canceling an expired timer.
+    REQUIRE(KeCancelTimer(&timer) == FALSE);
+    REQUIRE(KeReadStateTimer(&timer) == FALSE);
+    REQUIRE(context == 2);
+
+    // Test canceling a long-running timer.
+    due_time.QuadPart = -10000 * 1000 * 30ll; // 30 seconds.
+    REQUIRE(KeSetTimer(&timer, due_time, &dpc) == FALSE);
+    REQUIRE(KeReadStateTimer(&timer) == FALSE); // Verify not yet signaled.
+    REQUIRE(KeCancelTimer(&timer) == TRUE);
+    REQUIRE(KeReadStateTimer(&timer) == FALSE);
+    REQUIRE(context == 2);
+
+    // Test restarting a long-timer to make it expire immediately.
+    REQUIRE(KeSetTimer(&timer, due_time, &dpc) == FALSE);
+    due_time.QuadPart = -1;
+    REQUIRE(KeSetTimer(&timer, due_time, &dpc) == TRUE);
+    Sleep(1000); // Wait 1 second to make sure it has time to expire.
+    REQUIRE(KeReadStateTimer(&timer) == TRUE);
+    REQUIRE(context == 3);
+
+    usersim_platform_terminate();
+}
+
+TEST_CASE("periodic timers", "[ke]")
+{
+    REQUIRE(usersim_platform_initiate() == STATUS_SUCCESS);
+
+    uint64_t context = 1;
+    KTIMER timer;
+    KeInitializeTimer(&timer);
+    KDPC dpc;
+    KeInitializeDpc(&dpc, _timer_routine, &context);
+
+    // Set timer to expire immediately and then every second thereafter.
+    LARGE_INTEGER due_time = {.QuadPart = -1};
+    REQUIRE(KeSetTimerEx(&timer, due_time, 1000, &dpc) == FALSE);
+    Sleep(2500); // 2.5 seconds
+    KeCancelTimer(&timer);
+    REQUIRE(context == 4);
+    Sleep(1300); // 1.3 seconds.
+    REQUIRE(context == 4);
 
     usersim_platform_terminate();
 }

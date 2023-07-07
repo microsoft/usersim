@@ -153,6 +153,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI VOID
 {
     semaphore->handle = CreateSemaphore(nullptr, count, limit, nullptr);
     ASSERT(semaphore->handle != INVALID_HANDLE_VALUE);
+    semaphore->object_type = usersim_object_type_t::Semaphore;
 
     // There is no kernel function to uninitialize a semaphore, but there is in user mode,
     // so add the handle to a list we can clean up later.
@@ -206,17 +207,26 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _When_((timeout == NULL || timeout->QuadPart 
         timeout_ms = (DWORD)(timeout->QuadPart / 10000);
     }
 
-    PRKSEMAPHORE semaphore = (PRKSEMAPHORE)object;
-    DWORD result = WaitForSingleObject(semaphore->handle, timeout_ms);
-    switch (result) {
-    case WAIT_OBJECT_0:
-        return STATUS_SUCCESS;
-    case WAIT_TIMEOUT:
-        return STATUS_TIMEOUT;
-    case WAIT_ABANDONED:
-    case WAIT_FAILED:
+    // Get handle from object.
+    usersim_object_type_t type = *(usersim_object_type_t*)object;
+    switch (type) {
+    case usersim_object_type_t::Semaphore: {
+        PRKSEMAPHORE semaphore = (PRKSEMAPHORE)object;
+        DWORD result = WaitForSingleObject(semaphore->handle, timeout_ms);
+        switch (result) {
+        case WAIT_OBJECT_0:
+            return STATUS_SUCCESS;
+        case WAIT_TIMEOUT:
+            return STATUS_TIMEOUT;
+        case WAIT_ABANDONED:
+        case WAIT_FAILED:
+        default:
+            return STATUS_UNSUCCESSFUL;
+        }
+    }
     default:
-        return STATUS_UNSUCCESSFUL;
+        ASSERT(FALSE);
+        return STATUS_INVALID_PARAMETER;
     }
 }
 
@@ -509,3 +519,131 @@ usersim_initialize_dpcs()
 }
 
 #pragma endregion dpcs
+#pragma region timers
+
+static std::vector<TP_TIMER*>* g_usersim_threadpool_timers = nullptr;
+
+void
+KeInitializeTimer(_Out_ PKTIMER timer)
+{
+    memset(timer, 0, sizeof(*timer));
+    timer->object_type = usersim_object_type_t::Timer;
+}
+
+VOID CALLBACK
+_usersim_timer_callback(_Inout_ PTP_CALLBACK_INSTANCE instance, _Inout_opt_ PVOID context, _Inout_ PTP_TIMER threadpool_timer)
+{
+    UNREFERENCED_PARAMETER(instance);
+    UNREFERENCED_PARAMETER(threadpool_timer);
+
+    PKTIMER timer = (PKTIMER)context;
+    ASSERT(timer != nullptr);
+    ASSERT(timer->object_type == _usersim_object_type::Timer);
+    timer->signaled = TRUE;
+
+    if (timer->dpc) {
+        KIRQL old_irql;
+        KeRaiseIrql(DISPATCH_LEVEL, &old_irql);
+        timer->dpc->work_item_routine(
+            timer->dpc, timer->dpc->context, timer->dpc->parameter_1, timer->dpc->parameter_2);
+        KeLowerIrql(old_irql);
+    }
+}
+
+BOOLEAN
+KeSetTimer(_Inout_ PKTIMER timer, LARGE_INTEGER due_time, _In_opt_ PKDPC dpc)
+{
+    return KeSetCoalescableTimer(timer, due_time, 0, 0, dpc);
+}
+
+BOOLEAN
+KeSetTimerEx(_Inout_ PKTIMER timer, LARGE_INTEGER due_time, ULONG period, _In_opt_ PKDPC dpc)
+{
+    return KeSetCoalescableTimer(timer, due_time, period, 0, dpc);
+}
+
+BOOLEAN
+KeSetCoalescableTimer(
+    _Inout_ PKTIMER timer, LARGE_INTEGER due_time, ULONG period, ULONG tolerable_delay, _In_opt_ PKDPC dpc)
+{
+    ASSERT(dpc != nullptr);
+    ASSERT(timer->object_type == _usersim_object_type::Timer);
+
+    // We currently only support relative expiration times.
+    ASSERT(due_time.QuadPart < 0);
+
+    BOOLEAN running = (timer->threadpool_timer != nullptr);
+    if (!running) {
+        timer->threadpool_timer = CreateThreadpoolTimer(_usersim_timer_callback, timer, nullptr);
+        ASSERT(timer->threadpool_timer != nullptr);
+
+        // There is no kernel function to clean up a timer, but there is in user mode,
+        // so add the handle to a list we can clean up later.
+        if (g_usersim_threadpool_timers == nullptr) {
+            g_usersim_threadpool_timers = new std::vector<TP_TIMER*>();
+        }
+        g_usersim_threadpool_timers->push_back(timer->threadpool_timer);
+    }
+
+    timer->signaled = FALSE;
+    timer->dpc = dpc;
+    SetThreadpoolTimer(timer->threadpool_timer, (FILETIME*)&due_time, period, tolerable_delay);
+
+    return running;
+}
+
+void
+usersim_free_threadpool_timers()
+{
+    if (g_usersim_threadpool_timers) {
+        for (TP_TIMER* threadpool_timer : *g_usersim_threadpool_timers) {
+            CloseThreadpoolTimer(threadpool_timer);
+        }
+        usersim_free(g_usersim_threadpool_timers);
+        g_usersim_threadpool_timers = nullptr;
+    }
+}
+
+BOOLEAN
+KeCancelTimer(_Inout_ PKTIMER timer)
+{
+    // This call should never be made from the timeout handler since it waits
+    // for all callback functions to complete.  One way to assert that is to
+    // ensure we are at PASSIVE, since timeout handlers execute at DISPATCH.
+    ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
+
+    ASSERT(timer->object_type == _usersim_object_type::Timer);
+    if (timer->threadpool_timer == nullptr) {
+        return FALSE;
+    }
+
+    // Stop generating new callbacks.
+    SetThreadpoolTimer(timer->threadpool_timer, nullptr, 0, 0);
+
+    // Cancel any queued callbacks that have not yet started to execute.
+    WaitForThreadpoolTimerCallbacks(timer->threadpool_timer, TRUE);
+
+    // Clean up timer.
+    auto iterator =
+        std::find(g_usersim_threadpool_timers->begin(), g_usersim_threadpool_timers->end(), timer->threadpool_timer);
+    if (iterator != g_usersim_threadpool_timers->end()) {
+        g_usersim_threadpool_timers->erase(iterator);
+    }
+    CloseThreadpoolTimer(timer->threadpool_timer);
+    timer->threadpool_timer = nullptr;
+
+    // Return TRUE if the timer was running.
+    BOOLEAN was_running = !timer->signaled;
+    timer->signaled = FALSE;
+    return was_running;
+}
+
+// Check whether the current state is signaled.
+BOOLEAN
+KeReadStateTimer(_In_ PKTIMER timer)
+{
+    ASSERT(timer->object_type == _usersim_object_type::Timer);
+    return timer->signaled;
+}
+
+#pragma endregion timers

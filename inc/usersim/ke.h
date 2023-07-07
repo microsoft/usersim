@@ -21,6 +21,13 @@ extern "C"
         Executive,
     } KWAIT_REASON;
 
+    typedef enum class _usersim_object_type
+    {
+        Unknown,
+        Semaphore,
+        Timer,
+    } usersim_object_type_t;
+
     void
     KeEnterCriticalRegion(void);
 
@@ -108,6 +115,7 @@ extern "C"
 
     typedef struct _ksemaphore
     {
+        usersim_object_type_t object_type;
         HANDLE handle;
     } KSEMAPHORE;
     typedef KSEMAPHORE* PKSEMAPHORE;
@@ -157,6 +165,7 @@ extern "C"
 #pragma region dpcs
 
     typedef struct _KDPC KDPC;
+    typedef KDPC* PKDPC;
     typedef KDPC* PRKDPC;
 
     typedef void (KDEFERRED_ROUTINE)(
@@ -189,6 +198,38 @@ extern "C"
     void KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number);
 
 #pragma endregion dpcs
+#pragma region timers
+
+    typedef struct _ktimer
+    {
+        usersim_object_type_t object_type;
+        TP_TIMER* threadpool_timer;
+        KDPC* dpc;
+        BOOLEAN signaled;
+    } KTIMER;
+    typedef KTIMER* PKTIMER;
+
+    void
+    KeInitializeTimer(_Out_ PKTIMER timer);
+
+    BOOLEAN
+    KeSetTimer(_Inout_ PKTIMER timer, LARGE_INTEGER due_time, _In_opt_ PKDPC dpc);
+
+    BOOLEAN
+    KeSetTimerEx(_Inout_ PKTIMER timer, LARGE_INTEGER due_time, ULONG period, _In_opt_ PKDPC dpc);
+
+    BOOLEAN
+    KeSetCoalescableTimer(_Inout_ PKTIMER timer, LARGE_INTEGER due_time, ULONG period, ULONG tolerable_delay, _In_opt_ PKDPC dpc);
+
+    BOOLEAN KeCancelTimer(_Inout_ PKTIMER timer);
+
+    BOOLEAN
+    KeReadStateTimer(_In_ PKTIMER timer);
+
+    void
+    usersim_free_threadpool_timers();
+
+#pragma endregion timers
 
     LARGE_INTEGER KeQueryPerformanceCounter(_Out_opt_ PLARGE_INTEGER performance_frequency);
 
