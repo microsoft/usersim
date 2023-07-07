@@ -255,6 +255,7 @@ usersim_platform_terminate()
     }
 
     usersim_free_semaphores();
+    usersim_free_threadpool_timers();
 
     int32_t count = InterlockedDecrement((volatile long*)&_usersim_platform_initiate_count);
     if (count < 0) {
@@ -755,8 +756,8 @@ typedef struct _usersim_timer_work_item
     void* work_item_context;
 } usersim_timer_work_item_t;
 
-void
-_usersim_timer_callback(_Inout_ TP_CALLBACK_INSTANCE* instance, _Inout_opt_ void* context, _Inout_ TP_TIMER* timer)
+static void
+_usersim_timer_work_item_callback(_Inout_ TP_CALLBACK_INSTANCE* instance, _Inout_opt_ void* context, _Inout_ TP_TIMER* timer)
 {
     usersim_timer_work_item_t* timer_work_item = reinterpret_cast<usersim_timer_work_item_t*>(context);
     UNREFERENCED_PARAMETER(instance);
@@ -778,7 +779,7 @@ usersim_allocate_timer_work_item(
         goto Error;
     }
 
-    (*work_item)->threadpool_timer = CreateThreadpoolTimer(_usersim_timer_callback, *work_item, nullptr);
+    (*work_item)->threadpool_timer = CreateThreadpoolTimer(_usersim_timer_work_item_callback, *work_item, nullptr);
     if ((*work_item)->threadpool_timer == nullptr) {
         goto Error;
     }
