@@ -200,19 +200,43 @@ TEST_CASE("dpcs", "[ke]")
     REQUIRE(usersim_platform_initiate() == STATUS_SUCCESS);
 
     uint64_t context = 1;
+    uint64_t expected_context = context;
     KDPC dpc;
     KeInitializeDpc(&dpc, _dpc_routine, &context);
     REQUIRE(KeRemoveQueueDpc(&dpc) == FALSE);
     KeSetTargetProcessorDpc(&dpc, 0);
 
     REQUIRE(KeInsertQueueDpc(&dpc, (void*)(uintptr_t)0, (void*)(uintptr_t)1) == TRUE);
-    REQUIRE(KeRemoveQueueDpc(&dpc) == TRUE);
+
+    // Force it to be removed. In parallel, the DPC may be executing, but after the
+    // following call it should no longer be queued either way.
+    BOOLEAN removed = KeRemoveQueueDpc(&dpc);
+    if (!removed) {
+        expected_context += 1;
+    }
+
+    // Verify that trying to remove it again reports that it was not queued.
     REQUIRE(KeRemoveQueueDpc(&dpc) == FALSE);
 
-    REQUIRE(KeInsertQueueDpc(&dpc, (void*)(uintptr_t)1, (void*)(uintptr_t)2) == TRUE);
-    REQUIRE(KeInsertQueueDpc(&dpc, (void*)(uintptr_t)2, (void*)(uintptr_t)3) == FALSE);
+    // Wait for the DPC to complete, if it was running.
     KeFlushQueuedDpcs();
-    REQUIRE(context == 1 + 1 + 2);
+    REQUIRE(context == expected_context);
+
+    REQUIRE(KeInsertQueueDpc(&dpc, (void*)(uintptr_t)10, (void*)(uintptr_t)20) == TRUE);
+
+    // Try adding it again. In parallel, the DPC may be executing.
+    BOOLEAN again = KeInsertQueueDpc(&dpc, (void*)(uintptr_t)100, (void*)(uintptr_t)200);
+
+    // Wait for the DPC to finish.
+    KeFlushQueuedDpcs();
+    expected_context += 30;
+    if (again) {
+        expected_context += 300;
+    }
+    REQUIRE(context == expected_context);
+
+    // Verify KeFlushQueuedDpcs() can be called a second time.
+    KeFlushQueuedDpcs();
 
     usersim_platform_terminate();
 }
@@ -238,6 +262,11 @@ TEST_CASE("one-shot timers", "[ke]")
 
     // Test canceling a non-running timer.
     REQUIRE(KeCancelTimer(&timer) == FALSE);
+
+    // Verify canceling also works at dispatch level.
+    KIRQL old_irql = KeRaiseIrqlToDpcLevel();
+    REQUIRE(KeCancelTimer(&timer) == FALSE);
+    KeLowerIrql(old_irql);
 
     // Test a timer expiring immediately.
     LARGE_INTEGER due_time = {.QuadPart = -1};

@@ -197,6 +197,12 @@ extern "C"
 
     void KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number);
 
+    void
+    usersim_initialize_dpcs();
+
+    void
+    usersim_clean_up_dpcs();
+
 #pragma endregion dpcs
 #pragma region timers
 
@@ -247,6 +253,12 @@ extern "C"
 #if defined(__cplusplus)
 }
 #endif
+
+typedef enum
+{
+    IRQL_NOT_LESS_OR_EQUAL = 0x0A,
+    TIMER_OR_DPC_INVALID = 0xC7,
+} usersim_bug_check_code_t;
 
 // The bug check functions below throw C++ exceptions so tests can catch them to verify error behavior.
 void
