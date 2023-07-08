@@ -363,6 +363,7 @@ class _usersim_emulated_dpc
     _usersim_emulated_dpc(size_t i) : head({}), terminate(false), old_irql(PASSIVE_LEVEL)
     {
         usersim_list_initialize(&head);
+        usersim_list_initialize(&flush_entry);
         thread = std::thread([i, this]() {
             old_irql = KeRaiseIrqlToDpcLevel();
             std::unique_lock<std::mutex> l(mutex);
@@ -373,17 +374,25 @@ class _usersim_emulated_dpc
                 if (terminate) {
                     return;
                 }
+
                 if (!usersim_list_is_empty(&head)) {
                     auto entry = usersim_list_remove_head_entry(&head);
                     if (entry == &flush_entry) {
                         usersim_list_initialize(&flush_entry);
                         condition_variable.notify_all();
                     } else {
-                        l.unlock();
-                        usersim_list_initialize(entry);
+                        // Snapshot the arguments under the lock, to make sure
+                        // they are atomic, in case KeInsertQueueDpc() gets called
+                        // in parallel with different arguments.
                         KDPC* work_item = reinterpret_cast<KDPC*>(entry);
+                        void* context = work_item->context;
+                        void* parameter_1 = work_item->parameter_1;
+                        void* parameter_2 = work_item->parameter_2;
+                        usersim_list_initialize(entry);
+
+                        l.unlock();
                         work_item->work_item_routine(
-                            work_item, work_item->context, work_item->parameter_1, work_item->parameter_2);
+                            work_item, context, parameter_1, parameter_2);
                         l.lock();
                     }
                 }
@@ -510,7 +519,6 @@ KeFlushQueuedDpcs()
     for (auto& dpc : _usersim_emulated_dpcs) {
         dpc->flush_queue();
     }
-    _usersim_emulated_dpcs.resize(0);
 }
 
 void
@@ -519,6 +527,12 @@ usersim_initialize_dpcs()
     for (size_t i = 0; i < usersim_get_cpu_count(); i++) {
         _usersim_emulated_dpcs.push_back(std::make_shared<_usersim_emulated_dpc>(i));
     }
+}
+
+void
+usersim_clean_up_dpcs()
+{
+    _usersim_emulated_dpcs.resize(0);
 }
 
 #pragma endregion dpcs
@@ -545,8 +559,7 @@ _usersim_timer_callback(_Inout_ PTP_CALLBACK_INSTANCE instance, _Inout_opt_ PVOI
     timer->signaled = TRUE;
 
     if (timer->dpc) {
-        KIRQL old_irql;
-        KeRaiseIrql(DISPATCH_LEVEL, &old_irql);
+        KIRQL old_irql = KeRaiseIrqlToDpcLevel();
         timer->dpc->work_item_routine(
             timer->dpc, timer->dpc->context, timer->dpc->parameter_1, timer->dpc->parameter_2);
         KeLowerIrql(old_irql);
@@ -610,11 +623,6 @@ usersim_free_threadpool_timers()
 BOOLEAN
 KeCancelTimer(_Inout_ PKTIMER timer)
 {
-    // This call should never be made from the timeout handler since it waits
-    // for all callback functions to complete.  One way to assert that is to
-    // ensure we are at PASSIVE, since timeout handlers execute at DISPATCH.
-    ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
-
     ASSERT(timer->object_type == USERSIM_OBJECT_TYPE_TIMER);
     if (timer->threadpool_timer == nullptr) {
         return FALSE;

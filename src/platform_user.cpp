@@ -193,8 +193,6 @@ _get_environment_variable_as_size_t(const std::string& name)
     }
 }
 
-void usersim_initialize_dpcs();
-
 _Must_inspect_result_ usersim_result_t
 usersim_platform_initiate()
 {
@@ -248,14 +246,14 @@ usersim_platform_terminate()
 {
     ExWaitForRundownProtectionRelease(&_usersim_platform_preemptible_work_items_rundown);
 
+    usersim_free_semaphores();
+    usersim_free_threadpool_timers();
+    usersim_clean_up_dpcs();
     _clean_up_thread_pool();
     if (_usersim_leak_detector_ptr) {
         _usersim_leak_detector_ptr->dump_leaks();
         _usersim_leak_detector_ptr.reset();
     }
-
-    usersim_free_semaphores();
-    usersim_free_threadpool_timers();
 
     int32_t count = InterlockedDecrement((volatile long*)&_usersim_platform_initiate_count);
     if (count < 0) {
