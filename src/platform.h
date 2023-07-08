@@ -66,7 +66,6 @@ extern "C"
 
     typedef struct _usersim_non_preemptible_work_item usersim_non_preemptible_work_item_t;
     typedef struct _usersim_preemptible_work_item usersim_preemptible_work_item_t;
-    typedef struct _usersim_timer_work_item usersim_timer_work_item_t;
 
     typedef struct _usersim_trampoline_table usersim_trampoline_table_t;
 
@@ -323,21 +322,6 @@ extern "C"
         _Inout_ usersim_lock_t* lock, _IRQL_restores_ usersim_lock_state_t state);
 
     /**
-     * @brief Raise the IRQL to new_irql.
-     *
-     * @param[in] new_irql The new IRQL.
-     * @return The previous IRQL.
-     */
-    _IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ uint8_t usersim_raise_irql(uint8_t new_irql);
-
-    /**
-     * @brief Lower the IRQL to old_irql.
-     *
-     * @param[in] old_irql The old IRQL.
-     */
-    _IRQL_requires_max_(HIGH_LEVEL) void usersim_lower_irql(_In_ _Notliteral_ _IRQL_restores_ uint8_t old_irql);
-
-    /**
      * @brief Query the platform for the total number of CPUs.
      * @return The count of logical cores in the system.
      */
@@ -361,55 +345,6 @@ extern "C"
      */
     uint64_t
     usersim_get_current_thread_id();
-
-    /**
-     * @brief Query the platform to determine if non-preemptible work items are
-     *   supported.
-     *
-     * @retval true Non-preemptible work items are supported.
-     * @retval false Non-preemptible work items are not supported.
-     */
-    bool
-    usersim_is_non_preemptible_work_item_supported();
-
-    /**
-     * @brief Create a non-preemptible work item.
-     *
-     * @param[out] work_item Pointer to memory that will contain the pointer to
-     *  the non-preemptible work item on success.
-     * @param[in] cpu_id Associate the work item with this CPU.
-     * @param[in] work_item_routine Routine to execute as a work item.
-     * @param[in, out] work_item_context Context to pass to the routine.
-     * @retval USERSIM_SUCCESS The operation was successful.
-     * @retval USERSIM_NO_MEMORY Unable to allocate resources for this
-     *  work item.
-     */
-    _Must_inspect_result_ usersim_result_t
-    usersim_allocate_non_preemptible_work_item(
-        _Outptr_ usersim_non_preemptible_work_item_t** work_item,
-        uint32_t cpu_id,
-        _In_ void (*work_item_routine)(_Inout_opt_ void* work_item_context, _Inout_opt_ void* parameter_1),
-        _Inout_opt_ void* work_item_context);
-
-    /**
-     * @brief Free a non-preemptible work item.
-     *
-     * @param[in] work_item Pointer to the work item to free.
-     */
-    void
-    usersim_free_non_preemptible_work_item(_Frees_ptr_opt_ usersim_non_preemptible_work_item_t* work_item);
-
-    /**
-     * @brief Schedule a non-preemptible work item to run.
-     *
-     * @param[in, out] work_item Work item to schedule.
-     * @param[in, out] parameter_1 Parameter to pass to work item.
-     * @retval true Work item was queued.
-     * @retval false Work item is already queued.
-     */
-    bool
-    usersim_queue_non_preemptible_work_item(
-        _Inout_ usersim_non_preemptible_work_item_t* work_item, _Inout_opt_ void* parameter_1);
 
     /**
      * @brief Create a preemptible work item.
@@ -443,40 +378,6 @@ extern "C"
      */
     void
     usersim_queue_preemptible_work_item(_Inout_ usersim_preemptible_work_item_t* work_item);
-
-    /**
-     * @brief Allocate a timer to run a non-preemptible work item.
-     *
-     * @param[out] timer Pointer to memory that will contain timer on success.
-     * @param[in] work_item_routine Routine to execute when time expires.
-     * @param[in, out] work_item_context Context to pass to routine.
-     * @retval USERSIM_SUCCESS The operation was successful.
-     * @retval USERSIM_NO_MEMORY Unable to allocate resources for this
-     *  timer.
-     */
-    _Must_inspect_result_ usersim_result_t
-    usersim_allocate_timer_work_item(
-        _Outptr_ usersim_timer_work_item_t** timer,
-        _In_ void (*work_item_routine)(_Inout_opt_ void* work_item_context),
-        _Inout_opt_ void* work_item_context);
-
-    /**
-     * @brief Schedule a work item to be executed after elapsed_microseconds.
-     *
-     * @param[in, out] timer Pointer to timer to schedule.
-     * @param[in] elapsed_microseconds Microseconds to delay before executing
-     *   work item.
-     */
-    void
-    usersim_schedule_timer_work_item(_Inout_ usersim_timer_work_item_t* timer, uint32_t elapsed_microseconds);
-
-    /**
-     * @brief Free a timer.
-     *
-     * @param[in] timer Timer to be freed.
-     */
-    void
-    usersim_free_timer_work_item(_Frees_ptr_opt_ usersim_timer_work_item_t* timer);
 
     /**
      * @brief Atomically increase the value of addend by 1 and return the new
@@ -813,15 +714,6 @@ extern "C"
     _Must_inspect_result_ usersim_result_t
     usersim_cryptographic_hash_get_hash_length(_In_ const usersim_cryptographic_hash_t* hash, _Out_ size_t* length);
 
-    /**
-     * @brief Should the current thread yield the processor?
-     *
-     * @retval true Thread should yield the processor.
-     * @retval false Thread should not yield the processor.
-     */
-    bool
-    usersim_should_yield_processor();
-
 /**
  * @brief Append a value to a cryptographic hash object.
  * @param[in] hash The hash object to update.
@@ -847,44 +739,6 @@ extern "C"
      */
     _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ usersim_result_t
         usersim_platform_get_authentication_id(_Out_ uint64_t* authentication_id);
-
-    typedef struct _usersim_semaphore usersim_semaphore_t;
-
-    /**
-     * @brief Create a semaphore.
-     *
-     * @param[out] semaphore Pointer to the memory that contains the semaphore.
-     * @param[in] initial_count Initial count of the semaphore.
-     * @param[in] maximum_count Maximum count of the semaphore.
-     * @retval USERSIM_SUCCESS The hash object was created.
-     * @retval USERSIM_NO_MEMORY Unable to allocate resources for the semaphore.
-     */
-    _Must_inspect_result_ usersim_result_t
-    usersim_semaphore_create(_Outptr_ usersim_semaphore_t** semaphore, int initial_count, int maximum_count);
-
-    /**
-     * @brief Destroy a semaphore.
-     *
-     * @param[in] semaphore Semaphore to destroy.
-     */
-    void
-    usersim_semaphore_destroy(_Frees_ptr_opt_ usersim_semaphore_t* semaphore);
-
-    /**
-     * @brief Wait on a semaphore.
-     *
-     * @param[in] semaphore Semaphore to wait on.
-     */
-    void
-    usersim_semaphore_wait(_In_ usersim_semaphore_t* semaphore);
-
-    /**
-     * @brief Release a semaphore.
-     *
-     * @param[in] semaphore Semaphore to release.
-     */
-    void
-    usersim_semaphore_release(_In_ usersim_semaphore_t* semaphore);
 
     /**
      * @brief Enter a critical region. This will defer execution of kernel APCs

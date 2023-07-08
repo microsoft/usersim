@@ -153,7 +153,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI VOID
 {
     semaphore->handle = CreateSemaphore(nullptr, count, limit, nullptr);
     ASSERT(semaphore->handle != INVALID_HANDLE_VALUE);
-    semaphore->object_type = usersim_object_type_t::Semaphore;
+    semaphore->object_type = USERSIM_OBJECT_TYPE_SEMAPHORE;
 
     // There is no kernel function to uninitialize a semaphore, but there is in user mode,
     // so add the handle to a list we can clean up later.
@@ -181,6 +181,8 @@ _When_(wait == 0, _IRQL_requires_max_(DISPATCH_LEVEL))
 {
     UNREFERENCED_PARAMETER(increment);
     UNREFERENCED_PARAMETER(wait);
+
+    ASSERT(semaphore->object_type == USERSIM_OBJECT_TYPE_SEMAPHORE);
     LONG previous_count;
     ReleaseSemaphore(semaphore->handle, adjustment, &previous_count);
     ASSERT(previous_count >= 0);
@@ -210,7 +212,7 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _When_((timeout == NULL || timeout->QuadPart 
     // Get handle from object.
     usersim_object_type_t type = *(usersim_object_type_t*)object;
     switch (type) {
-    case usersim_object_type_t::Semaphore: {
+    case USERSIM_OBJECT_TYPE_SEMAPHORE: {
         PRKSEMAPHORE semaphore = (PRKSEMAPHORE)object;
         DWORD result = WaitForSingleObject(semaphore->handle, timeout_ms);
         switch (result) {
@@ -234,6 +236,7 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _When_((timeout == NULL || timeout->QuadPart 
 LONG
 KeReadStateSemaphore(_In_ PRKSEMAPHORE semaphore)
 {
+    ASSERT(semaphore->object_type == USERSIM_OBJECT_TYPE_SEMAPHORE);
     DWORD result = WaitForSingleObject(semaphore->handle, 0);
     if (result == WAIT_TIMEOUT) {
         return 0; // Not signaled.
@@ -527,7 +530,7 @@ void
 KeInitializeTimer(_Out_ PKTIMER timer)
 {
     memset(timer, 0, sizeof(*timer));
-    timer->object_type = usersim_object_type_t::Timer;
+    timer->object_type = USERSIM_OBJECT_TYPE_TIMER;
 }
 
 VOID CALLBACK
@@ -538,7 +541,7 @@ _usersim_timer_callback(_Inout_ PTP_CALLBACK_INSTANCE instance, _Inout_opt_ PVOI
 
     PKTIMER timer = (PKTIMER)context;
     ASSERT(timer != nullptr);
-    ASSERT(timer->object_type == _usersim_object_type::Timer);
+    ASSERT(timer->object_type == USERSIM_OBJECT_TYPE_TIMER);
     timer->signaled = TRUE;
 
     if (timer->dpc) {
@@ -567,7 +570,7 @@ KeSetCoalescableTimer(
     _Inout_ PKTIMER timer, LARGE_INTEGER due_time, ULONG period, ULONG tolerable_delay, _In_opt_ PKDPC dpc)
 {
     ASSERT(dpc != nullptr);
-    ASSERT(timer->object_type == _usersim_object_type::Timer);
+    ASSERT(timer->object_type == USERSIM_OBJECT_TYPE_TIMER);
 
     // We currently only support relative expiration times.
     ASSERT(due_time.QuadPart < 0);
@@ -612,7 +615,7 @@ KeCancelTimer(_Inout_ PKTIMER timer)
     // ensure we are at PASSIVE, since timeout handlers execute at DISPATCH.
     ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
 
-    ASSERT(timer->object_type == _usersim_object_type::Timer);
+    ASSERT(timer->object_type == USERSIM_OBJECT_TYPE_TIMER);
     if (timer->threadpool_timer == nullptr) {
         return FALSE;
     }
@@ -642,7 +645,7 @@ KeCancelTimer(_Inout_ PKTIMER timer)
 BOOLEAN
 KeReadStateTimer(_In_ PKTIMER timer)
 {
-    ASSERT(timer->object_type == _usersim_object_type::Timer);
+    ASSERT(timer->object_type == USERSIM_OBJECT_TYPE_TIMER);
     return timer->signaled;
 }
 

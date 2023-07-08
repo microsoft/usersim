@@ -21,11 +21,11 @@ extern "C"
         Executive,
     } KWAIT_REASON;
 
-    typedef enum class _usersim_object_type
+    typedef enum _usersim_object_type
     {
-        Unknown,
-        Semaphore,
-        Timer,
+        USERSIM_OBJECT_TYPE_UNKNOWN,
+        USERSIM_OBJECT_TYPE_SEMAPHORE,
+        USERSIM_OBJECT_TYPE_TIMER,
     } usersim_object_type_t;
 
     void
