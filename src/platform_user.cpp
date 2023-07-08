@@ -643,12 +643,6 @@ usersim_is_preemptible()
     return irql < DISPATCH_LEVEL;
 }
 
-bool
-usersim_is_non_preemptible_work_item_supported()
-{
-    return true;
-}
-
 ULONG
 KeGetCurrentProcessorNumberEx(_Out_opt_ PPROCESSOR_NUMBER ProcNumber)
 {
@@ -747,85 +741,6 @@ Done:
         *work_item = nullptr;
     }
     return result;
-}
-
-typedef struct _usersim_timer_work_item
-{
-    TP_TIMER* threadpool_timer;
-    void (*work_item_routine)(_Inout_opt_ void* work_item_context);
-    void* work_item_context;
-} usersim_timer_work_item_t;
-
-static void
-_usersim_timer_work_item_callback(_Inout_ TP_CALLBACK_INSTANCE* instance, _Inout_opt_ void* context, _Inout_ TP_TIMER* timer)
-{
-    usersim_timer_work_item_t* timer_work_item = reinterpret_cast<usersim_timer_work_item_t*>(context);
-    UNREFERENCED_PARAMETER(instance);
-    UNREFERENCED_PARAMETER(timer);
-    if (timer_work_item) {
-        timer_work_item->work_item_routine(timer_work_item->work_item_context);
-    }
-}
-
-_Must_inspect_result_ NTSTATUS
-usersim_allocate_timer_work_item(
-    _Outptr_ usersim_timer_work_item_t** work_item,
-    _In_ void (*work_item_routine)(_Inout_opt_ void* work_item_context),
-    _Inout_opt_ void* work_item_context)
-{
-    *work_item = (usersim_timer_work_item_t*)usersim_allocate(sizeof(usersim_timer_work_item_t));
-
-    if (*work_item == nullptr) {
-        goto Error;
-    }
-
-    (*work_item)->threadpool_timer = CreateThreadpoolTimer(_usersim_timer_work_item_callback, *work_item, nullptr);
-    if ((*work_item)->threadpool_timer == nullptr) {
-        goto Error;
-    }
-
-    (*work_item)->work_item_routine = work_item_routine;
-    (*work_item)->work_item_context = work_item_context;
-
-    return STATUS_SUCCESS;
-
-Error:
-    if (*work_item != nullptr) {
-        if ((*work_item)->threadpool_timer != nullptr) {
-            CloseThreadpoolTimer((*work_item)->threadpool_timer);
-        }
-
-        usersim_free(*work_item);
-    }
-    return STATUS_NO_MEMORY;
-}
-
-#define MICROSECONDS_PER_TICK 10
-#define MICROSECONDS_PER_MILLISECOND 1000
-
-void
-usersim_schedule_timer_work_item(_Inout_ usersim_timer_work_item_t* timer, uint32_t elapsed_microseconds)
-{
-    int64_t due_time;
-    due_time = -static_cast<int64_t>(elapsed_microseconds) * MICROSECONDS_PER_TICK;
-
-    SetThreadpoolTimer(
-        timer->threadpool_timer,
-        reinterpret_cast<FILETIME*>(&due_time),
-        0,
-        elapsed_microseconds / MICROSECONDS_PER_MILLISECOND);
-}
-
-void
-usersim_free_timer_work_item(_Frees_ptr_opt_ usersim_timer_work_item_t* work_item)
-{
-    if (!work_item) {
-        return;
-    }
-
-    WaitForThreadpoolTimerCallbacks(work_item->threadpool_timer, true);
-    CloseThreadpoolTimer(work_item->threadpool_timer);
-    usersim_free(work_item);
 }
 
 int32_t
@@ -993,72 +908,6 @@ _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSTATUS
 Exit:
     usersim_free(privileges);
     return return_value;
-}
-
-_IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ uint8_t usersim_raise_irql(uint8_t new_irql)
-{
-    UNREFERENCED_PARAMETER(new_irql);
-    return 0;
-}
-
-_IRQL_requires_max_(HIGH_LEVEL) void usersim_lower_irql(_In_ _Notliteral_ _IRQL_restores_ uint8_t old_irql)
-{
-    UNREFERENCED_PARAMETER(old_irql);
-}
-
-bool
-usersim_should_yield_processor()
-{
-    return false;
-}
-
-uint8_t
-usersim_get_current_irql()
-{
-    return KeGetCurrentIrql();
-}
-
-typedef struct _usersim_semaphore
-{
-    HANDLE semaphore;
-} usersim_semaphore_t;
-
-_Must_inspect_result_ usersim_result_t
-usersim_semaphore_create(_Outptr_ usersim_semaphore_t** semaphore, int initial_count, int maximum_count)
-{
-    *semaphore = (usersim_semaphore_t*)usersim_allocate(sizeof(usersim_semaphore_t));
-    if (*semaphore == nullptr) {
-        return STATUS_NO_MEMORY;
-    }
-
-    (*semaphore)->semaphore = CreateSemaphore(nullptr, initial_count, maximum_count, nullptr);
-    if ((*semaphore)->semaphore == INVALID_HANDLE_VALUE) {
-        usersim_free(*semaphore);
-        *semaphore = nullptr;
-        return STATUS_NO_MEMORY;
-    }
-    return STATUS_SUCCESS;
-}
-
-void
-usersim_semaphore_destroy(_Frees_ptr_opt_ usersim_semaphore_t* semaphore)
-{
-    if (semaphore) {
-        ::CloseHandle(semaphore->semaphore);
-        usersim_free(semaphore);
-    }
-}
-
-void
-usersim_semaphore_wait(_In_ usersim_semaphore_t* semaphore)
-{
-    WaitForSingleObject(semaphore->semaphore, INFINITE);
-}
-
-void
-usersim_semaphore_release(_In_ usersim_semaphore_t* semaphore)
-{
-    ReleaseSemaphore(semaphore->semaphore, 1, nullptr);
 }
 
 void
