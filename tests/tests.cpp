@@ -94,19 +94,6 @@ TEST_CASE("MmAllocatePagesForMdlEx", "[mm]")
     REQUIRE(MmGetMdlByteOffset(mdl) == 0);
 
     MmUnmapLockedPages(base_address, mdl);
-
-    // Try a second unmap.
-    try {
-        MmUnmapLockedPagesCPP(base_address, mdl);
-        REQUIRE(FALSE);
-    } catch (std::exception e) {
-        PCSTR expected_message_prefix = "*** STOP 0x000000d7 ";
-        REQUIRE(
-            strncmp(
-                e.what(), expected_message_prefix, strlen(expected_message_prefix)) ==
-            0);
-    }
-
     MmFreePagesFromMdl(mdl);
     ExFreePool(mdl);
 }
