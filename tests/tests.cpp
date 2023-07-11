@@ -94,6 +94,19 @@ TEST_CASE("MmAllocatePagesForMdlEx", "[mm]")
     REQUIRE(MmGetMdlByteOffset(mdl) == 0);
 
     MmUnmapLockedPages(base_address, mdl);
+
+    // Try a second unmap.
+    try {
+        MmUnmapLockedPagesCPP(base_address, mdl);
+        REQUIRE(FALSE);
+    } catch (std::exception e) {
+        PCSTR expected_message_prefix = "*** STOP 0x000000d7 ";
+        REQUIRE(
+            strncmp(
+                e.what(), expected_message_prefix, strlen(expected_message_prefix)) ==
+            0);
+    }
+
     MmFreePagesFromMdl(mdl);
     ExFreePool(mdl);
 }
@@ -329,7 +342,7 @@ TEST_CASE("KeBugCheck", "[ke]")
     } catch (std::exception e) {
         REQUIRE(
             strcmp(
-                e.what(), "*** STOP 0x000011 (0x00000000000000,0x00000000000000,0x00000000000000,0x00000000000000)") ==
+                e.what(), "*** STOP 0x00000011 (0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000)") ==
             0);
     }
 }
@@ -342,7 +355,7 @@ TEST_CASE("KeBugCheckEx", "[ke]")
     } catch (std::exception e) {
         REQUIRE(
             strcmp(
-                e.what(), "*** STOP 0x000011 (0x00000000000001,0x00000000000002,0x00000000000003,0x00000000000004)") ==
+                e.what(), "*** STOP 0x00000011 (0x0000000000000001,0x0000000000000002,0x0000000000000003,0x0000000000000004)") ==
             0);
     }
 }
@@ -370,7 +383,7 @@ TEST_CASE("ExFreePool null", "[ex]")
     } catch (std::exception e) {
         REQUIRE(
             strcmp(
-                e.what(), "*** STOP 0x0000c2 (0x00000000000046,0x00000000000000,0x00000000000000,0x00000000000000)") ==
+                e.what(), "*** STOP 0x000000c2 (0x0000000000000046,0x0000000000000000,0x0000000000000000,0x0000000000000000)") ==
             0);
     } catch (...) {
         REQUIRE(FALSE);
@@ -382,7 +395,7 @@ TEST_CASE("ExFreePool null", "[ex]")
     } catch (std::exception e) {
         REQUIRE(
             strcmp(
-                e.what(), "*** STOP 0x0000c2 (0x00000000000046,0x00000000000000,0x00000000000000,0x00000000000000)") ==
+                e.what(), "*** STOP 0x000000c2 (0x0000000000000046,0x0000000000000000,0x0000000000000000,0x0000000000000000)") ==
             0);
     }
 }

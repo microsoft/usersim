@@ -319,7 +319,7 @@ KeBugCheckExCPP(
 {
     std::ostringstream ss;
     ss << std::format(
-        "*** STOP {:#08x} ({:#016x},{:#016x},{:#016x},{:#016x})",
+        "*** STOP {:#010x} ({:#018x},{:#018x},{:#018x},{:#018x})",
         bug_check_code,
         bug_check_parameter1,
         bug_check_parameter2,

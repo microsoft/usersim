@@ -6,9 +6,13 @@
 #include "platform.h"
 #include "tracelog.h"
 #include "usersim/ex.h"
+#include "usersim/ke.h"
 #include "usersim/mm.h"
 
 // Mm* functions.
+
+// Internal MDL flags.
+#define MDL_FLAG_MAPPED 0x01
 
 void
 MmBuildMdlForNonPagedPool(_Inout_ MDL* memory_descriptor_list)
@@ -21,11 +25,10 @@ MmGetSystemAddressForMdlSafe(
     _Inout_ MDL* mdl,
     _In_ unsigned long page_priority) // MM_PAGE_PRIORITY logically OR'd with MdlMapping*
 {
-    if (usersim_fault_injection_inject_fault()) {
-        return nullptr;
+    if (!(mdl->flags & MDL_FLAG_MAPPED)) {
+        MmMapLockedPagesSpecifyCache(mdl, KernelMode, MmCached, nullptr, TRUE, page_priority);
     }
 
-    UNREFERENCED_PARAMETER(page_priority);
     return ((void*)((PUCHAR)(mdl)->start_va + (mdl)->byte_offset));
 }
 
@@ -97,14 +100,34 @@ MmMapLockedPagesSpecifyCache(
     UNREFERENCED_PARAMETER(requested_address);
     UNREFERENCED_PARAMETER(bug_check_on_failure);
     UNREFERENCED_PARAMETER(priority);
+
+    if (memory_descriptor_list->flags & MDL_FLAG_MAPPED) {
+        // Already mapped.
+        KeBugCheck(0);
+    }
+
+    if (usersim_fault_injection_inject_fault()) {
+        return nullptr;
+    }
+
+    memory_descriptor_list->flags |= MDL_FLAG_MAPPED;
     return memory_descriptor_list->start_va;
+}
+
+void
+MmUnmapLockedPagesCPP(_In_ void* base_address, _In_ MDL* memory_descriptor_list)
+{
+    UNREFERENCED_PARAMETER(base_address);
+    if (!(memory_descriptor_list->flags & MDL_FLAG_MAPPED)) {
+        KeBugCheckEx(DRIVER_UNMAPPING_INVALID_VIEW, (uintptr_t)memory_descriptor_list, 1, 0, 0);
+    }
+    memory_descriptor_list->flags &= ~MDL_FLAG_MAPPED;
 }
 
 void
 MmUnmapLockedPages(_In_ void* base_address, _In_ MDL* memory_descriptor_list)
 {
-    UNREFERENCED_PARAMETER(base_address);
-    UNREFERENCED_PARAMETER(memory_descriptor_list);
+    return MmUnmapLockedPagesCPP(base_address, memory_descriptor_list);
 }
 
 NTSTATUS

@@ -238,7 +238,12 @@ usersim_platform_initiate()
         return STATUS_NO_MEMORY;
     }
 
-    return _initialize_thread_pool();
+    usersim_result_t result = _initialize_thread_pool();
+    if (result != STATUS_SUCCESS) {
+        // Clean up since usersim_platform_terminate() will not be called by the caller.
+        usersim_platform_terminate();
+    }
+    return result;
 }
 
 void

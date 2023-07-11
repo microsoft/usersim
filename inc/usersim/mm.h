@@ -114,4 +114,10 @@ extern "C"
 
 #if defined(__cplusplus)
 }
+
+// The functions below throw C++ exceptions so tests can catch them to verify error behavior.
+
+void
+MmUnmapLockedPagesCPP(_In_ void* base_address, _In_ MDL* memory_descriptor_list);
+
 #endif
