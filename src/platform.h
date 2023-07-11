@@ -92,6 +92,8 @@ extern "C"
 
     /**
      * @brief Terminate the usersim platform abstraction layer.
+     * The caller should only call this if usersim_platform_initiate()
+     * returned success.
      */
     void
     usersim_platform_terminate();

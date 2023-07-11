@@ -28,6 +28,13 @@ extern "C"
         USERSIM_OBJECT_TYPE_TIMER,
     } usersim_object_type_t;
 
+    typedef enum
+    {
+        IRQL_NOT_LESS_OR_EQUAL = 0x0A,
+        TIMER_OR_DPC_INVALID = 0xC7,
+        DRIVER_UNMAPPING_INVALID_VIEW = 0xD7,
+    } usersim_bug_check_code_t;
+
     void
     KeEnterCriticalRegion(void);
 
@@ -252,13 +259,6 @@ extern "C"
 
 #if defined(__cplusplus)
 }
-#endif
-
-typedef enum
-{
-    IRQL_NOT_LESS_OR_EQUAL = 0x0A,
-    TIMER_OR_DPC_INVALID = 0xC7,
-} usersim_bug_check_code_t;
 
 // The bug check functions below throw C++ exceptions so tests can catch them to verify error behavior.
 void
@@ -271,3 +271,5 @@ KeBugCheckExCPP(
     ULONG_PTR bug_check_parameter2,
     ULONG_PTR bug_check_parameter3,
     ULONG_PTR bug_check_parameter4);
+
+#endif
