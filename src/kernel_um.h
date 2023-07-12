@@ -52,12 +52,14 @@ extern "C"
 
     // Functions
 
+    __declspec(dllexport)
     unsigned long __cdecl DbgPrintEx(
         _In_ unsigned long component_id, _In_ unsigned long level, _In_z_ _Printf_format_string_ PCSTR format, ...);
 
     unsigned long long
     QueryInterruptTimeEx();
 
+    __declspec(dllexport)
     void
     FatalListEntryError(_In_ void* p1, _In_ void* p2, _In_ void* p3);
 

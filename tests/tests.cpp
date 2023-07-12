@@ -132,7 +132,6 @@ TEST_CASE("processor count", "[ke]")
 
 TEST_CASE("semaphore", "[ke]")
 {
-    REQUIRE(usersim_platform_initiate() == STATUS_SUCCESS);
     KSEMAPHORE semaphore;
 
     // Create a semaphore that is ready to be signaled twice.
@@ -168,8 +167,6 @@ TEST_CASE("semaphore", "[ke]")
 
     // It should still be signaled.
     REQUIRE(KeReadStateSemaphore(&semaphore) != 0);
-
-    usersim_platform_terminate();
 }
 
 TEST_CASE("threads", "[ke]")
@@ -198,8 +195,6 @@ _dpc_routine(
 
 TEST_CASE("dpcs", "[ke]")
 {
-    REQUIRE(usersim_platform_initiate() == STATUS_SUCCESS);
-
     uint64_t context = 1;
     uint64_t expected_context = context;
     KDPC dpc;
@@ -238,8 +233,6 @@ TEST_CASE("dpcs", "[ke]")
 
     // Verify KeFlushQueuedDpcs() can be called a second time.
     KeFlushQueuedDpcs();
-
-    usersim_platform_terminate();
 }
 
 static void
@@ -253,8 +246,6 @@ _timer_routine(
 
 TEST_CASE("one-shot timers", "[ke]")
 {
-    REQUIRE(usersim_platform_initiate() == STATUS_SUCCESS);
-
     uint64_t context = 1;
     KTIMER timer;
     KeInitializeTimer(&timer);
@@ -296,14 +287,10 @@ TEST_CASE("one-shot timers", "[ke]")
     Sleep(1000); // Wait 1 second to make sure it has time to expire.
     REQUIRE(KeReadStateTimer(&timer) == TRUE);
     REQUIRE(context == 3);
-
-    usersim_platform_terminate();
 }
 
 TEST_CASE("periodic timers", "[ke]")
 {
-    REQUIRE(usersim_platform_initiate() == STATUS_SUCCESS);
-
     uint64_t context = 1;
     KTIMER timer;
     KeInitializeTimer(&timer);
@@ -318,8 +305,6 @@ TEST_CASE("periodic timers", "[ke]")
     REQUIRE(context == 4);
     Sleep(1300); // 1.3 seconds.
     REQUIRE(context == 4);
-
-    usersim_platform_terminate();
 }
 
 TEST_CASE("KeBugCheck", "[ke]")

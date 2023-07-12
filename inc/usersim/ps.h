@@ -12,9 +12,11 @@ extern "C"
 
     #define PsGetCurrentProcess IoGetCurrentProcess
 
+    __declspec(dllexport)
 	HANDLE
     PsGetCurrentProcessId();
 
+    __declspec(dllexport)
     _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE PsGetCurrentThreadId();
 
 #if defined(__cplusplus)

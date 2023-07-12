@@ -43,6 +43,7 @@ extern "C"
      * @retval true Fault injection is enabled.
      * @retval false Fault injection is disabled.
      */
+    __declspec(dllexport)
     bool
     usersim_fault_injection_is_enabled() noexcept;
 

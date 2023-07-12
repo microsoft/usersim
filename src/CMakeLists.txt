@@ -1,8 +1,8 @@
 # Copyright (c) Microsoft Corporation
 # SPDX-License-Identifier: MIT
 
-add_library(usersim STATIC
-  dll_skeleton.c
+add_library(usersim SHARED
+  dllmain.cpp
   ex.cpp
   fault_injection.cpp
   fault_injection.h

@@ -36,13 +36,16 @@ extern "C"
         _tlgIPv6Address,
     } usersim_tlg_type_t;
 
+    __declspec(dllexport)
     void
     usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ const char* event_name, size_t argc, ...);
 
+    __declspec(dllexport)
     BOOLEAN
     usersim_trace_logging_provider_enabled(
         _In_ const TraceLoggingHProvider hProvider, UCHAR event_level, ULONGLONG event_keyword);
 
+    __declspec(dllexport)
     void
     usersim_trace_logging_set_enabled(bool enabled, UCHAR event_level, ULONGLONG event_keyword);
 

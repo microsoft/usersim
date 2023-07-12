@@ -12,6 +12,16 @@
 
 // Rtl* functions.
 
+ULONG
+RtlRandomEx(_Inout_ PULONG seed)
+{
+    UNREFERENCED_PARAMETER(seed);
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    return mt();
+}
+
 NTSTATUS
 RtlULongAdd(
     _In_ unsigned long augend,

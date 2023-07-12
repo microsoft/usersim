@@ -124,8 +124,10 @@ typedef struct _SE_EXPORTS
         PSID SeAppSiloProfilesRootMinimalCapabilitySid;
     } SE_EXPORTS, *PSE_EXPORTS;
 
+    __declspec(dllexport)
     extern PSE_EXPORTS SeExports;
 
+    __declspec(dllexport)
     BOOLEAN
     SeAccessCheckFromState(
         _In_ PSECURITY_DESCRIPTOR SecurityDescriptor,
