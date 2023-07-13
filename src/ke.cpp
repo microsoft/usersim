@@ -538,7 +538,12 @@ usersim_clean_up_dpcs()
 #pragma endregion dpcs
 #pragma region timers
 
+// The following mutex currently protects two things that can contain a pointer to a TP_TIMER:
+// 1) the g_usersim_threadpool_timers list, and
+// 2) each KTIMER's threadpool_timer member.
 static std::mutex g_usersim_threadpool_mutex;
+
+// The following is a list of all TP_TIMER objects that are in use.
 static std::vector<TP_TIMER*>* g_usersim_threadpool_timers = nullptr;
 
 void
@@ -589,12 +594,11 @@ KeSetCoalescableTimer(
     // We currently only support relative expiration times.
     ASSERT(due_time.QuadPart < 0);
 
+    std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
     BOOLEAN running = (timer->threadpool_timer != nullptr);
     if (!running) {
         timer->threadpool_timer = CreateThreadpoolTimer(_usersim_timer_callback, timer, nullptr);
         ASSERT(timer->threadpool_timer != nullptr);
-
-        std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
 
         // There is no kernel function to clean up a timer, but there is in user mode,
         // so add the handle to a list we can clean up later.
@@ -614,8 +618,8 @@ KeSetCoalescableTimer(
 void
 usersim_free_threadpool_timers()
 {
+    std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
     if (g_usersim_threadpool_timers) {
-        std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
         for (TP_TIMER* threadpool_timer : *g_usersim_threadpool_timers) {
             CloseThreadpoolTimer(threadpool_timer);
         }
@@ -628,6 +632,8 @@ BOOLEAN
 KeCancelTimer(_Inout_ PKTIMER timer)
 {
     ASSERT(timer->object_type == USERSIM_OBJECT_TYPE_TIMER);
+
+    std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
     if (timer->threadpool_timer == nullptr) {
         return FALSE;
     }
@@ -639,12 +645,10 @@ KeCancelTimer(_Inout_ PKTIMER timer)
     WaitForThreadpoolTimerCallbacks(timer->threadpool_timer, TRUE);
 
     // Clean up timer.
-    std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
     auto iterator =
         std::find(g_usersim_threadpool_timers->begin(), g_usersim_threadpool_timers->end(), timer->threadpool_timer);
-    if (iterator != g_usersim_threadpool_timers->end()) {
-        g_usersim_threadpool_timers->erase(iterator);
-    }
+    ASSERT(iterator != g_usersim_threadpool_timers->end());
+    g_usersim_threadpool_timers->erase(iterator);
     CloseThreadpoolTimer(timer->threadpool_timer);
     timer->threadpool_timer = nullptr;
 
