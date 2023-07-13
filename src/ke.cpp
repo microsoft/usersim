@@ -538,6 +538,7 @@ usersim_clean_up_dpcs()
 #pragma endregion dpcs
 #pragma region timers
 
+static std::mutex g_usersim_threadpool_mutex;
 static std::vector<TP_TIMER*>* g_usersim_threadpool_timers = nullptr;
 
 void
@@ -593,6 +594,8 @@ KeSetCoalescableTimer(
         timer->threadpool_timer = CreateThreadpoolTimer(_usersim_timer_callback, timer, nullptr);
         ASSERT(timer->threadpool_timer != nullptr);
 
+        std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
+
         // There is no kernel function to clean up a timer, but there is in user mode,
         // so add the handle to a list we can clean up later.
         if (g_usersim_threadpool_timers == nullptr) {
@@ -612,6 +615,7 @@ void
 usersim_free_threadpool_timers()
 {
     if (g_usersim_threadpool_timers) {
+        std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
         for (TP_TIMER* threadpool_timer : *g_usersim_threadpool_timers) {
             CloseThreadpoolTimer(threadpool_timer);
         }
@@ -635,6 +639,7 @@ KeCancelTimer(_Inout_ PKTIMER timer)
     WaitForThreadpoolTimerCallbacks(timer->threadpool_timer, TRUE);
 
     // Clean up timer.
+    std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
     auto iterator =
         std::find(g_usersim_threadpool_timers->begin(), g_usersim_threadpool_timers->end(), timer->threadpool_timer);
     if (iterator != g_usersim_threadpool_timers->end()) {
