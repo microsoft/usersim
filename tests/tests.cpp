@@ -11,6 +11,7 @@
 #include "usersim/io.h"
 #include "usersim/ke.h"
 #include "usersim/mm.h"
+#include "usersim/rtl.h"
 
 TEST_CASE("DriverEntry", "[wdf]")
 {
@@ -385,4 +386,13 @@ TEST_CASE("ExFreePool null", "[ex]")
                 e.what(), "*** STOP 0x000000c2 (0x0000000000000046,0x0000000000000000,0x0000000000000000,0x0000000000000000)") ==
             0);
     }
+}
+
+TEST_CASE("RtlULongAdd", "[rtl]")
+{
+    ULONG result;
+    REQUIRE(NT_SUCCESS(RtlULongAdd(1, 2, &result)));
+    REQUIRE(result == 3);
+
+    REQUIRE(RtlULongAdd(ULONG_MAX, 1, &result) == STATUS_INTEGER_OVERFLOW);
 }

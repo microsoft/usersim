@@ -19,8 +19,7 @@ RtlULongAdd(
     _Out_ _Deref_out_range_(==, augend + addend) unsigned long* result)
 {
     // Skip Fault Injection.
-    *result = augend + addend;
-    return STATUS_SUCCESS;
+    return SUCCEEDED(ULongAdd(augend, addend, result)) ? STATUS_SUCCESS : STATUS_INTEGER_OVERFLOW;
 }
 
 NTSTATUS
