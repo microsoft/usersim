@@ -50,7 +50,7 @@ extern "C"
 #undef DISPATCH_LEVEL
 #define PASSIVE_LEVEL THREAD_PRIORITY_NORMAL   // Passive release level.
 #define APC_LEVEL THREAD_PRIORITY_ABOVE_NORMAL // APC interrupt level.
-#define DISPATCH_LEVEL THREAD_PRIORITY_HIGHEST // Dispatcher level.
+#define DISPATCH_LEVEL THREAD_PRIORITY_TIME_CRITICAL // Dispatcher level.
 
     KIRQL
     KeGetCurrentIrql();
