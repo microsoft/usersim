@@ -12,16 +12,6 @@
 
 // Rtl* functions.
 
-ULONG
-RtlRandomEx(_Inout_ PULONG seed)
-{
-    UNREFERENCED_PARAMETER(seed);
-
-    std::random_device rd;
-    std::mt19937 mt(rd());
-    return mt();
-}
-
 NTSTATUS
 RtlULongAdd(
     _In_ unsigned long augend,
@@ -123,6 +113,3 @@ RtlSizeTSub(
 {
     return SUCCEEDED(SizeTSub(minuend, subtrahend, result)) ? STATUS_SUCCESS : STATUS_INTEGER_OVERFLOW;
 }
-
-// Include Rtl* implementations from ntdll.lib.
-#pragma comment(lib, "ntdll.lib")

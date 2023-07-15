@@ -102,6 +102,9 @@ extern "C"
         _In_ PCCH utf8_string_source,
         _In_ ULONG utf8_string_byte_count);
 
+// Include Rtl* implementations from ntdll.lib.
+#pragma comment(lib, "ntdll.lib")
+
 #if defined(__cplusplus)
 }
 #endif
