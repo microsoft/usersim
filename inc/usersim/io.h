@@ -34,7 +34,7 @@ extern "C"
 
     typedef struct _IRP IRP;
 
-    __declspec(dllexport)
+    USERSIM_API
     MDL*
     IoAllocateMdl(
         _In_opt_ __drv_aliasesMem void* virtual_address,
@@ -43,11 +43,11 @@ extern "C"
         _In_ BOOLEAN charge_quota,
         _Inout_opt_ IRP* irp);
 
-    __declspec(dllexport)
+    USERSIM_API
     PIO_WORKITEM
     IoAllocateWorkItem(_In_ DEVICE_OBJECT* device_object);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     IoQueueWorkItem(
         _Inout_ __drv_aliasesMem IO_WORKITEM* io_work_item,
@@ -55,19 +55,19 @@ extern "C"
         _In_ WORK_QUEUE_TYPE queue_type,
         _In_opt_ __drv_aliasesMem void* context);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     IoFreeWorkItem(_In_ __drv_freesMem(Mem) PIO_WORKITEM io_work_item);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     IoFreeMdl(MDL* mdl);
 
-    __declspec(dllexport)
+    USERSIM_API
     PGENERIC_MAPPING
     IoGetFileObjectGenericMapping();
 
-    __declspec(dllexport)
+    USERSIM_API
     _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI PEPROCESS IoGetCurrentProcess(VOID);
 
 #if defined(__cplusplus)

@@ -85,96 +85,96 @@ extern "C"
 
     } _Enum_is_bitflag_ POOL_TYPE;
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     ExInitializeRundownProtection(_Out_ EX_RUNDOWN_REF* rundown_ref);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     ExReInitializeRundownProtection(_Inout_ EX_RUNDOWN_REF* rundown_ref);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     ExWaitForRundownProtectionRelease(_Inout_ EX_RUNDOWN_REF* rundown_ref);
 
-    __declspec(dllexport)
+    USERSIM_API
     BOOLEAN
     ExAcquireRundownProtection(_Inout_ EX_RUNDOWN_REF* rundown_ref);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     ExReleaseRundownProtection(_Inout_ EX_RUNDOWN_REF* rundown_ref);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Acquires_exclusive_lock_(push_lock->lock) void ExAcquirePushLockExclusiveEx(
         _Inout_ _Requires_lock_not_held_(*_Curr_) _Acquires_lock_(*_Curr_) EX_PUSH_LOCK* push_lock,
         _In_ unsigned long flags);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Acquires_shared_lock_(push_lock->lock) void ExAcquirePushLockSharedEx(
         _Inout_ _Requires_lock_not_held_(*_Curr_) _Acquires_lock_(*_Curr_) EX_PUSH_LOCK* push_lock,
         _In_ unsigned long flags);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Releases_exclusive_lock_(push_lock->lock) void ExReleasePushLockExclusiveEx(
         _Inout_ _Requires_lock_held_(*_Curr_) _Releases_lock_(*_Curr_) EX_PUSH_LOCK* push_lock,
         _In_ unsigned long flags);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Releases_shared_lock_(push_lock->lock) void ExReleasePushLockSharedEx(
         _Inout_ _Requires_lock_held_(*_Curr_) _Releases_lock_(*_Curr_) EX_PUSH_LOCK* push_lock,
         _In_ unsigned long flags);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Acquires_exclusive_lock_(spin_lock->lock) KIRQL
         ExAcquireSpinLockExclusiveEx(_Inout_ _Requires_lock_not_held_(*_Curr_) _Acquires_lock_(*_Curr_)
                                          EX_SPIN_LOCK* spin_lock);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Acquires_exclusive_lock_(spin_lock->lock) void ExAcquireSpinLockExclusiveAtDpcLevelEx(
         _Inout_ _Requires_lock_not_held_(*_Curr_) _Acquires_lock_(*_Curr_) EX_SPIN_LOCK* spin_lock);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Acquires_shared_lock_(spin_lock->lock) KIRQL
         ExAcquireSpinLockSharedEx(_Inout_ _Requires_lock_not_held_(*_Curr_) _Acquires_lock_(*_Curr_)
                                       EX_SPIN_LOCK* spin_lock);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Releases_exclusive_lock_(spin_lock->lock) void ExReleaseSpinLockExclusiveEx(
         _Inout_ _Requires_lock_held_(*_Curr_) _Releases_lock_(*_Curr_) EX_SPIN_LOCK* spin_lock, KIRQL old_irql);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Releases_shared_lock_(spin_lock->lock) void ExReleaseSpinLockSharedEx(
         _Inout_ _Requires_lock_held_(*_Curr_) _Releases_lock_(*_Curr_) EX_SPIN_LOCK* spin_lock, KIRQL old_irql);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Releases_exclusive_lock_(spin_lock->lock) void ExReleaseSpinLockExclusiveFromDpcLevelEx(
         _Inout_ _Requires_lock_held_(*_Curr_) _Releases_lock_(*_Curr_) EX_SPIN_LOCK* spin_lock);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Ret_maybenull_
     void*
     ExAllocatePoolUninitialized(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Ret_maybenull_
     void*
     ExAllocatePoolWithTag(
         _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     ExFreePool(_Frees_ptr_ void* p);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     ExFreePoolWithTag(_Frees_ptr_ void* p, ULONG tag);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     ExInitializePushLock(_Out_ EX_PUSH_LOCK* push_lock);
 
-    __declspec(dllexport)
+    USERSIM_API
     _IRQL_requires_max_(PASSIVE_LEVEL) NTKERNELAPI NTSTATUS ExUuidCreate(_Out_ UUID* uuid);
 
 #if defined(__cplusplus)
@@ -182,15 +182,15 @@ extern "C"
 #endif
 
 // The bug check functions below throw C++ exceptions so tests can catch them to verify error behavior.
-__declspec(dllexport) void
+USERSIM_API void
 ExFreePoolCPP(_Frees_ptr_ void* p);
 
-__declspec(dllexport) void
+USERSIM_API void
 ExFreePoolWithTagCPP(_Frees_ptr_ void* p, ULONG tag);
 
-__declspec(dllexport) _Ret_maybenull_ void*
+USERSIM_API _Ret_maybenull_ void*
 ExAllocatePoolWithTagCPP(
     _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag);
 
-__declspec(dllexport) _Ret_maybenull_ void*
+USERSIM_API _Ret_maybenull_ void*
 ExAllocatePoolUninitializedCPP(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag);

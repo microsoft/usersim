@@ -38,5 +38,5 @@ target_include_directories(usersim PRIVATE
   "${WDK_ROOT}/include/${WDK_VERSION}/km"
 )
 
-set(defs UNICODE _UNICODE)
+set(defs UNICODE _UNICODE USERSIM_SOURCE)
 target_compile_definitions(usersim PRIVATE ${defs})

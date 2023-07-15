@@ -35,15 +35,15 @@ extern "C"
         DRIVER_UNMAPPING_INVALID_VIEW = 0xD7,
     } usersim_bug_check_code_t;
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     KeEnterCriticalRegion(void);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     KeLeaveCriticalRegion(void);
 
-    __declspec(dllexport)
+    USERSIM_API
     ULONG
     KeGetCurrentProcessorNumberEx(_Out_opt_ PPROCESSOR_NUMBER ProcNumber);
 
@@ -58,83 +58,83 @@ extern "C"
 #define APC_LEVEL THREAD_PRIORITY_ABOVE_NORMAL // APC interrupt level.
 #define DISPATCH_LEVEL THREAD_PRIORITY_TIME_CRITICAL // Dispatcher level.
 
-    __declspec(dllexport)
+    USERSIM_API
     KIRQL
     KeGetCurrentIrql();
 
-    __declspec(dllexport)
+    USERSIM_API
     VOID
     KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql);
 
-    __declspec(dllexport)
+    USERSIM_API
     KIRQL
     KeRaiseIrqlToDpcLevel();
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     KeLowerIrql(_In_ KIRQL new_irql);
 
-    __declspec(dllexport)
+    USERSIM_API
     _IRQL_requires_min_(DISPATCH_LEVEL) NTKERNELAPI LOGICAL KeShouldYieldProcessor(VOID);
 
 #pragma endregion irqls
 
 #pragma region spin_locks
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     KeInitializeSpinLock(_Out_ PKSPIN_LOCK spin_lock);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Requires_lock_not_held_(*spin_lock) _Acquires_lock_(*spin_lock) _IRQL_requires_max_(
         DISPATCH_LEVEL) void KeAcquireSpinLock(_Inout_ PKSPIN_LOCK spin_lock, _Out_ PKIRQL old_irql);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Requires_lock_not_held_(*spin_lock) _Acquires_lock_(*spin_lock) _IRQL_requires_max_(DISPATCH_LEVEL) KIRQL
         KeAcquireSpinLockRaiseToDpc(_Inout_ PKSPIN_LOCK spin_lock);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Requires_lock_not_held_(*spin_lock) _Acquires_lock_(*spin_lock)
         _IRQL_requires_(DISPATCH_LEVEL) void KeAcquireSpinLockAtDpcLevel(_Inout_ PKSPIN_LOCK spin_lock);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Requires_lock_held_(*spin_lock) _Releases_lock_(*spin_lock)
         _IRQL_requires_(DISPATCH_LEVEL) void KeReleaseSpinLockFromDpcLevel(_Inout_ PKSPIN_LOCK spin_lock);
 
-    __declspec(dllexport)
+    USERSIM_API
     _Requires_lock_held_(*spin_lock) _Releases_lock_(*spin_lock) _IRQL_requires_(DISPATCH_LEVEL) void KeReleaseSpinLock(
         _Inout_ PKSPIN_LOCK spin_lock, _In_ _IRQL_restores_ KIRQL new_irql);
 
 #pragma endregion spin_locks
 
-    __declspec(dllexport)
+    USERSIM_API
     unsigned long long
     KeQueryInterruptTime();
 
 #pragma region threads
 
-    __declspec(dllexport)
+    USERSIM_API
     ULONG
     KeQueryMaximumProcessorCount();
 
-    __declspec(dllexport)
+    USERSIM_API
     ULONG
     KeQueryMaximumProcessorCountEx(_In_ USHORT group_number);
 
 #define KeQueryActiveProcessorCount KeQueryMaximumProcessorCount
 #define KeQueryActiveProcessorCountEx KeQueryMaximumProcessorCountEx
 
-    __declspec(dllexport)
+    USERSIM_API
     KAFFINITY
     KeSetSystemAffinityThreadEx(KAFFINITY affinity);
 
-    __declspec(dllexport)
+    USERSIM_API
     _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
         KeRevertToUserAffinityThreadEx(_In_ KAFFINITY affinity);
 
     typedef struct _kthread* PKTHREAD;
 
-    __declspec(dllexport)
+    USERSIM_API
     PKTHREAD
     NTAPI
     KeGetCurrentThread(VOID);
@@ -151,13 +151,13 @@ extern "C"
     typedef KSEMAPHORE* PKSEMAPHORE;
     typedef KSEMAPHORE* PRKSEMAPHORE;
 
-    __declspec(dllexport)
+    USERSIM_API
     _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI
         void KeInitializeSemaphore(_Out_ PRKSEMAPHORE semaphore, _In_ LONG count, _In_ LONG limit);
 
     typedef ULONG KPRIORITY;
 
-    __declspec(dllexport)
+    USERSIM_API
     _When_(wait == 0, _IRQL_requires_max_(DISPATCH_LEVEL))
         _When_(wait == 1, _IRQL_requires_max_(APC_LEVEL)) NTKERNELAPI LONG KeReleaseSemaphore(
             _Inout_ PRKSEMAPHORE semaphore,
@@ -165,7 +165,7 @@ extern "C"
             _In_ LONG adjustment,
             _In_ _Literal_ BOOLEAN wait);
 
-    __declspec(dllexport)
+    USERSIM_API
     LONG
     KeReadStateSemaphore(_In_ PRKSEMAPHORE semaphore);
 
@@ -174,14 +174,14 @@ extern "C"
 
 #pragma endregion semaphores
 
-    __declspec(dllexport)
+    USERSIM_API
     _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
         KeStackAttachProcess(_Inout_ PRKPROCESS process, _Out_ PRKAPC_STATE apc_state);
 
-    __declspec(dllexport)
+    USERSIM_API
     _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID KeUnstackDetachProcess(_In_ PRKAPC_STATE api_state);
 
-    __declspec(dllexport)
+    USERSIM_API
     _IRQL_requires_min_(PASSIVE_LEVEL)
         _When_((timeout == NULL || timeout->QuadPart != 0), _IRQL_requires_max_(APC_LEVEL))
             _When_((timeout != NULL && timeout->QuadPart == 0), _IRQL_requires_max_(DISPATCH_LEVEL))
@@ -192,11 +192,11 @@ extern "C"
                     _In_ BOOLEAN alertable,
                     _In_opt_ PLARGE_INTEGER timeout);
 
-    __declspec(dllexport)
+    USERSIM_API
     _IRQL_requires_same_ ULONG64
     KeQueryUnbiasedInterruptTimePrecise(_Out_ PULONG64 qpc_time_stamp);
 
-    __declspec(dllexport)
+    USERSIM_API
     _IRQL_requires_same_ ULONG64
     KeQueryInterruptTimePrecise(_Out_ PULONG64 qpc_time_stamp);
 
@@ -223,21 +223,21 @@ extern "C"
         PKDEFERRED_ROUTINE work_item_routine;
     };
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     KeInitializeDpc(_Out_ __drv_aliasesMem PRKDPC dpc, _In_ PKDEFERRED_ROUTINE deferred_routine, _In_opt_ __drv_aliasesMem PVOID deferred_context);
 
-    __declspec(dllexport)
+    USERSIM_API
     BOOLEAN KeInsertQueueDpc(_Inout_ PRKDPC dpc, _In_opt_ PVOID system_argument1, _In_opt_ __drv_aliasesMem PVOID system_argument2);
 
-    __declspec(dllexport)
+    USERSIM_API
     BOOLEAN KeRemoveQueueDpc(_Inout_ PRKDPC dpc);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     KeFlushQueuedDpcs();
 
-    __declspec(dllexport)
+    USERSIM_API
     void KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number);
 
     void
@@ -258,26 +258,26 @@ extern "C"
     } KTIMER;
     typedef KTIMER* PKTIMER;
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     KeInitializeTimer(_Out_ PKTIMER timer);
 
-    __declspec(dllexport)
+    USERSIM_API
     BOOLEAN
     KeSetTimer(_Inout_ PKTIMER timer, LARGE_INTEGER due_time, _In_opt_ PKDPC dpc);
 
-    __declspec(dllexport)
+    USERSIM_API
     BOOLEAN
     KeSetTimerEx(_Inout_ PKTIMER timer, LARGE_INTEGER due_time, ULONG period, _In_opt_ PKDPC dpc);
 
-    __declspec(dllexport)
+    USERSIM_API
     BOOLEAN
     KeSetCoalescableTimer(_Inout_ PKTIMER timer, LARGE_INTEGER due_time, ULONG period, ULONG tolerable_delay, _In_opt_ PKDPC dpc);
 
-    __declspec(dllexport)
+    USERSIM_API
     BOOLEAN KeCancelTimer(_Inout_ PKTIMER timer);
 
-    __declspec(dllexport)
+    USERSIM_API
     BOOLEAN
     KeReadStateTimer(_In_ PKTIMER timer);
 
@@ -286,14 +286,14 @@ extern "C"
 
 #pragma endregion timers
 
-    __declspec(dllexport)
+    USERSIM_API
     LARGE_INTEGER KeQueryPerformanceCounter(_Out_opt_ PLARGE_INTEGER performance_frequency);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     KeBugCheck(ULONG bug_check_code);
 
-    __declspec(dllexport)
+    USERSIM_API
     void
     KeBugCheckEx(
         ULONG bug_check_code,
@@ -306,10 +306,10 @@ extern "C"
 }
 
 // The bug check functions below throw C++ exceptions so tests can catch them to verify error behavior.
-__declspec(dllexport) void
+USERSIM_API void
 KeBugCheckCPP(ULONG bug_check_code);
 
-__declspec(dllexport) void
+USERSIM_API void
 KeBugCheckExCPP(
     ULONG bug_check_code,
     ULONG_PTR bug_check_parameter1,

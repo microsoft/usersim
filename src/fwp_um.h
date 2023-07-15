@@ -3,30 +3,13 @@
 #pragma once
 
 #include "net_platform.h"
+#include "usersim/fwp_test.h"
 
 #include <shared_mutex>
 #include <unordered_map>
 
 typedef std::unique_lock<std::shared_mutex> exclusive_lock_t;
 typedef std::shared_lock<std::shared_mutex> shared_lock_t;
-
-typedef struct _fwp_classify_parameters
-{
-    ADDRESS_FAMILY family;
-    uint32_t destination_ipv4_address;
-    FWP_BYTE_ARRAY16 destination_ipv6_address;
-    uint16_t destination_port;
-    uint32_t source_ipv4_address;
-    FWP_BYTE_ARRAY16 source_ipv6_address;
-    uint16_t source_port;
-    uint8_t protocol;
-    uint32_t compartment_id;
-    FWP_BYTE_BLOB app_id;
-    uint64_t interface_luid;
-    TOKEN_ACCESS_INFORMATION token_access_information;
-    FWP_BYTE_BLOB user_id;
-    uint32_t reauthorization_flag;
-} fwp_classify_parameters_t;
 
 typedef class _fwp_engine
 {

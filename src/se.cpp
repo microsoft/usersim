@@ -9,7 +9,7 @@
 // Se* functions.
 
 static SE_EXPORTS _SeExports = {0};
-PSE_EXPORTS SeExports = &_SeExports;
+__declspec(dllexport) PSE_EXPORTS SeExports = &_SeExports;
 
 BOOLEAN
 SeAccessCheckFromState(
