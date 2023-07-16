@@ -1,0 +1,46 @@
+;
+;  Copyright (c) Microsoft Corporation
+;  SPDX-License-Identifier: MIT
+;
+
+LIBRARY
+EXPORTS
+    FwpmCalloutAdd0
+    FwpmEngineClose0
+    FwpmEngineOpen0
+    FwpmFilterAdd0
+    FwpmFilterDeleteById0
+    FwpmProviderAdd0
+    FwpmSubLayerAdd0
+    FwpmTransactionAbort0
+    FwpmTransactionBegin0
+    FwpmTransactionCommit0
+
+    FwpsAcquireClassifyHandle0
+    FwpsAcquireWritableLayerDataPointer0
+    FwpsAllocateCloneNetBufferList0
+    FwpsAllocateNetBufferAndNetBufferList0
+    FwpsApplyModifiedLayerData0
+    FwpsCalloutRegister3
+    FwpsCalloutUnregisterById0
+    FwpsFlowAssociateContext0
+    FwpsFlowRemoveContext0
+    FwpsFreeCloneNetBufferList0
+    FwpsFreeNetBufferList0
+    FwpsInjectionHandleCreate0
+    FwpsInjectionHandleDestroy0
+    FwpsInjectMacReceiveAsync0
+    FwpsInjectMacSendAsync0
+    FwpsQueryConnectionRedirectState0
+    FwpsRedirectHandleCreate0
+    FwpsRedirectHandleDestroy0
+    FwpsReleaseClassifyHandle0
+
+    NmrRegisterClient
+    NmrClientAttachProvider
+    NmrDeregisterClient
+    NmrDeregisterProvider
+    NmrProviderDetachClientComplete
+    NmrRegisterProvider
+    NmrWaitForClientDeregisterComplete
+    NmrWaitForProviderDeregisterComplete

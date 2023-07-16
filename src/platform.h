@@ -4,6 +4,7 @@
 
 #include "framework.h"
 #include "kernel_um.h"
+#include "usersim/common.h"
 
 typedef NTSTATUS usersim_result_t;
 
@@ -148,6 +149,7 @@ extern "C"
      * @param[in] size Size of memory to allocate
      * @returns Pointer to memory block allocated, or null on failure.
      */
+    USERSIM_API 
     __drv_allocatesMem(Mem) _Must_inspect_result_
         _Ret_writes_maybenull_(size) void* usersim_allocate_cache_aligned(size_t size);
 
@@ -337,9 +339,6 @@ extern "C"
     bool
     usersim_is_preemptible();
 
-    ULONG
-    KeGetCurrentProcessorNumberEx(_Out_opt_ PPROCESSOR_NUMBER ProcNumber);
-
     /**
      * @brief Query the platform to determine an opaque identifier for the
      *   current thread. Only valid if usersim_is_preemptible() == false.
@@ -359,6 +358,7 @@ extern "C"
      * @retval USERSIM_NO_MEMORY Unable to allocate resources for this
      *  work item.
      */
+    USERSIM_API
     _Must_inspect_result_ usersim_result_t
     usersim_allocate_preemptible_work_item(
         _Outptr_ usersim_preemptible_work_item_t** work_item,
@@ -370,6 +370,7 @@ extern "C"
      *
      * @param[in] work_item Pointer to the work item to free.
      */
+    USERSIM_API
     void
     usersim_free_preemptible_work_item(_Frees_ptr_opt_ usersim_preemptible_work_item_t* work_item);
 
@@ -378,6 +379,7 @@ extern "C"
      *
      * @param[in, out] work_item Work item to schedule.
      */
+    USERSIM_API
     void
     usersim_queue_preemptible_work_item(_Inout_ usersim_preemptible_work_item_t* work_item);
 
@@ -553,6 +555,7 @@ extern "C"
      * @retval USERSIM_SUCCESS Requested access is granted.
      * @retval USERSIM_ACCESS_DENIED Requested access is denied.
      */
+    USERSIM_API
     _Must_inspect_result_ usersim_result_t
     usersim_access_check(
         _In_ const usersim_security_descriptor_t* security_descriptor,
@@ -567,6 +570,7 @@ extern "C"
      * @retval USERSIM_SUCCESS Security descriptor is well formed.
      * @retval USERSIM_INVALID_ARGUMENT Security descriptor is malformed.
      */
+    USERSIM_API
     _Must_inspect_result_ usersim_result_t
     usersim_validate_security_descriptor(
         _In_ const usersim_security_descriptor_t* security_descriptor, size_t security_descriptor_length);
@@ -739,6 +743,7 @@ extern "C"
      *
      * @return result of the operation.
      */
+    USERSIM_API 
     _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ usersim_result_t
         usersim_platform_get_authentication_id(_Out_ uint64_t* authentication_id);
 

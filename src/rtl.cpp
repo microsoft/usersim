@@ -113,6 +113,3 @@ RtlSizeTSub(
 {
     return SUCCEEDED(SizeTSub(minuend, subtrahend, result)) ? STATUS_SUCCESS : STATUS_INTEGER_OVERFLOW;
 }
-
-// Include Rtl* implementations from ntdll.lib.
-#pragma comment(lib, "ntdll.lib")

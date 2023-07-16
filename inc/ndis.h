@@ -43,41 +43,41 @@ typedef struct _NET_BUFFER_LIST_CONTEXT NET_BUFFER_LIST_CONTEXT, *PNET_BUFFER_LI
 
 typedef struct _NDIS_GENERIC_OBJECT NDIS_GENERIC_OBJECT, *PNDIS_GENERIC_OBJECT;
 
-PNDIS_GENERIC_OBJECT
+__declspec(dllexport) PNDIS_GENERIC_OBJECT
 NdisAllocateGenericObject(_In_opt_ DRIVER_OBJECT* driver_object, _In_ unsigned long tag, _In_ uint16_t size);
 
-NDIS_HANDLE
+__declspec(dllexport) NDIS_HANDLE
 NdisAllocateNetBufferListPool(_In_opt_ NDIS_HANDLE ndis_handle, _In_ NET_BUFFER_LIST_POOL_PARAMETERS const* parameters);
 
-NET_BUFFER_LIST*
+__declspec(dllexport) NET_BUFFER_LIST*
 NdisAllocateCloneNetBufferList(
     _In_ NET_BUFFER_LIST* original_net_buffer_list,
     _In_ NDIS_HANDLE net_buffer_list_pool_handle,
     _In_ NDIS_HANDLE net_buffer_pool_handle,
     ULONG allocate_clone_flags);
 
-void
+__declspec(dllexport) void
 NdisFreeCloneNetBufferList(_In_ NET_BUFFER_LIST* clone_net_buffer_list, ULONG free_clone_flags);
 
-PNET_BUFFER_LIST
+__declspec(dllexport) PNET_BUFFER_LIST
 NdisAllocateNetBufferList(_In_ NDIS_HANDLE nbl_pool_handle, _In_ USHORT context_size, _In_ USHORT context_backfill);
 
-_Must_inspect_result_ __drv_allocatesMem(mem) NET_BUFFER* NdisAllocateNetBuffer(
+__declspec(dllexport) _Must_inspect_result_ __drv_allocatesMem(mem) NET_BUFFER* NdisAllocateNetBuffer(
     _In_ NDIS_HANDLE pool_handle, _In_opt_ MDL* mdl_chain, _In_ unsigned long data_offset, _In_ SIZE_T data_length);
 
-VOID
+__declspec(dllexport) VOID
 NdisFreeNetBuffer(_In_ __drv_freesMem(mem) NET_BUFFER* net_buffer);
 
-VOID
+__declspec(dllexport) VOID
 NdisFreeNetBufferList(_In_ __drv_freesMem(mem) NET_BUFFER_LIST* net_buffer_list);
 
-void
+__declspec(dllexport) void
 NdisFreeNetBufferListPool(_In_ __drv_freesMem(mem) NDIS_HANDLE pool_handle);
 
-void
+__declspec(dllexport) void
 NdisFreeGenericObject(_In_ PNDIS_GENERIC_OBJECT ndis_object);
 
-void*
+__declspec(dllexport) void*
 NdisGetDataBuffer(
     _In_ NET_BUFFER* net_buffer,
     _In_ unsigned long bytes_needed,
@@ -85,14 +85,14 @@ NdisGetDataBuffer(
     _In_ unsigned long align_multiple,
     _In_ unsigned long align_offset);
 
-NDIS_STATUS
+__declspec(dllexport) NDIS_STATUS
 NdisRetreatNetBufferDataStart(
     _In_ NET_BUFFER* net_buffer,
     _In_ unsigned long data_offset_delta,
     _In_ unsigned long data_back_fill,
     _In_opt_ void* allocate_mdl_handler);
 
-void
+__declspec(dllexport) void
 NdisAdvanceNetBufferDataStart(
     _In_ NET_BUFFER* net_buffer,
     _In_ unsigned long data_offset_delta,

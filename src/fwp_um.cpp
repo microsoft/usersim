@@ -12,6 +12,56 @@
 
 thread_local static FWPS_CONNECT_REQUEST0* _fwp_um_connect_request = nullptr;
 
+bool
+_is_connection_redirected(
+    _In_ const fwp_classify_parameters_t* parameters,
+    _In_ const FWPS_CONNECT_REQUEST0* request,
+    _Out_ uint16_t* redirected_port,
+    _Out_ uint8_t** redirected_address)
+{
+    // Only check the port to know if redirection happened.
+    *redirected_port = INETADDR_PORT((PSOCKADDR)&request->remoteAddressAndPort);
+    *redirected_address = INETADDR_ADDRESS((PSOCKADDR)&request->remoteAddressAndPort);
+
+    if (parameters->destination_port == *redirected_port) {
+        return false;
+    }
+
+    if (request->remoteAddressAndPort.ss_family == AF_INET) {
+        if (parameters->destination_ipv4_address == *((uint32_t*)*redirected_address)) {
+            return false;
+        }
+    } else if (memcmp(*redirected_address, parameters->destination_ipv6_address.byteArray16, 16) == 0) {
+        return false;
+    }
+
+    return true;
+}
+
+// Allocate and initialize FWPS_CONNECT_REQUEST0.
+void static _allocate_and_initialize_connection_request(
+    ADDRESS_FAMILY family, _In_ const fwp_classify_parameters_t* parameters)
+{
+    usersim_assert(_fwp_um_connect_request == nullptr);
+    _fwp_um_connect_request = (FWPS_CONNECT_REQUEST0*)usersim_allocate(sizeof(FWPS_CONNECT_REQUEST0));
+    if (_fwp_um_connect_request == nullptr) {
+        // Most likely we are under fault injection simulation. Return.
+        return;
+    }
+
+    _fwp_um_connect_request->remoteAddressAndPort.ss_family = family;
+    INETADDR_SET_PORT((PSOCKADDR)&_fwp_um_connect_request->remoteAddressAndPort, parameters->destination_port);
+    return;
+}
+
+void static _free_connection_request()
+{
+    usersim_free(_fwp_um_connect_request);
+    _fwp_um_connect_request = nullptr;
+}
+
+#pragma region fwp_engine
+
 std::unique_ptr<_fwp_engine> _fwp_engine::_engine;
 
 // Attempt to classify a test packet at a given WFP layer on a given interface index.
@@ -185,54 +235,6 @@ _fwp_engine::test_cgroup_inet6_recv_accept(_In_ fwp_classify_parameters_t* param
 
     return test_callout(
         FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6, _default_sublayer, incoming_value);
-}
-
-bool
-_is_connection_redirected(
-    _In_ const fwp_classify_parameters_t* parameters,
-    _In_ const FWPS_CONNECT_REQUEST0* request,
-    _Out_ uint16_t* redirected_port,
-    _Out_ uint8_t** redirected_address)
-{
-    // Only check the port to know if redirection happened.
-    *redirected_port = INETADDR_PORT((PSOCKADDR)&request->remoteAddressAndPort);
-    *redirected_address = INETADDR_ADDRESS((PSOCKADDR)&request->remoteAddressAndPort);
-
-    if (parameters->destination_port == *redirected_port) {
-        return false;
-    }
-
-    if (request->remoteAddressAndPort.ss_family == AF_INET) {
-        if (parameters->destination_ipv4_address == *((uint32_t*)*redirected_address)) {
-            return false;
-        }
-    } else if (memcmp(*redirected_address, parameters->destination_ipv6_address.byteArray16, 16) == 0) {
-        return false;
-    }
-
-    return true;
-}
-
-// Allocate and initialize FWPS_CONNECT_REQUEST0.
-void static _allocate_and_initialize_connection_request(
-    ADDRESS_FAMILY family, _In_ const fwp_classify_parameters_t* parameters)
-{
-    usersim_assert(_fwp_um_connect_request == nullptr);
-    _fwp_um_connect_request = (FWPS_CONNECT_REQUEST0*)usersim_allocate(sizeof(FWPS_CONNECT_REQUEST0));
-    if (_fwp_um_connect_request == nullptr) {
-        // Most likely we are under fault injection simulation. Return.
-        return;
-    }
-
-    _fwp_um_connect_request->remoteAddressAndPort.ss_family = family;
-    INETADDR_SET_PORT((PSOCKADDR)&_fwp_um_connect_request->remoteAddressAndPort, parameters->destination_port);
-    return;
-}
-
-void static _free_connection_request()
-{
-    usersim_free(_fwp_um_connect_request);
-    _fwp_um_connect_request = nullptr;
 }
 
 // This is used to test the INET4_CONNECT hook.
@@ -413,13 +415,9 @@ _fwp_engine::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
         FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6, _default_sublayer, incoming_value);
 }
 
-typedef struct _fwp_injection_handle
-{
-    ADDRESS_FAMILY address_family;
-    uint32_t flags;
-} fwp_injection_handle;
+#pragma endregion fwp_engine
 
-static std::unique_ptr<fwp_injection_handle> _injection_handle;
+#pragma region fwpm_apis
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmFilterDeleteById0(_In_ HANDLE engine_handle, _In_ uint64_t id)
 {
@@ -482,26 +480,6 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmTransactionAbort0(_In_ _Releases
     return STATUS_SUCCESS;
 }
 
-_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
-    FwpsCalloutRegister3(_Inout_ void* device_object, _In_ const FWPS_CALLOUT3* callout, _Out_opt_ uint32_t* callout_id)
-{
-    if (usersim_fault_injection_inject_fault()) {
-        return STATUS_NO_MEMORY;
-    }
-
-    UNREFERENCED_PARAMETER(device_object);
-
-    auto& engine = *_fwp_engine::get()->get();
-
-    auto id_returned = engine.register_fwps_callout(callout);
-
-    if (callout_id) {
-        *callout_id = id_returned;
-    }
-
-    return STATUS_SUCCESS;
-}
-
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmCalloutAdd0(
     _In_ HANDLE engine_handle,
     _In_ const FWPM_CALLOUT0* callout,
@@ -521,21 +499,6 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmCalloutAdd0(
     }
     UNREFERENCED_PARAMETER(sd);
     return STATUS_SUCCESS;
-}
-
-_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpsCalloutUnregisterById0(_In_ const uint32_t callout_id)
-{
-    if (usersim_fault_injection_inject_fault()) {
-        return STATUS_NO_MEMORY;
-    }
-
-    auto& engine = *_fwp_engine::get()->get();
-
-    if (engine.remove_fwps_callout(callout_id)) {
-        return STATUS_SUCCESS;
-    } else {
-        return STATUS_INVALID_PARAMETER;
-    }
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmEngineOpen0(
@@ -598,6 +561,53 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmEngineClose0(_Inout_ HANDLE engi
         return STATUS_INVALID_PARAMETER;
     } else {
         return STATUS_SUCCESS;
+    }
+}
+
+#pragma endregion fwpm_apis
+
+#pragma region fwps_apis
+
+typedef struct _fwp_injection_handle
+{
+    ADDRESS_FAMILY address_family;
+    uint32_t flags;
+} fwp_injection_handle;
+
+static std::unique_ptr<fwp_injection_handle> _injection_handle;
+
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
+    FwpsCalloutRegister3(_Inout_ void* device_object, _In_ const FWPS_CALLOUT3* callout, _Out_opt_ uint32_t* callout_id)
+{
+    if (usersim_fault_injection_inject_fault()) {
+        return STATUS_NO_MEMORY;
+    }
+
+    UNREFERENCED_PARAMETER(device_object);
+
+    auto& engine = *_fwp_engine::get()->get();
+
+    auto id_returned = engine.register_fwps_callout(callout);
+
+    if (callout_id) {
+        *callout_id = id_returned;
+    }
+
+    return STATUS_SUCCESS;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpsCalloutUnregisterById0(_In_ const uint32_t callout_id)
+{
+    if (usersim_fault_injection_inject_fault()) {
+        return STATUS_NO_MEMORY;
+    }
+
+    auto& engine = *_fwp_engine::get()->get();
+
+    if (engine.remove_fwps_callout(callout_id)) {
+        return STATUS_SUCCESS;
+    } else {
+        return STATUS_INVALID_PARAMETER;
     }
 }
 
@@ -881,3 +891,60 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(DISPATCH_LEVEL) FWPS_CONN
 
     return FWPS_CONNECTION_NOT_REDIRECTED;
 }
+
+#pragma endregion fwps_apis
+
+#pragma region test_fwp
+
+FWP_ACTION_TYPE
+usersim_fwp_classify_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_index)
+{
+    return _fwp_engine::get()->classify_test_packet(layer_guid, if_index);
+}
+
+FWP_ACTION_TYPE usersim_fwp_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
+{
+    return _fwp_engine::get()->test_bind_ipv4(parameters);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* parameters)
+{
+    return _fwp_engine::get()->test_cgroup_inet4_recv_accept(parameters);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_cgroup_inet6_recv_accept(_In_ fwp_classify_parameters_t* parameters)
+{
+    return _fwp_engine::get()->test_cgroup_inet6_recv_accept(parameters);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* parameters)
+{
+    return _fwp_engine::get()->test_cgroup_inet4_connect(parameters);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameters)
+{
+    return _fwp_engine::get()->test_cgroup_inet6_connect(parameters);
+}
+
+FWP_ACTION_TYPE usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters)
+{
+    return _fwp_engine::get()->test_sock_ops_v4(parameters);
+}
+
+FWP_ACTION_TYPE usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
+{
+    return _fwp_engine::get()->test_sock_ops_v6(parameters);
+}
+
+void usersim_fwp_set_sublayer_guids(
+    _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer)
+{
+    fwp_engine::get()->set_sublayer_guids(default_sublayer, connect_v4_sublayer, connect_v6_sublayer);
+}
+
+#pragma endregion test_fwp

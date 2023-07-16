@@ -37,12 +37,15 @@ extern "C"
         unsigned long byte_count;
     } MDL, *PMDL;
 
+    USERSIM_API
     void
     MmBuildMdlForNonPagedPool(_Inout_ MDL* memory_descriptor_list);
 
+    USERSIM_API
     unsigned long
     MmGetMdlByteCount(_In_ MDL* mdl);
 
+    USERSIM_API
     void*
     MmGetSystemAddressForMdlSafe(
         _Inout_ MDL* mdl,
@@ -64,6 +67,7 @@ extern "C"
 #define MmGetMdlBaseVa(mdl) ((mdl)->start_va)
 #define MmGetMdlVirtualAddress(mdl) ((void*)((PCHAR)((mdl)->start_va) + (mdl)->byte_offset))
 
+    USERSIM_API
     void
     MmFreePagesFromMdl(_Inout_ PMDL memory_descriptor);
 
@@ -81,6 +85,7 @@ extern "C"
         MmNotMapped = -1
     } MEMORY_CACHING_TYPE;
 
+    USERSIM_API
     MDL*
     MmAllocatePagesForMdlEx(
         PHYSICAL_ADDRESS low_address,
@@ -97,6 +102,7 @@ extern "C"
         MaximumMode
     } MODE;
 
+    USERSIM_API
     void*
     MmMapLockedPagesSpecifyCache(
         MDL* memory_descriptor_list,
@@ -106,9 +112,11 @@ extern "C"
         ULONG bug_check_on_failure,
         ULONG priority);
 
+    USERSIM_API
     void
     MmUnmapLockedPages(_In_ void* base_address, _In_ MDL* memory_descriptor_list);
 
+    USERSIM_API
     NTSTATUS
     MmProtectMdlSystemAddress(_In_ MDL* memory_descriptor_list, ULONG new_protect);
 
