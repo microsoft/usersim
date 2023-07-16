@@ -27,6 +27,7 @@ typedef struct
 } test_client_binding_context_t;
 
 static test_client_binding_context_t _test_client_binding_context = {.allocated = false};
+static bool _test_client_async_deregister = false;
 
 static NTSTATUS
 _test_client_attach_provider(
@@ -61,7 +62,7 @@ _test_client_detach_provider(_In_ void* client_binding_context)
     _test_client_binding_context.provider_binding_context = nullptr;
     _test_client_binding_context.provider_dispatch = nullptr;
 
-    return STATUS_SUCCESS;
+    return (_test_client_async_deregister) ? STATUS_PENDING : STATUS_SUCCESS;
 }
 
 static void
@@ -97,6 +98,7 @@ typedef struct
 } test_provider_binding_context_t;
 
 static test_provider_binding_context_t _test_provider_binding_context = {.allocated = false};
+static bool _test_provider_async_deregister = false;
 
 static NTSTATUS
 _test_provider_attach_client(
@@ -131,7 +133,7 @@ _test_provider_detach_client(_In_ void* provider_binding_context)
     _test_provider_binding_context.client_binding_context = nullptr;
     _test_provider_binding_context.client_dispatch = nullptr;
 
-    return STATUS_SUCCESS;
+    return (_test_provider_async_deregister) ? STATUS_PENDING : STATUS_SUCCESS;
 }
 
 static void
@@ -162,9 +164,6 @@ TEST_CASE("NmrRegisterClient", "[nmr]")
     REQUIRE(_test_client_binding_context.allocated == false);
 
     REQUIRE(NmrDeregisterClient(nmr_client_handle) == STATUS_SUCCESS);
-
-    // TODO: test async detach
-    //REQUIRE(NmrWaitForClientDeregisterComplete(nmr_client_handle) == STATUS_SUCCESS);
 }
 
 TEST_CASE("NmrRegisterProvider", "[nmr]")
@@ -177,9 +176,6 @@ TEST_CASE("NmrRegisterProvider", "[nmr]")
     REQUIRE(_test_provider_binding_context.allocated == false);
 
     REQUIRE(NmrDeregisterProvider(nmr_provider_handle) == STATUS_SUCCESS);
-
-    // TODO: test async detach
-    //REQUIRE(NmrWaitForProviderDeregisterComplete(nmr_provider_handle) == STATUS_SUCCESS);
 }
 
 TEST_CASE("attach during NmrRegisterProvider", "[nmr]")
@@ -254,4 +250,76 @@ TEST_CASE("attach during NmrRegisterClient", "[nmr]")
     REQUIRE(_test_provider_binding_context.client_dispatch == nullptr);
 
     REQUIRE(NmrDeregisterProvider(nmr_provider_handle) == STATUS_SUCCESS);
+}
+
+TEST_CASE("NmrRegisterClient with async deregister", "[nmr]")
+{
+    HANDLE nmr_client_handle;
+    REQUIRE(NmrRegisterClient(&_test_client_characteristics, nullptr, &nmr_client_handle) == STATUS_SUCCESS);
+    HANDLE nmr_provider_handle;
+    REQUIRE(NmrRegisterProvider(&_test_provider_characteristics, nullptr, &nmr_provider_handle) == STATUS_SUCCESS);
+
+    // Start an asynchronous deregister, as if calls were in progress.
+    _test_client_async_deregister = true;
+    REQUIRE(NmrDeregisterClient(nmr_client_handle) == STATUS_PENDING);
+
+    // Verify that the binding still exists but no further calls will be initiated.
+    REQUIRE(_test_client_binding_context.allocated == true);
+    REQUIRE(_test_client_binding_context.nmr_binding_handle != nullptr);
+    REQUIRE(_test_client_binding_context.provider_binding_context == nullptr);
+    REQUIRE(_test_client_binding_context.provider_dispatch == nullptr);
+
+    REQUIRE(_test_provider_binding_context.allocated == true);
+    REQUIRE(_test_provider_binding_context.nmr_binding_handle != nullptr);
+    REQUIRE(_test_provider_binding_context.client_binding_context == nullptr);
+    REQUIRE(_test_provider_binding_context.client_dispatch == nullptr);
+
+    // Complete the detach.
+    NmrClientDetachProviderComplete(_test_client_binding_context.nmr_binding_handle);
+    REQUIRE(NmrWaitForClientDeregisterComplete(nmr_client_handle) == STATUS_SUCCESS);
+    _test_client_async_deregister = false;
+
+    // The binding should no longer exist.
+    REQUIRE(_test_client_binding_context.allocated == false);
+    REQUIRE(_test_client_binding_context.nmr_binding_handle == nullptr);
+    REQUIRE(_test_provider_binding_context.allocated == false);
+    REQUIRE(_test_provider_binding_context.nmr_binding_handle == nullptr);
+
+    REQUIRE(NmrDeregisterProvider(nmr_provider_handle) == STATUS_SUCCESS);
+}
+
+TEST_CASE("NmrRegisterProvider with async deregister", "[nmr]")
+{
+    HANDLE nmr_client_handle;
+    REQUIRE(NmrRegisterClient(&_test_client_characteristics, nullptr, &nmr_client_handle) == STATUS_SUCCESS);
+    HANDLE nmr_provider_handle;
+    REQUIRE(NmrRegisterProvider(&_test_provider_characteristics, nullptr, &nmr_provider_handle) == STATUS_SUCCESS);
+
+    // Start an asynchronous deregister, as if calls were in progress.
+    _test_provider_async_deregister = true;
+    REQUIRE(NmrDeregisterProvider(nmr_provider_handle) == STATUS_PENDING);
+
+    // Verify that the binding still exists but no further calls will be initiated.
+    REQUIRE(_test_client_binding_context.allocated == true);
+    REQUIRE(_test_client_binding_context.nmr_binding_handle != nullptr);
+    REQUIRE(_test_client_binding_context.provider_binding_context == nullptr);
+    REQUIRE(_test_client_binding_context.provider_dispatch == nullptr);
+
+    REQUIRE(_test_provider_binding_context.allocated == true);
+    REQUIRE(_test_provider_binding_context.nmr_binding_handle != nullptr);
+    REQUIRE(_test_provider_binding_context.client_binding_context == nullptr);
+    REQUIRE(_test_provider_binding_context.client_dispatch == nullptr);
+
+    // Complete the detach.
+    NmrProviderDetachClientComplete(_test_provider_binding_context.nmr_binding_handle);
+    REQUIRE(NmrWaitForProviderDeregisterComplete(nmr_provider_handle) == STATUS_SUCCESS);
+    _test_provider_async_deregister = false;
+
+    // The binding should no longer exist.
+    REQUIRE(_test_client_binding_context.allocated == false);
+    REQUIRE(_test_client_binding_context.nmr_binding_handle == nullptr);
+    REQUIRE(_test_provider_binding_context.allocated == false);
+    REQUIRE(_test_provider_binding_context.nmr_binding_handle == nullptr);
+
+    REQUIRE(NmrDeregisterClient(nmr_client_handle) == STATUS_SUCCESS);
 }
