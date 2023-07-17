@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "../inc/TraceLoggingProvider.h"
 #include "fault_injection.h"
 #include "leak_detector.h"
 #include "symbol_decoder.h"
@@ -11,6 +10,7 @@
 #include "usersim/mm.h"
 #include "utilities.h"
 
+#include "../inc/TraceLoggingProvider.h"
 #include <functional>
 #include <intsafe.h>
 #include <map>
