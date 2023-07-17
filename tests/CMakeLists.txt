@@ -12,6 +12,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(usersim_tests
+  nmr_test.cpp
   tests.cpp
 )
 
