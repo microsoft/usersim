@@ -139,11 +139,22 @@ _dpc_routine(
     (*(uint64_t*)deferred_context) += argument1 + argument2;
 }
 
+static void
+_dpc_stall_routine(
+    _In_ PRKDPC dpc, _In_opt_ void* deferred_context, _In_opt_ void* system_argument1, _In_opt_ void* system_argument2)
+{
+    uint64_t delay_100ns = (uintptr_t)system_argument1;
+    ULONG64 time = KeQueryInterruptTime();
+    while (KeQueryInterruptTime() < time + delay_100ns)
+        ;
+}
+
 TEST_CASE("dpcs", "[ke]")
 {
     uint64_t context = 1;
     uint64_t expected_context = context;
     KDPC dpc;
+    const uintptr_t delay_in_100ns = 1000 * 1000 * 10;
     KeInitializeDpc(&dpc, _dpc_routine, &context);
     REQUIRE(KeRemoveQueueDpc(&dpc) == FALSE);
     KeSetTargetProcessorDpc(&dpc, 0);
@@ -195,7 +206,7 @@ TEST_CASE("dpcs", "[ke]")
 
     // Busy loop for 1 second (in 100-ns interrupt time units)
     ULONG64 time = KeQueryInterruptTime();
-    while (KeQueryInterruptTime() < time + 5000 * 1000 * 10)
+    while (KeQueryInterruptTime() < time + delay_in_100ns)
         ;
 
     REQUIRE(context == expected_context);
@@ -206,6 +217,18 @@ TEST_CASE("dpcs", "[ke]")
 
     expected_context += 3000;
     REQUIRE(context == expected_context);
+
+    // Insert a DPC that preempts this passive level thread. Ensure this
+    // thread does not run until the DPC completes.
+    user_affinity = KeSetSystemAffinityThreadEx(1);
+    KeInitializeDpc(&dpc, _dpc_stall_routine, &context);
+    KeSetTargetProcessorDpc(&dpc, 0);
+    time = KeQueryInterruptTime();
+    REQUIRE(KeInsertQueueDpc(&dpc, (void*)delay_in_100ns, NULL) == TRUE);
+    REQUIRE(KeQueryInterruptTime() - time >= delay_in_100ns);
+
+    KeRevertToUserAffinityThreadEx(user_affinity);
+    KeFlushQueuedDpcs();
 }
 
 static void
