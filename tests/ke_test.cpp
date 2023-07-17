@@ -123,7 +123,7 @@ TEST_CASE("threads", "[ke]")
     ULONG processor_count = KeQueryActiveProcessorCount();
     REQUIRE(processor_count > 0);
 
-    KAFFINITY new_affinity = (1 << processor_count) - 1;
+    KAFFINITY new_affinity = ((ULONG_PTR)1 << processor_count) - 1;
     KAFFINITY old_affinity = KeSetSystemAffinityThreadEx(new_affinity);
     REQUIRE(old_affinity != 0);
 
@@ -179,6 +179,33 @@ TEST_CASE("dpcs", "[ke]")
 
     // Verify KeFlushQueuedDpcs() can be called a second time.
     KeFlushQueuedDpcs();
+
+    // Set the current thread affinity to the DPC target processor
+    // and raise IRQL to dispatch level. This must prevent the
+    // DPC executing.
+    KAFFINITY user_affinity = KeSetSystemAffinityThreadEx(1);
+    KIRQL old_irql = KeRaiseIrqlToDpcLevel();
+    REQUIRE(KeGetCurrentProcessorNumberEx(NULL) == 0);
+
+    // Insert the DPC. It should sit in the queue.
+    REQUIRE(KeInsertQueueDpc(&dpc, (void*)(uintptr_t)1000, (void*)(uintptr_t)2000) == TRUE);
+
+    // Revert to the original user affinity. This does not take effect until IRQL drops below DISPATCH_LEVEL.
+    KeRevertToUserAffinityThreadEx(user_affinity);
+
+    // Busy loop for 1 second (in 100-ns interrupt time units)
+    ULONG64 time = KeQueryInterruptTime();
+    while (KeQueryInterruptTime() < time + 5000 * 1000 * 10)
+        ;
+
+    REQUIRE(context == expected_context);
+
+    // Lower IRQL and wait for the DPC to execute.
+    KeLowerIrql(old_irql);
+    KeFlushQueuedDpcs();
+
+    expected_context += 3000;
+    REQUIRE(context == expected_context);
 }
 
 static void

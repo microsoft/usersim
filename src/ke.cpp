@@ -3,11 +3,15 @@
 
 #include "platform.h"
 #include "usersim/ke.h"
+#include "utilities.h"
+
 #include <format>
 #include <sstream>
 #include <vector>
 #undef ASSERT
-#define ASSERT(x) if (!(x)) KeBugCheckCPP(0)
+#define ASSERT(x) \
+    if (!(x))     \
+    KeBugCheckCPP(0)
 
 #pragma comment(lib, "mincore.lib")
 
@@ -16,6 +20,47 @@
 #pragma region irqls
 
 thread_local KIRQL _usersim_current_irql = PASSIVE_LEVEL;
+thread_local GROUP_AFFINITY _usersim_dispatch_previous_affinity;
+
+static uint32_t _usersim_original_priority_class;
+static std::vector<std::mutex> _usersim_dispatch_locks;
+
+usersim_result_t
+usersim_initialize_irql()
+{
+    usersim_result_t result;
+
+    _usersim_original_priority_class = GetPriorityClass(GetCurrentProcess());
+    if (_usersim_original_priority_class == 0) {
+        result = win32_error_to_usersim_error(GetLastError());
+        goto Exit;
+    }
+
+    if (!SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS)) {
+        result = win32_error_to_usersim_error(GetLastError());
+        goto Exit;
+    }
+
+    _usersim_dispatch_locks = std::move(std::vector<std::mutex>(GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS)));
+
+    result = STATUS_SUCCESS;
+
+Exit:
+
+    return result;
+}
+
+void
+usersim_clean_up_irql()
+{
+    if (_usersim_original_priority_class != 0) {
+        if (!SetPriorityClass(GetCurrentProcess(), _usersim_original_priority_class)) {
+            ASSERT(FALSE);
+        }
+
+        _usersim_original_priority_class = 0;
+    }
+}
 
 KIRQL
 KeGetCurrentIrql() { return _usersim_current_irql; }
@@ -27,6 +72,19 @@ KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
     _usersim_current_irql = new_irql;
     BOOL result = SetThreadPriority(GetCurrentThread(), new_irql);
     ASSERT(result);
+
+    if (new_irql >= DISPATCH_LEVEL && *old_irql < DISPATCH_LEVEL) {
+        PROCESSOR_NUMBER processor;
+        uint32_t processor_index = KeGetCurrentProcessorNumberEx(&processor);
+
+        GROUP_AFFINITY new_affinity = {0};
+        new_affinity.Group = processor.Group;
+        new_affinity.Mask = (ULONG_PTR)1 << processor.Number;
+        result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, NULL);
+        ASSERT(result);
+
+        _usersim_dispatch_locks[processor_index].lock();
+    }
 }
 
 KIRQL
@@ -40,8 +98,17 @@ KeRaiseIrqlToDpcLevel()
 void
 KeLowerIrql(_In_ KIRQL new_irql)
 {
+    BOOL result;
+    if (_usersim_current_irql >= DISPATCH_LEVEL && new_irql < DISPATCH_LEVEL) {
+        uint32_t processor_index = KeGetCurrentProcessorNumberEx(NULL);
+        _usersim_dispatch_locks[processor_index].unlock();
+        GROUP_AFFINITY new_affinity;
+        usersim_get_current_thread_group_affinity(&new_affinity);
+        result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, NULL);
+        ASSERT(result);
+    }
     _usersim_current_irql = new_irql;
-    BOOL result = SetThreadPriority(GetCurrentThread(), new_irql);
+    result = SetThreadPriority(GetCurrentThread(), new_irql);
     ASSERT(result);
 }
 
@@ -115,6 +182,8 @@ KeQueryInterruptTime()
 
 #pragma region threads
 
+thread_local GROUP_AFFINITY _usersim_thread_affinity;
+
 ULONG
 KeQueryMaximumProcessorCount() { return GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS); }
 
@@ -124,23 +193,43 @@ KeQueryMaximumProcessorCountEx(_In_ USHORT group_number) { return GetMaximumProc
 KAFFINITY
 KeSetSystemAffinityThreadEx(KAFFINITY affinity)
 {
-    uintptr_t old_affinity = SetThreadAffinityMask(GetCurrentThread(), affinity);
-    if (old_affinity == 0) {
+    GROUP_AFFINITY old_affinity;
+    usersim_get_current_thread_group_affinity(&old_affinity);
+    _usersim_thread_affinity.Group = old_affinity.Group;
+    _usersim_thread_affinity.Mask = affinity;
+    if (KeGetCurrentIrql() < DISPATCH_LEVEL && SetThreadAffinityMask(GetCurrentThread(), affinity) == 0) {
         unsigned long error = GetLastError();
         KeBugCheckEx(0, error, 0, 0, 0);
     }
-    return (KAFFINITY)old_affinity;
+    return (KAFFINITY)old_affinity.Mask;
 }
 
 _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
     KeRevertToUserAffinityThreadEx(_In_ KAFFINITY affinity)
 {
-    SetThreadAffinityMask(GetCurrentThread(), affinity);
+    KeSetSystemAffinityThreadEx(affinity);
 }
 
 PKTHREAD
 NTAPI
 KeGetCurrentThread(VOID) { return (PKTHREAD)usersim_get_current_thread_id(); }
+
+void
+usersim_get_current_thread_group_affinity(_Out_ GROUP_AFFINITY* Affinity)
+{
+
+    if (_usersim_thread_affinity.Mask != 0) {
+        *Affinity = _usersim_thread_affinity;
+    } else {
+        // The thread's current group affinity has never been explicitly set. Report the
+        // current affinity is all processors in the current group.
+        PROCESSOR_NUMBER processor;
+        KeGetCurrentProcessorNumberEx(&processor);
+        RtlZeroMemory(Affinity, sizeof(*Affinity));
+        Affinity->Group = processor.Group;
+        Affinity->Mask = ((ULONG_PTR)1 << GetMaximumProcessorGroupCount()) - 1;
+    }
+}
 
 #pragma endregion threads
 
@@ -360,16 +449,14 @@ class _usersim_emulated_dpc
      *
      * @param[in] i CPU to run on.
      */
-    _usersim_emulated_dpc(size_t i) : head({}), terminate(false), old_irql(PASSIVE_LEVEL)
+    _usersim_emulated_dpc(size_t i) : head({}), terminate(false)
     {
         usersim_list_initialize(&head);
         usersim_list_initialize(&flush_entry);
         thread = std::thread([i, this]() {
-            old_irql = KeRaiseIrqlToDpcLevel();
+            SetThreadPriority(GetCurrentThread(), DISPATCH_LEVEL);
+            KeSetSystemAffinityThreadEx((ULONG_PTR)1 << i);
             std::unique_lock<std::mutex> l(mutex);
-            uintptr_t old_thread_affinity;
-            usersim_assert_success(usersim_set_current_thread_affinity(1ull << i, &old_thread_affinity));
-            SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
             for (;;) {
                 if (terminate) {
                     KeLowerIrql(old_irql);
@@ -392,8 +479,9 @@ class _usersim_emulated_dpc
                         usersim_list_initialize(entry);
 
                         l.unlock();
-                        work_item->work_item_routine(
-                            work_item, context, parameter_1, parameter_2);
+                        KIRQL old_irql = KeRaiseIrqlToDpcLevel();
+                        work_item->work_item_routine(work_item, context, parameter_1, parameter_2);
+                        KeLowerIrql(old_irql);
                         l.lock();
                     }
                 }
@@ -408,6 +496,7 @@ class _usersim_emulated_dpc
      */
     ~_usersim_emulated_dpc()
     {
+        SetThreadPriority(GetCurrentThread(), PASSIVE_LEVEL);
         terminate = true;
         condition_variable.notify_all();
         thread.join();
@@ -488,7 +577,6 @@ class _usersim_emulated_dpc
     std::mutex mutex;
     std::condition_variable condition_variable;
     bool terminate;
-    KIRQL old_irql;
 };
 
 void
@@ -516,10 +604,7 @@ KeInsertQueueDpc(_Inout_ PRKDPC dpc, _In_opt_ PVOID system_argument1, _In_opt_ _
 }
 
 BOOLEAN
-KeRemoveQueueDpc(_Inout_ PRKDPC dpc)
-{
-    return _usersim_emulated_dpc::remove(dpc);
-}
+KeRemoveQueueDpc(_Inout_ PRKDPC dpc) { return _usersim_emulated_dpc::remove(dpc); }
 
 void
 KeFlushQueuedDpcs()
@@ -562,7 +647,8 @@ KeInitializeTimer(_Out_ PKTIMER timer)
 }
 
 VOID CALLBACK
-_usersim_timer_callback(_Inout_ PTP_CALLBACK_INSTANCE instance, _Inout_opt_ PVOID context, _Inout_ PTP_TIMER threadpool_timer)
+_usersim_timer_callback(
+    _Inout_ PTP_CALLBACK_INSTANCE instance, _Inout_opt_ PVOID context, _Inout_ PTP_TIMER threadpool_timer)
 {
     UNREFERENCED_PARAMETER(instance);
     UNREFERENCED_PARAMETER(threadpool_timer);

@@ -54,8 +54,8 @@ extern "C"
 #undef PASSIVE_LEVEL
 #undef APC_LEVEL
 #undef DISPATCH_LEVEL
-#define PASSIVE_LEVEL THREAD_PRIORITY_NORMAL   // Passive release level.
-#define APC_LEVEL THREAD_PRIORITY_ABOVE_NORMAL // APC interrupt level.
+#define PASSIVE_LEVEL THREAD_PRIORITY_NORMAL         // Passive release level.
+#define APC_LEVEL THREAD_PRIORITY_ABOVE_NORMAL       // APC interrupt level.
 #define DISPATCH_LEVEL THREAD_PRIORITY_TIME_CRITICAL // Dispatcher level.
 
     USERSIM_API
@@ -76,6 +76,12 @@ extern "C"
 
     USERSIM_API
     _IRQL_requires_min_(DISPATCH_LEVEL) NTKERNELAPI LOGICAL KeShouldYieldProcessor(VOID);
+
+    usersim_result_t
+    usersim_initialize_irql();
+
+    void
+    usersim_clean_up_irql();
 
 #pragma endregion irqls
 
@@ -138,6 +144,9 @@ extern "C"
     PKTHREAD
     NTAPI
     KeGetCurrentThread(VOID);
+
+    void
+    usersim_get_current_thread_group_affinity(_Out_ GROUP_AFFINITY* Affinity);
 
 #pragma endregion threads
 
@@ -206,7 +215,7 @@ extern "C"
     typedef KDPC* PKDPC;
     typedef KDPC* PRKDPC;
 
-    typedef void (KDEFERRED_ROUTINE)(
+    typedef void(KDEFERRED_ROUTINE)(
         _In_ KDPC* dpc,
         _In_opt_ void* deferred_context,
         _In_opt_ void* system_argument1,
@@ -225,20 +234,27 @@ extern "C"
 
     USERSIM_API
     void
-    KeInitializeDpc(_Out_ __drv_aliasesMem PRKDPC dpc, _In_ PKDEFERRED_ROUTINE deferred_routine, _In_opt_ __drv_aliasesMem PVOID deferred_context);
+    KeInitializeDpc(
+        _Out_ __drv_aliasesMem PRKDPC dpc,
+        _In_ PKDEFERRED_ROUTINE deferred_routine,
+        _In_opt_ __drv_aliasesMem PVOID deferred_context);
 
     USERSIM_API
-    BOOLEAN KeInsertQueueDpc(_Inout_ PRKDPC dpc, _In_opt_ PVOID system_argument1, _In_opt_ __drv_aliasesMem PVOID system_argument2);
+    BOOLEAN
+    KeInsertQueueDpc(
+        _Inout_ PRKDPC dpc, _In_opt_ PVOID system_argument1, _In_opt_ __drv_aliasesMem PVOID system_argument2);
 
     USERSIM_API
-    BOOLEAN KeRemoveQueueDpc(_Inout_ PRKDPC dpc);
+    BOOLEAN
+    KeRemoveQueueDpc(_Inout_ PRKDPC dpc);
 
     USERSIM_API
     void
     KeFlushQueuedDpcs();
 
     USERSIM_API
-    void KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number);
+    void
+    KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number);
 
     void
     usersim_initialize_dpcs();
@@ -272,10 +288,12 @@ extern "C"
 
     USERSIM_API
     BOOLEAN
-    KeSetCoalescableTimer(_Inout_ PKTIMER timer, LARGE_INTEGER due_time, ULONG period, ULONG tolerable_delay, _In_opt_ PKDPC dpc);
+    KeSetCoalescableTimer(
+        _Inout_ PKTIMER timer, LARGE_INTEGER due_time, ULONG period, ULONG tolerable_delay, _In_opt_ PKDPC dpc);
 
     USERSIM_API
-    BOOLEAN KeCancelTimer(_Inout_ PKTIMER timer);
+    BOOLEAN
+    KeCancelTimer(_Inout_ PKTIMER timer);
 
     USERSIM_API
     BOOLEAN
@@ -287,7 +305,8 @@ extern "C"
 #pragma endregion timers
 
     USERSIM_API
-    LARGE_INTEGER KeQueryPerformanceCounter(_Out_opt_ PLARGE_INTEGER performance_frequency);
+    LARGE_INTEGER
+    KeQueryPerformanceCounter(_Out_opt_ PLARGE_INTEGER performance_frequency);
 
     USERSIM_API
     void
