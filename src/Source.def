@@ -38,6 +38,7 @@ EXPORTS
 
     NmrRegisterClient
     NmrClientAttachProvider
+    NmrClientDetachProviderComplete
     NmrDeregisterClient
     NmrDeregisterProvider
     NmrProviderDetachClientComplete
