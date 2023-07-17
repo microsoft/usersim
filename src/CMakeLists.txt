@@ -31,6 +31,7 @@ add_library(usersim SHARED
   tracelog.h
   utilities.h
   wdf.cpp
+  Source.def
 )
 
 target_include_directories(usersim PRIVATE
