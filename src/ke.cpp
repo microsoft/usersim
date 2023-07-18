@@ -372,6 +372,7 @@ class _usersim_emulated_dpc
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
             for (;;) {
                 if (terminate) {
+                    KeLowerIrql(old_irql);
                     return;
                 }
 
@@ -407,7 +408,6 @@ class _usersim_emulated_dpc
      */
     ~_usersim_emulated_dpc()
     {
-        KeLowerIrql(old_irql);
         terminate = true;
         condition_variable.notify_all();
         thread.join();
