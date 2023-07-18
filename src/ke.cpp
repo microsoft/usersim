@@ -372,6 +372,7 @@ class _usersim_emulated_dpc
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
             for (;;) {
                 if (terminate) {
+                    KeLowerIrql(old_irql);
                     return;
                 }
 
@@ -407,10 +408,17 @@ class _usersim_emulated_dpc
      */
     ~_usersim_emulated_dpc()
     {
-        KeLowerIrql(old_irql);
         terminate = true;
         condition_variable.notify_all();
         thread.join();
+
+        // On process termination, the system may have killed the thread before
+        // it could release the mutex. If that happens, the kernel will have
+        // released the mutex, but the user-mode class won't know that yet.
+        // Work around this issue by trying to take the mutex here (forcing
+        // user-mode to be reconciled with the actual kernel-mode state), to
+        // avoid the mutex destructor asserting due to destruction without releasing.
+        std::unique_lock<std::mutex> l(mutex);
     }
 
     /**
