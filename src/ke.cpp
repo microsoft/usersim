@@ -227,7 +227,7 @@ usersim_get_current_thread_group_affinity(_Out_ GROUP_AFFINITY* Affinity)
         KeGetCurrentProcessorNumberEx(&processor);
         RtlZeroMemory(Affinity, sizeof(*Affinity));
         Affinity->Group = processor.Group;
-        Affinity->Mask = ((ULONG_PTR)1 << GetMaximumProcessorGroupCount()) - 1;
+        Affinity->Mask = ((ULONG_PTR)1 << GetMaximumProcessorCount(Affinity->Group)) - 1;
     }
 }
 
@@ -479,9 +479,11 @@ class _usersim_emulated_dpc
                         usersim_list_initialize(entry);
 
                         l.unlock();
-                        KIRQL old_irql = KeRaiseIrqlToDpcLevel();
+                        _usersim_dispatch_locks[i].lock();
+                        _usersim_current_irql = DISPATCH_LEVEL;
                         work_item->work_item_routine(work_item, context, parameter_1, parameter_2);
-                        KeLowerIrql(old_irql);
+                        _usersim_dispatch_locks[i].unlock();
+                        _usersim_current_irql = PASSIVE_LEVEL;
                         l.lock();
                     }
                 }
