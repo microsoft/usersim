@@ -152,8 +152,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ex_test.cpp" />
+    <ClCompile Include="ke_test.cpp" />
+    <ClCompile Include="mm_test.cpp" />
     <ClCompile Include="nmr_test.cpp" />
-    <ClCompile Include="tests.cpp" />
+    <ClCompile Include="rtl_test.cpp" />
+    <ClCompile Include="wdf_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

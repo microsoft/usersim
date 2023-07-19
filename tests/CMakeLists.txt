@@ -12,8 +12,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(usersim_tests
+  ex_test.cpp
+  ke_test.cpp
+  mm_test.cpp
   nmr_test.cpp
-  tests.cpp
+  rtl_test.cpp
+  wdf_test.cpp
 )
 
 target_include_directories(usersim_tests PRIVATE

@@ -1,25 +1,13 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#define CATCH_CONFIG_MAIN
 #if !defined(CMAKE_NUGET)
 #include <catch2/catch_all.hpp>
 #else
 #include <catch2/catch.hpp>
 #endif
-#include "usersim/ex.h"
-#include "usersim/io.h"
 #include "usersim/ke.h"
 #include "usersim/mm.h"
-#include "usersim/rtl.h"
-
-TEST_CASE("DriverEntry", "[wdf]")
-{
-    HMODULE module = LoadLibraryW(L"sample.dll");
-    REQUIRE(module != nullptr);
-
-    FreeLibrary(module);
-}
 
 TEST_CASE("irql", "[ke]")
 {
@@ -76,48 +64,6 @@ TEST_CASE("spin lock", "[ke]")
     KeAcquireSpinLockAtDpcLevel(&lock);
     KeReleaseSpinLockFromDpcLevel(&lock);
     KeLowerIrql(old_irql);
-}
-
-TEST_CASE("MmAllocatePagesForMdlEx", "[mm]")
-{
-    PHYSICAL_ADDRESS start_address{.QuadPart = 0};
-    PHYSICAL_ADDRESS end_address{.QuadPart = -1};
-    PHYSICAL_ADDRESS page_size{.QuadPart = PAGE_SIZE};
-    const size_t byte_count = 256;
-    MDL* mdl = MmAllocatePagesForMdlEx(
-        start_address, end_address, page_size, byte_count, MmCached, MM_ALLOCATE_FULLY_REQUIRED);
-    REQUIRE(mdl != nullptr);
-
-    void* base_address = MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority);
-    REQUIRE(base_address != nullptr);
-
-    REQUIRE(MmGetMdlByteCount(mdl) == byte_count);
-    REQUIRE(MmGetMdlByteOffset(mdl) == 0);
-
-    MmUnmapLockedPages(base_address, mdl);
-    MmFreePagesFromMdl(mdl);
-    ExFreePool(mdl);
-}
-
-TEST_CASE("IoAllocateMdl", "[mm]")
-{
-    const size_t byte_count = 256;
-    ULONG tag = 'tset';
-    void* buffer = ExAllocatePoolWithTag(NonPagedPool, byte_count, tag);
-    REQUIRE(buffer != nullptr);
-
-    MDL* mdl = IoAllocateMdl(buffer, byte_count, FALSE, FALSE, nullptr);
-    REQUIRE(mdl != nullptr);
-
-    MmBuildMdlForNonPagedPool(mdl);
-
-    void* base_address = MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority);
-    REQUIRE(base_address == buffer);
-
-    REQUIRE(MmGetMdlByteCount(mdl) == byte_count);
-
-    IoFreeMdl(mdl);
-    ExFreePoolWithTag(buffer, tag);
 }
 
 TEST_CASE("processor count", "[ke]")
@@ -263,7 +209,7 @@ TEST_CASE("one-shot timers", "[ke]")
     // Test a timer expiring immediately.
     LARGE_INTEGER due_time = {.QuadPart = -1};
     REQUIRE(KeSetTimer(&timer, due_time, &dpc) == FALSE);
-    Sleep(1000); // Wait 1 second to make sure it has time to expire.
+    Sleep(1000);                               // Wait 1 second to make sure it has time to expire.
     REQUIRE(KeReadStateTimer(&timer) == TRUE); // Verify signaled.
     REQUIRE(context == 2);
 
@@ -315,7 +261,8 @@ TEST_CASE("KeBugCheck", "[ke]")
     } catch (std::exception e) {
         REQUIRE(
             strcmp(
-                e.what(), "*** STOP 0x00000011 (0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000)") ==
+                e.what(),
+                "*** STOP 0x00000011 (0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000)") ==
             0);
     }
 }
@@ -328,56 +275,8 @@ TEST_CASE("KeBugCheckEx", "[ke]")
     } catch (std::exception e) {
         REQUIRE(
             strcmp(
-                e.what(), "*** STOP 0x00000011 (0x0000000000000001,0x0000000000000002,0x0000000000000003,0x0000000000000004)") ==
+                e.what(),
+                "*** STOP 0x00000011 (0x0000000000000001,0x0000000000000002,0x0000000000000003,0x0000000000000004)") ==
             0);
     }
-}
-
-TEST_CASE("ExAllocatePool", "[ex]")
-{
-    uint64_t* buffer = (uint64_t*)ExAllocatePoolUninitialized(NonPagedPool, 8, 'tset');
-    REQUIRE(buffer != nullptr);
-    REQUIRE(*buffer != 0);
-    *buffer = 0;
-    ExFreePool(buffer);
-
-    buffer = (uint64_t*)ExAllocatePoolWithTag(NonPagedPool, 8, 'tset');
-    REQUIRE(buffer != nullptr);
-    REQUIRE(*buffer == 0);
-    *buffer = 42;
-    ExFreePool(buffer);
-}
-
-TEST_CASE("ExFreePool null", "[ex]")
-{
-    try {
-        ExFreePoolCPP(nullptr);
-        REQUIRE(FALSE);
-    } catch (std::exception e) {
-        REQUIRE(
-            strcmp(
-                e.what(), "*** STOP 0x000000c2 (0x0000000000000046,0x0000000000000000,0x0000000000000000,0x0000000000000000)") ==
-            0);
-    } catch (...) {
-        REQUIRE(FALSE);
-    }
-
-    try {
-        ExFreePoolWithTagCPP(nullptr, 'tset');
-        REQUIRE(FALSE);
-    } catch (std::exception e) {
-        REQUIRE(
-            strcmp(
-                e.what(), "*** STOP 0x000000c2 (0x0000000000000046,0x0000000000000000,0x0000000000000000,0x0000000000000000)") ==
-            0);
-    }
-}
-
-TEST_CASE("RtlULongAdd", "[rtl]")
-{
-    ULONG result;
-    REQUIRE(NT_SUCCESS(RtlULongAdd(1, 2, &result)));
-    REQUIRE(result == 3);
-
-    REQUIRE(RtlULongAdd(ULONG_MAX, 1, &result) == STATUS_INTEGER_OVERFLOW);
 }
