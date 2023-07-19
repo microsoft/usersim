@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <winnt.h>
+#include "..\src\platform.h"
 #include "ke.h"
 
 #if defined(__cplusplus)
