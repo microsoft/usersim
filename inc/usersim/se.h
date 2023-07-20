@@ -141,6 +141,9 @@ typedef struct _SE_EXPORTS
         _Out_ PACCESS_MASK GrantedAccess,
         _Out_ NTSTATUS* AccessStatus);
 
+    void
+    usersim_initialize_se();
+
 #if defined(__cplusplus)
 }
 #endif

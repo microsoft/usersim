@@ -27,7 +27,11 @@ extern "C"
 
     USERSIM_API
     unsigned long
-    RtlLengthSid(_In_ PSID Sid);
+    RtlLengthSid(_In_ PSID sid);
+
+    USERSIM_API
+    BOOLEAN
+    RtlValidSid(_In_ PSID sid);
 
     USERSIM_API
     NTSTATUS

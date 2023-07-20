@@ -46,10 +46,16 @@ RtlMapGenericMask(_Inout_ PACCESS_MASK AccessMask, _In_ const GENERIC_MAPPING* G
 }
 
 unsigned long
-RtlLengthSid(_In_ PSID Sid)
+RtlLengthSid(_In_ PSID sid)
 {
-    UNREFERENCED_PARAMETER(Sid);
-    return (unsigned long)sizeof(SID);
+    SID* sid_structure = (SID*)sid;
+    return FIELD_OFFSET(SID, SubAuthority[sid_structure->SubAuthorityCount]);
+}
+
+BOOLEAN
+RtlValidSid(_In_ PSID sid)
+{
+    return (sid != nullptr);
 }
 
 NTSTATUS

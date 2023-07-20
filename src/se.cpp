@@ -11,6 +11,14 @@
 static SE_EXPORTS _SeExports = {0};
 __declspec(dllexport) PSE_EXPORTS SeExports = &_SeExports;
 
+void
+usersim_initialize_se()
+{
+    // Initialize SeExports.
+    _SeExports.SeLocalSystemSid = nullptr;
+    _SeExports.SeAliasAdminsSid = nullptr;
+}
+
 BOOLEAN
 SeAccessCheckFromState(
     _In_ PSECURITY_DESCRIPTOR SecurityDescriptor,
