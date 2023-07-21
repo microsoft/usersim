@@ -73,44 +73,46 @@ usersim_initialize_se()
     _initialize_sid(WinCreatorOwnerRightsSid, &_SeExports.SeOwnerRightsSid);
     _initialize_sid(WinBuiltinAnyPackageSid, &_SeExports.SeAllAppPackagesSid);
     _initialize_sid(WinUserModeDriversSid, &_SeExports.SeUserModeDriversSid);
-    // SeProcTrustWinTcbSid
-    // SeTrustedInstallerSid
-    // SeAppSiloSid
-    // SeAppSiloVolumeRootMinimalCapabilitySid
-    // SeAppSiloProfilesRootMinimalCapabilitySid
+
+    // The following don't seem to have WELL_KNOWN_SID_TYPE enum values:
+    //    SeProcTrustWinTcbSid
+    //    SeTrustedInstallerSid
+    //    SeAppSiloSid
+    //    SeAppSiloVolumeRootMinimalCapabilitySid
+    //    SeAppSiloProfilesRootMinimalCapabilitySid
 }
 
 BOOLEAN
 SeAccessCheckFromState(
-    _In_ PSECURITY_DESCRIPTOR SecurityDescriptor,
-    _In_ PTOKEN_ACCESS_INFORMATION PrimaryTokenInformation,
-    _In_opt_ PTOKEN_ACCESS_INFORMATION ClientTokenInformation,
-    _In_ ACCESS_MASK DesiredAccess,
-    _In_ ACCESS_MASK PreviouslyGrantedAccess,
-    _Outptr_opt_result_maybenull_ PPRIVILEGE_SET* Privileges,
-    _In_ PGENERIC_MAPPING GenericMapping,
-    _In_ KPROCESSOR_MODE AccessMode,
-    _Out_ PACCESS_MASK GrantedAccess,
-    _Out_ NTSTATUS* AccessStatus)
+    _In_ PSECURITY_DESCRIPTOR security_descriptor,
+    _In_ PTOKEN_ACCESS_INFORMATION primary_token_information,
+    _In_opt_ PTOKEN_ACCESS_INFORMATION client_token_information,
+    _In_ ACCESS_MASK desired_access,
+    _In_ ACCESS_MASK previously_granted_access,
+    _Outptr_opt_result_maybenull_ PPRIVILEGE_SET* privileges,
+    _In_ PGENERIC_MAPPING generic_mapping,
+    _In_ KPROCESSOR_MODE access_mode,
+    _Out_ PACCESS_MASK granted_access,
+    _Out_ NTSTATUS* access_status)
 {
-    if (Privileges != nullptr) {
-        *Privileges = nullptr;
+    if (privileges != nullptr) {
+        *privileges = nullptr;
     }
-    *GrantedAccess = DesiredAccess;
+    *granted_access = desired_access;
 
     if (usersim_fault_injection_inject_fault()) {
-        *AccessStatus = STATUS_ACCESS_DENIED;
+        *access_status = STATUS_ACCESS_DENIED;
         return false;
     }
 
-    UNREFERENCED_PARAMETER(SecurityDescriptor);
-    UNREFERENCED_PARAMETER(PrimaryTokenInformation);
-    UNREFERENCED_PARAMETER(ClientTokenInformation);
-    UNREFERENCED_PARAMETER(PreviouslyGrantedAccess);
-    UNREFERENCED_PARAMETER(GenericMapping);
-    UNREFERENCED_PARAMETER(AccessMode);
+    UNREFERENCED_PARAMETER(security_descriptor);
+    UNREFERENCED_PARAMETER(primary_token_information);
+    UNREFERENCED_PARAMETER(client_token_information);
+    UNREFERENCED_PARAMETER(previously_granted_access);
+    UNREFERENCED_PARAMETER(generic_mapping);
+    UNREFERENCED_PARAMETER(access_mode);
 
-    *AccessStatus = STATUS_SUCCESS;
+    *access_status = STATUS_SUCCESS;
 
     return true;
 }
