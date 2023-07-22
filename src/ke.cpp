@@ -80,7 +80,7 @@ KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
         GROUP_AFFINITY new_affinity = {0};
         new_affinity.Group = processor.Group;
         new_affinity.Mask = (ULONG_PTR)1 << processor.Number;
-        result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, NULL);
+        result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, nullptr);
         ASSERT(result);
 
         _usersim_dispatch_locks[processor_index].lock();
@@ -100,11 +100,11 @@ KeLowerIrql(_In_ KIRQL new_irql)
 {
     BOOL result;
     if (_usersim_current_irql >= DISPATCH_LEVEL && new_irql < DISPATCH_LEVEL) {
-        uint32_t processor_index = KeGetCurrentProcessorNumberEx(NULL);
+        uint32_t processor_index = KeGetCurrentProcessorNumberEx(nullptr);
         _usersim_dispatch_locks[processor_index].unlock();
         GROUP_AFFINITY new_affinity;
         usersim_get_current_thread_group_affinity(&new_affinity);
-        result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, NULL);
+        result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, nullptr);
         ASSERT(result);
     }
     _usersim_current_irql = new_irql;
@@ -215,19 +215,18 @@ NTAPI
 KeGetCurrentThread(VOID) { return (PKTHREAD)usersim_get_current_thread_id(); }
 
 void
-usersim_get_current_thread_group_affinity(_Out_ GROUP_AFFINITY* Affinity)
+usersim_get_current_thread_group_affinity(_Out_ GROUP_AFFINITY* affinity)
 {
-
     if (_usersim_thread_affinity.Mask != 0) {
-        *Affinity = _usersim_thread_affinity;
+        *affinity = _usersim_thread_affinity;
     } else {
         // The thread's current group affinity has never been explicitly set. Report the
         // current affinity is all processors in the current group.
         PROCESSOR_NUMBER processor;
         KeGetCurrentProcessorNumberEx(&processor);
-        RtlZeroMemory(Affinity, sizeof(*Affinity));
-        Affinity->Group = processor.Group;
-        Affinity->Mask = ((ULONG_PTR)1 << GetMaximumProcessorCount(Affinity->Group)) - 1;
+        RtlZeroMemory(affinity, sizeof(*affinity));
+        affinity->Group = processor.Group;
+        affinity->Mask = ((ULONG_PTR)1 << GetMaximumProcessorCount(affinity->Group)) - 1;
     }
 }
 
@@ -459,7 +458,7 @@ class _usersim_emulated_dpc
             std::unique_lock<std::mutex> l(mutex);
             for (;;) {
                 if (terminate) {
-                    KeLowerIrql(old_irql);
+                    SetThreadPriority(GetCurrentThread(), PASSIVE_LEVEL);
                     return;
                 }
 
