@@ -5,11 +5,11 @@
 #include "leak_detector.h"
 #include "symbol_decoder.h"
 #include "tracelog.h"
-#include "utilities.h"
 #include "usersim/ex.h"
 #include "usersim/ke.h"
 #include "usersim/mm.h"
 #include "usersim/se.h"
+#include "utilities.h"
 
 #include "../inc/TraceLoggingProvider.h"
 #include <functional>
@@ -197,6 +197,8 @@ _get_environment_variable_as_size_t(const std::string& name)
 _Must_inspect_result_ usersim_result_t
 usersim_platform_initiate()
 {
+    usersim_result_t result;
+
     int32_t count = InterlockedIncrement((volatile long*)&_usersim_platform_initiate_count);
     if (count > 1) {
         // Usersim library already initialized, return.
@@ -224,6 +226,11 @@ usersim_platform_initiate()
             _usersim_leak_detector_ptr = std::make_unique<usersim_leak_detector_t>();
         }
 
+        result = usersim_initialize_irql();
+        if (result != STATUS_SUCCESS) {
+            goto Exit;
+        }
+
         usersim_initialize_dpcs();
 
         // Compute the starting index of each processor group.
@@ -241,7 +248,13 @@ usersim_platform_initiate()
         return STATUS_NO_MEMORY;
     }
 
-    usersim_result_t result = _initialize_thread_pool();
+    result = _initialize_thread_pool();
+    if (result != STATUS_SUCCESS) {
+        goto Exit;
+    }
+
+Exit:
+
     if (result != STATUS_SUCCESS) {
         // Clean up since usersim_platform_terminate() will not be called by the caller.
         usersim_platform_terminate();
@@ -257,6 +270,7 @@ usersim_platform_terminate()
     usersim_free_semaphores();
     usersim_free_threadpool_timers();
     usersim_clean_up_dpcs();
+    usersim_clean_up_irql();
     _clean_up_thread_pool();
     if (_usersim_leak_detector_ptr) {
         _usersim_leak_detector_ptr->dump_leaks();
@@ -431,7 +445,8 @@ usersim_allocate_ring_buffer_memory(size_t length)
         return nullptr;
     }
 
-    usersim_ring_descriptor_t* descriptor = (usersim_ring_descriptor_t*)usersim_allocate(sizeof(usersim_ring_descriptor_t));
+    usersim_ring_descriptor_t* descriptor =
+        (usersim_ring_descriptor_t*)usersim_allocate(sizeof(usersim_ring_descriptor_t));
     if (!descriptor) {
         goto Exit;
     }
@@ -618,26 +633,6 @@ usersim_query_time_since_boot(bool include_suspended_time)
     }
 
     return interrupt_time;
-}
-
-_Must_inspect_result_ usersim_result_t
-usersim_set_current_thread_affinity(uintptr_t new_thread_affinity_mask, _Out_ uintptr_t* old_thread_affinity_mask)
-{
-    uintptr_t old_mask = SetThreadAffinityMask(GetCurrentThread(), new_thread_affinity_mask);
-    if (old_mask == 0) {
-        unsigned long error = GetLastError();
-        usersim_assert(error != ERROR_SUCCESS);
-        return STATUS_NOT_SUPPORTED;
-    } else {
-        *old_thread_affinity_mask = old_mask;
-        return STATUS_SUCCESS;
-    }
-}
-
-void
-usersim_restore_current_thread_affinity(uintptr_t old_thread_affinity_mask)
-{
-    SetThreadAffinityMask(GetCurrentThread(), old_thread_affinity_mask);
 }
 
 _Ret_range_(>, 0) uint32_t usersim_get_cpu_count() { return _usersim_platform_maximum_processor_count; }
@@ -995,19 +990,19 @@ usersim_platform_detach_process(_In_ usersim_process_state_t* state)
     UNREFERENCED_PARAMETER(state);
 }
 
-#define HANDLE_VARIABLE_TYPE(type, fmt) \
-     { \
-        int count = va_arg(valist, int); \
-        i++; \
-        if (count > 0) { \
-            type value = va_arg(valist, type); \
-            printf("," fmt, value); \
-        } \
-        for (int j = 1; j < count; j++) { \
+#define HANDLE_VARIABLE_TYPE(type, fmt)                    \
+    {                                                      \
+        int count = va_arg(valist, int);                   \
+        i++;                                               \
+        if (count > 0) {                                   \
+            type value = va_arg(valist, type);             \
+            printf("," fmt, value);                        \
+        }                                                  \
+        for (int j = 1; j < count; j++) {                  \
             const char* str = va_arg(valist, const char*); \
-            printf(",\"%s\"", str); \
-        } \
-        i += count; \
+            printf(",\"%s\"", str);                        \
+        }                                                  \
+        i += count;                                        \
     }
 
 static bool _usersim_trace_logging_enabled = false;
@@ -1039,7 +1034,7 @@ usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ c
     if (!_usersim_trace_logging_enabled) {
         return;
     }
-    
+
     printf("{%s", eventName);
 
     va_list valist;
@@ -1062,8 +1057,7 @@ usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ c
             opcode = va_arg(valist, int);
             i++;
             break;
-        case _tlgCountedUtf8String:
-            {
+        case _tlgCountedUtf8String: {
             const char* value = va_arg(valist, const char*);
             i++;
             int size = va_arg(valist, int);
@@ -1079,8 +1073,8 @@ usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ c
             }
             i += count;
             break;
-            }
-        case _tlgPsz: 
+        }
+        case _tlgPsz:
             HANDLE_VARIABLE_TYPE(const char*, "\"%s\"");
             break;
         case _tlgPwsz:
@@ -1125,8 +1119,7 @@ usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ c
             i += count;
             break;
         }
-        case _tlgIPv4Address:
-        {
+        case _tlgIPv4Address: {
             int count = va_arg(valist, int);
             i++;
             if (count > 0) {
@@ -1142,8 +1135,7 @@ usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ c
             i += count;
             break;
         }
-        case _tlgIPv6Address:
-        {
+        case _tlgIPv6Address: {
             int count = va_arg(valist, int);
             i++;
             if (count > 0) {
