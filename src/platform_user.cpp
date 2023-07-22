@@ -8,6 +8,7 @@
 #include "usersim/ex.h"
 #include "usersim/ke.h"
 #include "usersim/mm.h"
+#include "usersim/se.h"
 #include "utilities.h"
 
 #include "../inc/TraceLoggingProvider.h"
@@ -241,6 +242,8 @@ usersim_platform_initiate()
         }
 
         ExInitializeRundownProtection(&_usersim_platform_preemptible_work_items_rundown);
+
+        usersim_initialize_se();
     } catch (const std::bad_alloc&) {
         return STATUS_NO_MEMORY;
     }

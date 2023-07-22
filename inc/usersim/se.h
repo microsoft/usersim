@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <winnt.h>
+#include "..\src\platform.h"
 #include "ke.h"
 
 #if defined(__cplusplus)
@@ -130,16 +130,19 @@ typedef struct _SE_EXPORTS
     USERSIM_API
     BOOLEAN
     SeAccessCheckFromState(
-        _In_ PSECURITY_DESCRIPTOR SecurityDescriptor,
-        _In_ PTOKEN_ACCESS_INFORMATION PrimaryTokenInformation,
-        _In_opt_ PTOKEN_ACCESS_INFORMATION ClientTokenInformation,
-        _In_ ACCESS_MASK DesiredAccess,
-        _In_ ACCESS_MASK PreviouslyGrantedAccess,
-        _Outptr_opt_result_maybenull_ PPRIVILEGE_SET* Privileges,
-        _In_ PGENERIC_MAPPING GenericMapping,
-        _In_ KPROCESSOR_MODE AccessMode,
-        _Out_ PACCESS_MASK GrantedAccess,
-        _Out_ NTSTATUS* AccessStatus);
+        _In_ PSECURITY_DESCRIPTOR security_descriptor,
+        _In_ PTOKEN_ACCESS_INFORMATION primary_token_information,
+        _In_opt_ PTOKEN_ACCESS_INFORMATION client_token_information,
+        _In_ ACCESS_MASK desired_access,
+        _In_ ACCESS_MASK previously_granted_access,
+        _Outptr_opt_result_maybenull_ PPRIVILEGE_SET* privileges,
+        _In_ PGENERIC_MAPPING generic_mapping,
+        _In_ KPROCESSOR_MODE access_mode,
+        _Out_ PACCESS_MASK granted_access,
+        _Out_ NTSTATUS* access_status);
+
+    void
+    usersim_initialize_se();
 
 #if defined(__cplusplus)
 }
