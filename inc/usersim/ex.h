@@ -3,8 +3,9 @@
 
 #pragma once
 #include "..\src\platform.h"
-#include <synchapi.h>
 #include "ke.h"
+
+#include <synchapi.h>
 
 #if defined(__cplusplus)
 extern "C"
@@ -28,7 +29,7 @@ extern "C"
     {
         BAD_POOL_CALLER = 0xC2,
     } bug_check_code_t;
-	
+
     typedef struct _EX_PUSH_LOCK
     {
         SRWLOCK lock;
@@ -42,7 +43,7 @@ extern "C"
         void* reserved;
     } EX_RUNDOWN_REF;
 
-        //
+    //
     // Pool Allocation routines (in pool.c)
     //
     typedef _Enum_is_bitflag_ enum _POOL_TYPE {
@@ -179,9 +180,8 @@ extern "C"
 
 #if defined(__cplusplus)
 }
-#endif
 
-// The bug check functions below throw C++ exceptions so tests can catch them to verify error behavior.
+// The functions below throw C++ exceptions so tests can catch them to verify error behavior.
 USERSIM_API void
 ExFreePoolCPP(_Frees_ptr_ void* p);
 
@@ -194,3 +194,5 @@ ExAllocatePoolWithTagCPP(
 
 USERSIM_API _Ret_maybenull_ void*
 ExAllocatePoolUninitializedCPP(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag);
+
+#endif
