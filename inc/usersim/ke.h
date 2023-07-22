@@ -324,7 +324,7 @@ extern "C"
 #if defined(__cplusplus)
 }
 
-// The bug check functions below throw C++ exceptions so tests can catch them to verify error behavior.
+// The functions below throw C++ exceptions so tests can catch them to verify error behavior.
 USERSIM_API void
 KeBugCheckCPP(ULONG bug_check_code);
 
