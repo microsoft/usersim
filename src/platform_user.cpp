@@ -71,11 +71,6 @@ _initialize_thread_pool()
     // Initialize a callback environment for the thread pool.
     InitializeThreadpoolEnvironment(&_callback_environment);
 
-    // CreateThreadpoolCleanupGroup can return nullptr.
-    if (usersim_fault_injection_inject_fault()) {
-        return STATUS_NO_MEMORY;
-    }
-
     _pool = CreateThreadpool(nullptr);
     if (_pool == nullptr) {
         result = win32_error_code_to_usersim_result(GetLastError());
@@ -245,7 +240,8 @@ usersim_platform_initiate()
 
         usersim_initialize_se();
     } catch (const std::bad_alloc&) {
-        return STATUS_NO_MEMORY;
+        result = STATUS_NO_MEMORY;
+        goto Exit;
     }
 
     result = _initialize_thread_pool();
@@ -254,7 +250,6 @@ usersim_platform_initiate()
     }
 
 Exit:
-
     if (result != STATUS_SUCCESS) {
         // Clean up since usersim_platform_terminate() will not be called by the caller.
         usersim_platform_terminate();
