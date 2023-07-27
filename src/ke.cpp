@@ -498,7 +498,12 @@ class _usersim_emulated_dpc
     ~_usersim_emulated_dpc()
     {
         SetThreadPriority(GetCurrentThread(), PASSIVE_LEVEL);
-        terminate = true;
+        // Set the flag to terminate the thread while holding the lock, to make
+        // sure the thread is not in the middle of a wait.
+        {
+            std::unique_lock<std::mutex> l(mutex);
+            terminate = true;
+        }
         condition_variable.notify_all();
         thread.join();
 
