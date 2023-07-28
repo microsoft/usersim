@@ -13,10 +13,11 @@ To use this repository from another project:
    See the "sample" project as an example, which builds the
    [KMDF sample driver](https://learn.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/writing-a-very-small-kmdf--driver)
    as a DLL (the sample project can be built either using Visual Studio or using cmake).
-3. Define the preprocessor symbol USERSIM_DLLMAIN when building one file (typically the one containing your DriverEntry)
-  that includes wdf.h.  The sample project does this not in the driver.c source file itself but rather in the sample.vcxproj that
-  builds it, but all that is important is defining it before including wdf.h.
-4. Add a reference from your DLL project to the usersim project.
+4. Add a reference from your DLL project to the usersim project and the usersim_dll_skeleton project.
+5. Define _AMD64_ in the project properties preprocessor defines.
+6. Add to AdditionalIncludeDirectories: $(WindowsSdkDir)Include\10.0.22621.0\km;$(WindowsSdkDir)Include\wdf\kmdf\1.15
+7. Disable warning 4324 (structure was padded due to alignment) in the project properties, by adding 4324 to
+   Configuration Properties -> C/C++ -> Advanced -> Disable Specific Warnings.
 
 ### Leak Detection
 

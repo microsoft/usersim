@@ -17,6 +17,7 @@ add_library(usersim SHARED
   leak_detector.h
   mm.cpp
   ndis_um.cpp
+  ndis.h
   net_platform.h
   nmr_impl.cpp
   nmr_impl.h
@@ -31,10 +32,12 @@ add_library(usersim SHARED
   tracelog.h
   utilities.h
   wdf.cpp
+  wdf.h
   Source.def
 )
 
 target_include_directories(usersim PRIVATE
+  "."
   "../inc"
   "${WDK_ROOT}/include/${WDK_VERSION}/km"
 )

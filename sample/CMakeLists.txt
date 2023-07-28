@@ -6,20 +6,22 @@ add_library(sample SHARED
 )
 
 target_include_directories(sample PRIVATE
-  "../inc"
   "${WDK_ROOT}/include/${WDK_VERSION}/km"
+  "${WDK_ROOT}/include/wdf/kmdf/1.15"
 )
 
 target_compile_definitions(sample PRIVATE
   _WINDLL
+  _AMD64_
 )
 
 target_link_libraries(sample PRIVATE
   "usersim.lib"
+  "usersim_dll_skeleton.lib"
 )
 
 target_link_directories(sample PRIVATE
   "${CMAKE_BINARY_DIR}/lib/${CONFIG}"
 )
 
-add_dependencies(sample usersim)
+add_dependencies(sample usersim usersim_dll_skeleton)
