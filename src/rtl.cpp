@@ -4,6 +4,7 @@
 #include "fault_injection.h"
 #include "platform.h"
 #include "kernel_um.h"
+#include "usersim/ke.h"
 #include "usersim/rtl.h"
 #include "utilities.h"
 #include <intsafe.h>
@@ -118,4 +119,27 @@ RtlSizeTSub(
     size_t minuend, size_t subtrahend, _Out_ _Deref_out_range_(==, minuend - subtrahend) size_t* result)
 {
     return SUCCEEDED(SizeTSub(minuend, subtrahend, result)) ? STATUS_SUCCESS : STATUS_INTEGER_OVERFLOW;
+}
+
+__analysis_noreturn VOID NTAPI
+RtlAssertCPP(
+    _In_ PVOID void_failed_assertion,
+    _In_ PVOID void_file_name,
+    _In_ ULONG line_number,
+    _In_opt_ PSTR mutable_message)
+{
+    UNREFERENCED_PARAMETER(void_failed_assertion);
+    UNREFERENCED_PARAMETER(void_file_name);
+    UNREFERENCED_PARAMETER(mutable_message);
+    KeBugCheckEx(0, line_number, NULL, NULL, NULL);
+}
+
+__analysis_noreturn VOID NTAPI
+RtlAssert(
+    _In_ PVOID void_failed_assertion,
+    _In_ PVOID void_file_name,
+    _In_ ULONG line_number,
+    _In_opt_ PSTR mutable_message)
+{
+    RtlAssertCPP(void_failed_assertion, void_file_name, line_number, mutable_message);
 }

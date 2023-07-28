@@ -106,9 +106,27 @@ extern "C"
         _In_ PCCH utf8_string_source,
         _In_ ULONG utf8_string_byte_count);
 
+    USERSIM_API
+    __analysis_noreturn VOID NTAPI
+    RtlAssert(
+        _In_ PVOID void_failed_assertion,
+        _In_ PVOID void_file_name,
+        _In_ ULONG line_number,
+        _In_opt_ PSTR mutable_message);
+
 // Include Rtl* implementations from ntdll.lib.
 #pragma comment(lib, "ntdll.lib")
 
 #if defined(__cplusplus)
 }
+
+// The functions below throw C++ exceptions so tests can catch them to verify error behavior.
+
+USERSIM_API __analysis_noreturn void
+RtlAssertCPP(
+    _In_ PVOID void_failed_assertion,
+    _In_ PVOID void_file_name,
+    _In_ ULONG line_number,
+    _In_opt_ PSTR mutable_message);
+
 #endif
