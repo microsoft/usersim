@@ -240,6 +240,7 @@ usersim_platform_initiate()
         ExInitializeRundownProtection(&_usersim_platform_preemptible_work_items_rundown);
 
         usersim_initialize_se();
+        usersim_initialize_wdf();
     } catch (const std::bad_alloc&) {
         result = STATUS_NO_MEMORY;
         goto Exit;
