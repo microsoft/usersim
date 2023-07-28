@@ -37,5 +37,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Release)
 
 add_subdirectory("src")
+add_subdirectory("usersim_dll_skeleton")
 add_subdirectory("sample")
 add_subdirectory("tests")

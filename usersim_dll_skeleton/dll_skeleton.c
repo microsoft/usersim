@@ -15,8 +15,8 @@ PWDF_DRIVER_GLOBALS UsersimWdfDriverGlobals;
 
 __declspec(dllimport) const WDFFUNC* UsersimWdfFunctions;
 
-PWDF_DRIVER_GLOBALS WdfDriverGlobals;
-const WDFFUNC* WdfFunctions_01015;
+PWDF_DRIVER_GLOBALS WdfDriverGlobals = NULL;
+const WDFFUNC* WdfFunctions_01015 = NULL;
 
     struct _driver_object
     {
