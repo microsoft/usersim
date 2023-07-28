@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 #include "framework.h"
-#include "ntddk.h"
 #include "wdf.h"
 
 static WDFDRIVER g_CurrentDriver = {};
@@ -35,6 +34,20 @@ WdfDeviceCreate(
 
     *device = nullptr;
     return STATUS_SUCCESS;
+}
+
+WDF_DRIVER_GLOBALS g_UsersimWdfDriverGlobals = {
+    .Driver = g_CurrentDriver,
+};
+
+const WDFFUNC g_UsersimWdfFunctions = {};
+
+extern "C"
+{
+    USERSIM_API
+    PWDF_DRIVER_GLOBALS UsersimWdfDriverGlobals = &g_UsersimWdfDriverGlobals;
+
+    USERSIM_API const WDFFUNC* UsersimWdfFunctions = &g_UsersimWdfFunctions;
 }
 
 WDFDRIVER

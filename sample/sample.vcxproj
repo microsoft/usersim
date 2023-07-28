@@ -86,7 +86,8 @@
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\10.0.22621.0\km;$(WindowsSdkDir)Include\wdf\kmdf\1.15;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_AMD64_;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
   </ItemDefinitionGroup>
@@ -95,7 +96,8 @@
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\10.0.22621.0\km;$(WindowsSdkDir)Include\wdf\kmdf\1.15;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_AMD64_;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link />
   </ItemDefinitionGroup>
@@ -124,6 +126,9 @@
   <ItemGroup>
     <ProjectReference Include="..\src\usersim.vcxproj">
       <Project>{030a7ac6-14dc-45cf-af34-891057ab1402}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\usersim_dll_skeleton\usersim_dll_skeleton.vcxproj">
+      <Project>{1937db41-f3eb-4955-a636-6386dcb394f6}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

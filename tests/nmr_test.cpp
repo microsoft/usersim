@@ -6,7 +6,7 @@
 #else
 #include <catch2/catch.hpp>
 #endif
-#include <ntddk.h>
+#include "../src/framework.h"
 #include <../km/netioddk.h>
 
 NPIID test_npiid = {0};

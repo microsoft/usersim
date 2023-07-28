@@ -110,7 +110,7 @@
     <ClInclude Include="..\inc\usersim\se.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\inc\ndis.h">
+    <ClInclude Include="ndis.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\inc\usersim\rtl.h">
@@ -119,10 +119,7 @@
     <ClInclude Include="framework.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\inc\ntddk.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\inc\wdf.h">
+    <ClInclude Include="wdf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="platform.h">

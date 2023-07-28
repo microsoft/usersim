@@ -212,12 +212,11 @@
     <ClCompile Include="wdf.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\inc\ntddk.h" />
     <ClInclude Include="..\inc\TraceLoggingProvider.h" />
     <ClInclude Include="..\inc\usersim\common.h" />
     <ClInclude Include="..\inc\usersim\ex.h" />
     <ClInclude Include="..\inc\usersim\fwp_test.h" />
-    <ClInclude Include="..\inc\wdf.h" />
+    <ClInclude Include="wdf.h" />
     <ClInclude Include="fault_injection.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="fwp_um.h" />
@@ -226,7 +225,7 @@
     <ClInclude Include="kernel_um.h" />
     <ClInclude Include="leak_detector.h" />
     <ClInclude Include="..\inc\usersim\mm.h" />
-    <ClInclude Include="..\inc\ndis.h" />
+    <ClInclude Include="ndis.h" />
     <ClInclude Include="net_platform.h" />
     <ClInclude Include="nmr_impl.h" />
     <ClInclude Include="..\inc\usersim\ps.h" />

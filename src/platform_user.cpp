@@ -10,6 +10,7 @@
 #include "usersim/mm.h"
 #include "usersim/se.h"
 #include "utilities.h"
+#include "wdf.h"
 
 #include "../inc/TraceLoggingProvider.h"
 #include <functional>
