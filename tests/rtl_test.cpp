@@ -16,3 +16,17 @@ TEST_CASE("RtlULongAdd", "[rtl]")
 
     REQUIRE(RtlULongAdd(ULONG_MAX, 1, &result) == STATUS_INTEGER_OVERFLOW);
 }
+
+TEST_CASE("RtlAssert", "[rtl]")
+{
+    try {
+        RtlAssertCPP((PVOID) "0 == 1", (PVOID) "filename.c", 17, nullptr);
+        REQUIRE(FALSE);
+    } catch (std::exception e) {
+        REQUIRE(
+            strcmp(
+                e.what(),
+                "*** STOP 0x00000000 (0x0000000000000011,0x0000000000000000,0x0000000000000000,0x0000000000000000)") ==
+            0);
+    }
+}
