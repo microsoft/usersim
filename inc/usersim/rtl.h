@@ -4,6 +4,7 @@
 #pragma once
 #include "../src/platform.h"
 #include <strsafe.h>
+#include "../usersim_dll_skeleton/dll_skeleton.h"
 
 #if defined(__cplusplus)
 extern "C"
@@ -113,6 +114,14 @@ extern "C"
         _In_ PVOID void_file_name,
         _In_ ULONG line_number,
         _In_opt_ PSTR mutable_message);
+
+    _IRQL_requires_max_(DISPATCH_LEVEL) _At_(DestinationString->Buffer, _Post_equal_to_(SourceString))
+    _At_(DestinationString->Length, _Post_equal_to_(_String_length_(SourceString) * sizeof(WCHAR)))
+    _At_(DestinationString->MaximumLength, _Post_equal_to_((_String_length_(SourceString) + 1) * sizeof(WCHAR)))
+    USERSIM_API VOID NTAPI
+    RtlInitUnicodeString(
+        _Out_ PUNICODE_STRING destination_string,
+        _In_opt_z_ __drv_aliasesMem PCWSTR source_string);
 
 // Include Rtl* implementations from ntdll.lib.
 #pragma comment(lib, "ntdll.lib")

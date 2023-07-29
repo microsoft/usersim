@@ -30,3 +30,30 @@ TEST_CASE("RtlAssert", "[rtl]")
             0);
     }
 }
+
+TEST_CASE("RtlInitUnicodeString", "[rtl]")
+{
+    UNICODE_STRING unicode_string = {0};
+    RtlInitUnicodeString(&unicode_string, nullptr);
+    REQUIRE(unicode_string.Buffer == nullptr);
+    REQUIRE(unicode_string.Length == 0);
+    REQUIRE(unicode_string.MaximumLength == 0);
+
+    PCWSTR empty = L"";
+    RtlInitUnicodeString(&unicode_string, empty);
+    REQUIRE(unicode_string.Buffer == empty);
+    REQUIRE(unicode_string.Length == 0);
+    REQUIRE(unicode_string.MaximumLength == 2);
+
+    PCWSTR test = L"test";
+    RtlInitUnicodeString(&unicode_string, test);
+    REQUIRE(unicode_string.Buffer == test);
+    REQUIRE(unicode_string.Length == 8);
+    REQUIRE(unicode_string.MaximumLength == 10);
+
+    WCHAR buffer[80] = L"test";
+    RtlInitUnicodeString(&unicode_string, buffer);
+    REQUIRE(unicode_string.Buffer == buffer);
+    REQUIRE(unicode_string.Length == 8);
+    REQUIRE(unicode_string.MaximumLength == 10);
+}
