@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "framework.h"
-#include "wdf.h"
+#include "usersim/wdf.h"
 
 static WDFDRIVER g_CurrentDriver = {};
 
