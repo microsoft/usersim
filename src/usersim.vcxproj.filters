@@ -119,9 +119,6 @@
     <ClInclude Include="framework.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wdf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="platform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -132,6 +129,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\inc\usersim\fwp_test.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\usersim\wdf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

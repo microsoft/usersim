@@ -216,7 +216,7 @@
     <ClInclude Include="..\inc\usersim\common.h" />
     <ClInclude Include="..\inc\usersim\ex.h" />
     <ClInclude Include="..\inc\usersim\fwp_test.h" />
-    <ClInclude Include="wdf.h" />
+    <ClInclude Include="..\inc\usersim\wdf.h" />
     <ClInclude Include="fault_injection.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="fwp_um.h" />

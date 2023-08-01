@@ -1,10 +1,12 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
-
+//
+// This file contains user-mode definitions for Rtl* APIs
+// implemented in usersim.dll, and can be used by unit tests.
 #pragma once
+
 #include "../src/platform.h"
 #include <strsafe.h>
-#include "../usersim_dll_skeleton/dll_skeleton.h"
 
 #if defined(__cplusplus)
 extern "C"
@@ -115,12 +117,40 @@ extern "C"
         _In_ ULONG line_number,
         _In_opt_ PSTR mutable_message);
 
+    typedef struct _STRING
+    {
+        USHORT Length;
+        USHORT MaximumLength;
+        _Field_size_bytes_part_opt_(MaximumLength, Length) PCHAR Buffer;
+    } STRING;
+    typedef STRING* PSTRING;
+    typedef STRING ANSI_STRING;
+    typedef PSTRING PANSI_STRING;
+
+    typedef struct _UNICODE_STRING
+    {
+        USHORT Length;
+        USHORT MaximumLength;
+        _Field_size_bytes_part_opt_(MaximumLength, Length) PWCH Buffer;
+    } UNICODE_STRING, *PUNICODE_STRING;
+    typedef const UNICODE_STRING* PCUNICODE_STRING;
+
+#define DECLARE_CONST_UNICODE_STRING(_var, _string)  \
+    const WCHAR _var##_buffer[] = _string; \
+    __pragma(warning(push)) __pragma(warning(disable : 4221)) __pragma(warning(disable : 4204))  \
+    const UNICODE_STRING _var = {sizeof(_string) - sizeof(WCHAR), sizeof(_string), (PWCH)_var##_buffer} __pragma(warning(pop))
+
+    USERSIM_API VOID
+    RtlInitString(
+        _Out_ PSTRING destination_string,
+        _In_opt_ __drv_aliasesMem PCSTR source_string);
+
     _IRQL_requires_max_(DISPATCH_LEVEL) _At_(DestinationString->Buffer, _Post_equal_to_(SourceString))
     _At_(DestinationString->Length, _Post_equal_to_(_String_length_(SourceString) * sizeof(WCHAR)))
     _At_(DestinationString->MaximumLength, _Post_equal_to_((_String_length_(SourceString) + 1) * sizeof(WCHAR)))
     USERSIM_API VOID NTAPI
     RtlInitUnicodeString(
-        _Out_ PUNICODE_STRING destination_string,
+        _Out_ PCUNICODE_STRING destination_string,
         _In_opt_z_ __drv_aliasesMem PCWSTR source_string);
 
 // Include Rtl* implementations from ntdll.lib.

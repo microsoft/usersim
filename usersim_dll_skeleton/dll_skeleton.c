@@ -1,7 +1,11 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "dll_skeleton.h"
+#include <sal.h>
+#include <winsock2.h>
+#include <windows.h>
+#include "usersim/rtl.h"
+#include "usersim/wdf.h"
 
 #define NT_SUCCESS(status) (((NTSTATUS)(status)) >= 0)
 

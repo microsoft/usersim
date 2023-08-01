@@ -9,8 +9,8 @@
 #include "usersim/ke.h"
 #include "usersim/mm.h"
 #include "usersim/se.h"
+#include "usersim/wdf.h"
 #include "utilities.h"
-#include "wdf.h"
 
 #include "../inc/TraceLoggingProvider.h"
 #include <functional>
