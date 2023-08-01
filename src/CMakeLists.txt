@@ -39,6 +39,7 @@ target_include_directories(usersim PRIVATE
   "."
   "../inc"
   "${WDK_ROOT}/include/${WDK_VERSION}/km"
+  "${WindowsSdkDir}include/10.0.22621.0"
 )
 
 set(defs UNICODE _UNICODE USERSIM_SOURCE)
