@@ -51,3 +51,69 @@ TEST_CASE("IoAllocateMdl", "[mm]")
     IoFreeMdl(mdl);
     ExFreePoolWithTag(buffer, tag);
 }
+
+int
+test_probe_for_read_exception_filter(ULONG code, _In_ struct _EXCEPTION_POINTERS *ep)
+{
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+ULONG
+test_probe_for_read(_In_ const volatile void* address, SIZE_T length, ULONG alignment)
+{
+    try {
+        ProbeForReadCPP(address, length, alignment);
+        return 0;
+    } catch (std::exception e) {
+        PCSTR message = e.what();
+        PCSTR ex = message + strlen("Exception: ");
+        int64_t code = _atoi64(ex);
+        return (ULONG)code;
+    }
+}
+
+TEST_CASE("ProbeForRead", "[mm]")
+{
+    // Verify a null pointer access results in STATUS_ACCESS_VIOLATION.
+    REQUIRE(test_probe_for_read(nullptr, 8, 8) == STATUS_ACCESS_VIOLATION);
+
+    // Verify a valid access does nothing.
+    uint64_t x = 0;
+    REQUIRE(test_probe_for_read(&x, sizeof(x), sizeof(x)) == STATUS_SUCCESS);
+
+    // Verify a misaligned pointer access results in STATUS_DATATYPE_MISALIGNMENT.
+    REQUIRE(test_probe_for_read(((char*)&x) + 4, sizeof(uint32_t), sizeof(uint64_t)) == STATUS_DATATYPE_MISALIGNMENT);
+
+    // Verify a read past end of memory results in STATUS_ACCESS_VIOLATION.
+    REQUIRE(test_probe_for_read(&x, 65536, 8) == STATUS_ACCESS_VIOLATION);
+}
+
+ULONG
+test_probe_for_write(_In_ volatile void* address, SIZE_T length, ULONG alignment)
+{
+    try {
+        ProbeForWriteCPP(address, length, alignment);
+        return 0;
+    } catch (std::exception e) {
+        PCSTR message = e.what();
+        PCSTR ex = message + strlen("Exception: ");
+        int64_t code = _atoi64(ex);
+        return (ULONG)code;
+    }
+}
+
+TEST_CASE("ProbeForWrite", "[mm]")
+{
+    // Verify a null pointer access results in STATUS_ACCESS_VIOLATION.
+    REQUIRE(test_probe_for_write(nullptr, 8, 8) == STATUS_ACCESS_VIOLATION);
+
+    // Verify a valid access does nothing.
+    uint64_t x = 0;
+    REQUIRE(test_probe_for_write(&x, sizeof(x), sizeof(x)) == STATUS_SUCCESS);
+
+    // Verify a misaligned pointer access results in STATUS_DATATYPE_MISALIGNMENT.
+    REQUIRE(test_probe_for_write(((char*)&x) + 4, sizeof(uint32_t), sizeof(uint64_t)) == STATUS_DATATYPE_MISALIGNMENT);
+
+    // Verify a write past end of memory results in STATUS_ACCESS_VIOLATION.
+    REQUIRE(test_probe_for_write(&x, 65536, 8) == STATUS_ACCESS_VIOLATION);
+}

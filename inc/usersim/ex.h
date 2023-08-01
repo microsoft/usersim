@@ -178,6 +178,12 @@ extern "C"
     USERSIM_API
     _IRQL_requires_max_(PASSIVE_LEVEL) NTKERNELAPI NTSTATUS ExUuidCreate(_Out_ UUID* uuid);
 
+    USERSIM_API void
+    ExRaiseAccessViolation();
+
+    USERSIM_API void
+    ExRaiseDatatypeMisalignment();
+
 #if defined(__cplusplus)
 }
 
@@ -194,5 +200,11 @@ ExAllocatePoolWithTagCPP(
 
 USERSIM_API _Ret_maybenull_ void*
 ExAllocatePoolUninitializedCPP(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag);
+
+USERSIM_API void
+ExRaiseAccessViolationCPP();
+
+USERSIM_API void
+ExRaiseDatatypeMisalignmentCPP();
 
 #endif

@@ -135,12 +135,47 @@ MmProtectMdlSystemAddress(_In_ MDL* memory_descriptor_list, ULONG new_protect)
 {
     DWORD old_protect;
     if (!VirtualProtect(
-            memory_descriptor_list->start_va,
-            memory_descriptor_list->byte_count,
-            new_protect,
-            &old_protect)) {
+        memory_descriptor_list->start_va,
+        memory_descriptor_list->byte_count,
+        new_protect,
+        &old_protect)) {
         USERSIM_LOG_WIN32_API_FAILURE(USERSIM_TRACELOG_KEYWORD_BASE, VirtualProtect);
         USERSIM_RETURN_RESULT(STATUS_INVALID_PARAMETER);
     }
     USERSIM_RETURN_RESULT(STATUS_SUCCESS);
+}
+
+void
+ProbeForReadCPP(_In_ const volatile void* address, SIZE_T length, ULONG alignment)
+{
+    if ((((uintptr_t)address) % alignment) != 0) {
+        ExRaiseDatatypeMisalignment();
+    }
+    MEMORY_BASIC_INFORMATION mbi;
+    mbi.Protect = 0;
+    ::VirtualQuery(((LPCSTR)address) + length - 1, &mbi, sizeof(mbi));
+    if ((mbi.Protect & 0xE6) != 0 && (mbi.Protect & PAGE_GUARD) == 0) {
+        // Probe is ok.
+        return;
+    }
+
+    ExRaiseAccessViolation();
+}
+
+void
+ProbeForRead(_In_ const volatile void* address, SIZE_T length, ULONG alignment)
+{
+    ProbeForReadCPP(address, length, alignment);
+}
+
+void
+ProbeForWriteCPP(_Inout_ volatile void* address, SIZE_T length, ULONG alignment)
+{
+    ProbeForReadCPP(address, length, alignment);
+}
+
+void
+ProbeForWrite(_Inout_ volatile void* address, SIZE_T length, ULONG alignment)
+{
+    ProbeForWriteCPP(address, length, alignment);
 }
