@@ -32,7 +32,6 @@ add_library(usersim SHARED
   tracelog.h
   utilities.h
   wdf.cpp
-  wdf.h
   Source.def
 )
 
