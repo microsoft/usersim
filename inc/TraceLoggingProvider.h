@@ -121,6 +121,9 @@ extern "C"
 
 #define _tlgWriteTransfer_EtwWriteTransfer(...)
 
+    USERSIM_API void
+    EtwWriteTransfer(_In_ const TraceLoggingHProvider hProvider, _In_z_ const char* eventName, size_t argc, ...);
+
 #ifdef __cplusplus
 }
 #endif

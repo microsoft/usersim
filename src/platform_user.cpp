@@ -1157,3 +1157,9 @@ usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ c
 
     printf("}\n");
 }
+
+void
+EtwWriteTransfer(_In_ const TraceLoggingHProvider hProvider, _In_z_ const char* eventName, size_t argc, ...)
+{
+    usersim_trace_logging_write(hProvider, eventName, argc, nullptr);
+}
