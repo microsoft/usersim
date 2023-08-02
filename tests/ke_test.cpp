@@ -36,6 +36,23 @@ TEST_CASE("irql", "[ke]")
     REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
 }
 
+TEST_CASE("KfRaiseIrql", "[ke]")
+{
+    REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
+
+    KIRQL old_irql;
+    old_irql = KfRaiseIrql(DISPATCH_LEVEL);
+    REQUIRE(old_irql == PASSIVE_LEVEL);
+    REQUIRE(KeGetCurrentIrql() == DISPATCH_LEVEL);
+
+    old_irql = KfRaiseIrql(DISPATCH_LEVEL);
+    REQUIRE(old_irql == DISPATCH_LEVEL);
+    REQUIRE(KeGetCurrentIrql() == DISPATCH_LEVEL);
+
+    KeLowerIrql(PASSIVE_LEVEL);
+    REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
+}
+
 TEST_CASE("spin lock", "[ke]")
 {
     KSPIN_LOCK lock;

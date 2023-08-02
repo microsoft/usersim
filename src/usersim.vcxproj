@@ -193,6 +193,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="etw.cpp" />
     <ClCompile Include="ex.cpp" />
     <ClCompile Include="fault_injection.cpp" />
     <ClCompile Include="fwp_um.cpp" />
@@ -214,6 +215,7 @@
   <ItemGroup>
     <ClInclude Include="..\inc\TraceLoggingProvider.h" />
     <ClInclude Include="..\inc\usersim\common.h" />
+    <ClInclude Include="..\inc\usersim\etw.h" />
     <ClInclude Include="..\inc\usersim\ex.h" />
     <ClInclude Include="..\inc\usersim\fwp_test.h" />
     <ClInclude Include="..\inc\usersim\wdf.h" />

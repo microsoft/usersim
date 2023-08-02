@@ -3,6 +3,7 @@
 
 add_library(usersim SHARED
   dllmain.cpp
+  etw.cpp
   ex.cpp
   fault_injection.cpp
   fault_injection.h

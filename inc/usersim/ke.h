@@ -3,9 +3,10 @@
 
 #pragma once
 #include "..\src\platform.h"
-#include <string>
 
 #if defined(__cplusplus)
+#include <string>
+
 extern "C"
 {
 #endif
@@ -66,6 +67,10 @@ extern "C"
     USERSIM_API
     VOID
     KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql);
+
+    USERSIM_API
+    _IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ KIRQL
+    KfRaiseIrql(_In_ KIRQL new_irql);
 
     USERSIM_API
     KIRQL
