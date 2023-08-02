@@ -68,12 +68,18 @@ KeGetCurrentIrql() { return _usersim_current_irql; }
 VOID
 KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
 {
-    *old_irql = KeGetCurrentIrql();
+    *old_irql = KfRaiseIrql(new_irql);
+}
+
+KIRQL
+KfRaiseIrql(_In_ KIRQL new_irql)
+{
+    KIRQL old_irql = KeGetCurrentIrql();
     _usersim_current_irql = new_irql;
     BOOL result = SetThreadPriority(GetCurrentThread(), new_irql);
     ASSERT(result);
 
-    if (new_irql >= DISPATCH_LEVEL && *old_irql < DISPATCH_LEVEL) {
+    if (new_irql >= DISPATCH_LEVEL && old_irql < DISPATCH_LEVEL) {
         PROCESSOR_NUMBER processor;
         uint32_t processor_index = KeGetCurrentProcessorNumberEx(&processor);
 
@@ -85,6 +91,8 @@ KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
 
         _usersim_dispatch_locks[processor_index].lock();
     }
+
+    return old_irql;
 }
 
 KIRQL
