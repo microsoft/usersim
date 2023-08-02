@@ -205,6 +205,7 @@
     <ClCompile Include="ndis_um.cpp" />
     <ClCompile Include="nmr_impl.cpp" />
     <ClCompile Include="nmr_um.cpp" />
+    <ClCompile Include="ob.cpp" />
     <ClCompile Include="platform_user.cpp" />
     <ClCompile Include="ps.cpp" />
     <ClCompile Include="rtl.cpp" />
@@ -218,6 +219,7 @@
     <ClInclude Include="..\inc\usersim\etw.h" />
     <ClInclude Include="..\inc\usersim\ex.h" />
     <ClInclude Include="..\inc\usersim\fwp_test.h" />
+    <ClInclude Include="..\inc\usersim\ob.h" />
     <ClInclude Include="..\inc\usersim\wdf.h" />
     <ClInclude Include="fault_injection.h" />
     <ClInclude Include="framework.h" />

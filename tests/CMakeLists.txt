@@ -17,6 +17,7 @@ add_executable(usersim_tests
   ke_test.cpp
   mm_test.cpp
   nmr_test.cpp
+  ob_test.cpp
   rtl_test.cpp
   se_test.cpp
   wdf_test.cpp
