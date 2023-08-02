@@ -12,6 +12,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(usersim_tests
+  etw_test.cpp
   ex_test.cpp
   ke_test.cpp
   mm_test.cpp

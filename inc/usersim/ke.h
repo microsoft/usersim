@@ -3,9 +3,10 @@
 
 #pragma once
 #include "..\src\platform.h"
-#include <string>
 
 #if defined(__cplusplus)
+#include <string>
+
 extern "C"
 {
 #endif

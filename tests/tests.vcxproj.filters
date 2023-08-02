@@ -36,6 +36,9 @@
     <ClCompile Include="se_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="etw_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
