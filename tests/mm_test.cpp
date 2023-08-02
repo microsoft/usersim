@@ -52,12 +52,6 @@ TEST_CASE("IoAllocateMdl", "[mm]")
     ExFreePoolWithTag(buffer, tag);
 }
 
-int
-test_probe_for_read_exception_filter(ULONG code, _In_ struct _EXCEPTION_POINTERS *ep)
-{
-    return EXCEPTION_EXECUTE_HANDLER;
-}
-
 ULONG
 test_probe_for_read(_In_ const volatile void* address, SIZE_T length, ULONG alignment)
 {
