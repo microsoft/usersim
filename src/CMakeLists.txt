@@ -23,6 +23,7 @@ add_library(usersim SHARED
   nmr_impl.cpp
   nmr_impl.h
   nmr_um.cpp
+  ob.cpp
   platform.h
   platform_user.cpp
   ps.cpp
