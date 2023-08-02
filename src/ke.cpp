@@ -391,8 +391,8 @@ KeBugCheckCPP(ULONG bug_check_code)
     KeBugCheckExCPP(bug_check_code, 0, 0, 0, 0);
 }
 
-static void
-_throw_exception(_In_ std::string message)
+void
+usersim_throw_exception(_In_ std::string message)
 {
     throw std::exception(message.c_str());
 }
@@ -413,7 +413,7 @@ KeBugCheckExCPP(
         bug_check_parameter2,
         bug_check_parameter3,
         bug_check_parameter4);
-    _throw_exception(ss.str());
+    usersim_throw_exception(ss.str());
 }
 
 void

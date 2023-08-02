@@ -3,6 +3,7 @@
 
 #pragma once
 #include "..\src\platform.h"
+#include <string>
 
 #if defined(__cplusplus)
 extern "C"
@@ -335,5 +336,8 @@ KeBugCheckExCPP(
     ULONG_PTR bug_check_parameter2,
     ULONG_PTR bug_check_parameter3,
     ULONG_PTR bug_check_parameter4);
+
+void
+usersim_throw_exception(_In_ std::string message);
 
 #endif

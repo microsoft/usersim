@@ -49,3 +49,29 @@ TEST_CASE("ExFreePool null", "[ex]")
             0);
     }
 }
+
+TEST_CASE("ExRaiseAccessViolation", "[ex]")
+{
+    try {
+        ExRaiseAccessViolationCPP();
+        REQUIRE(FALSE);
+    } catch (std::exception e) {
+        PCSTR message = e.what();
+        PCSTR ex = message + strlen("Exception: ");
+        int64_t code = _atoi64(ex);
+        REQUIRE(code == STATUS_ACCESS_VIOLATION);
+    }
+}
+
+TEST_CASE("ExRaiseDatatypeMisalignment", "[ex]")
+{
+    try {
+        ExRaiseDatatypeMisalignmentCPP();
+        REQUIRE(FALSE);
+    } catch (std::exception e) {
+        PCSTR message = e.what();
+        PCSTR ex = message + strlen("Exception: ");
+        int64_t code = _atoi64(ex);
+        REQUIRE(code == STATUS_DATATYPE_MISALIGNMENT);
+    }
+}

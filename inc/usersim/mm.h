@@ -120,12 +120,27 @@ extern "C"
     NTSTATUS
     MmProtectMdlSystemAddress(_In_ MDL* memory_descriptor_list, ULONG new_protect);
 
+    USERSIM_API void
+    ProbeForRead(_In_ const volatile void* address, SIZE_T length, ULONG alignment);
+
+    USERSIM_API void
+    ProbeForWrite(_Inout_ volatile void* address, SIZE_T length, ULONG alignment);
+
 #if defined(__cplusplus)
 }
 
 // The functions below throw C++ exceptions so tests can catch them to verify error behavior.
 
+USERSIM_API
 void
 MmUnmapLockedPagesCPP(_In_ void* base_address, _In_ MDL* memory_descriptor_list);
+
+USERSIM_API
+void
+ProbeForReadCPP(_In_ const volatile void* address, SIZE_T length, ULONG alignment);
+
+USERSIM_API
+void
+ProbeForWriteCPP(_Inout_ volatile void* address, SIZE_T length, ULONG alignment);
 
 #endif

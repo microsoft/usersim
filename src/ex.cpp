@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <map>
 #include <mutex>
+#include <sstream>
 #include <tuple>
 
 // Ex* functions.
@@ -374,4 +375,38 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTKERNELAPI NTSTATUS ExUuidCreate(_Out_ UUID*
     } else {
         return STATUS_NOT_SUPPORTED;
     }
+}
+
+void
+ExRaiseAccessViolationCPP()
+{
+    // This should really use RaiseException(STATUS_ACCESS_VIOLATION, 0, 0, 0)
+    // but SEH doesn't seem to play well with Catch2 so for now we use C++
+    // exceptions.
+    std::ostringstream ss;
+    ss << "Exception: " << STATUS_ACCESS_VIOLATION << "\n";
+    usersim_throw_exception(ss.str());
+}
+
+void
+ExRaiseAccessViolation()
+{
+    ExRaiseAccessViolationCPP();
+}
+
+void
+ExRaiseDatatypeMisalignmentCPP()
+{
+    // This should really use RaiseException(STATUS_DATATYPE_MISALIGNMENT, 0, 0, 0)
+    // but SEH doesn't seem to play well with Catch2 so for now we use C++
+    // exceptions.
+    std::ostringstream ss;
+    ss << "Exception: " << STATUS_DATATYPE_MISALIGNMENT << "\n";
+    usersim_throw_exception(ss.str());
+}
+
+void
+ExRaiseDatatypeMisalignment()
+{
+    ExRaiseDatatypeMisalignmentCPP();
 }
