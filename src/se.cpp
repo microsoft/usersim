@@ -121,34 +121,47 @@ SeAccessCheck(
     _Out_ PACCESS_MASK granted_access,
     _Out_ PNTSTATUS access_status)
 {
+    TOKEN_ACCESS_INFORMATION* token_access_information = nullptr;
+
     if (!subject_context_locked) {
         SeLockSubjectContext(subject_security_context);
     }
 
-    char buffer[2048];
-    DWORD return_length = 0;
+    // Get needed buffer size.
+    DWORD length = 0;
     BOOLEAN result = !!GetTokenInformation(
         subject_security_context->thread_token,
         TokenAccessInformation,
-        buffer,
-        sizeof(buffer),
-        &return_length);
-    if (!result) {
-        *access_status = win32_error_to_usersim_error(GetLastError());
-    } else {
-        result = SeAccessCheckFromState(
-            security_descriptor,
-            (TOKEN_ACCESS_INFORMATION*)buffer,
-            nullptr,
-            desired_access,
-            previously_granted_access,
-            privileges,
-            generic_mapping,
-            access_mode,
-            granted_access,
-            access_status);
+        token_access_information,
+        length,
+        &length);
+    int error = GetLastError();
+    if (error != ERROR_INSUFFICIENT_BUFFER || length == 0) {
+        *access_status = win32_error_to_usersim_error(error);
+        goto Done;
     }
 
+    // Allocate buffer.
+    token_access_information = (TOKEN_ACCESS_INFORMATION*)usersim_allocate(length);
+    if (token_access_information == nullptr) {
+        *access_status = STATUS_NO_MEMORY;
+        goto Done;
+    }
+
+    result = SeAccessCheckFromState(
+        security_descriptor,
+        token_access_information,
+        nullptr,
+        desired_access,
+        previously_granted_access,
+        privileges,
+        generic_mapping,
+        access_mode,
+        granted_access,
+        access_status);
+
+Done:
+    usersim_free(token_access_information);
     if (!subject_context_locked) {
         SeUnlockSubjectContext(subject_security_context);
     }

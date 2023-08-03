@@ -104,20 +104,10 @@ TEST_CASE("SeAccessCheck", "[se]")
     REQUIRE(granted_access == STANDARD_RIGHTS_WRITE);
     REQUIRE(access_status == STATUS_SUCCESS);
 
-    char buffer[2048];
-    DWORD return_length;
-    if (!GetTokenInformation(
-            GetCurrentThreadEffectiveToken(),
-            TokenAccessInformation,
-            buffer,
-            sizeof(buffer),
-            &return_length)) {
-        return;
-    }
-
+    TOKEN_ACCESS_INFORMATION token_access_information = {0};
     result = SeAccessCheckFromState(
         &security_descriptor,
-        (PTOKEN_ACCESS_INFORMATION)buffer,
+        &token_access_information,
         nullptr,
         STANDARD_RIGHTS_READ,
         0,
