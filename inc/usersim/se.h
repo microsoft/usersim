@@ -127,6 +127,41 @@ typedef struct _SE_EXPORTS
     USERSIM_API
     extern PSE_EXPORTS SeExports;
 
+    typedef struct _SECURITY_SUBJECT_CONTEXT
+    {
+        // These field names intentionally differ from the ones in the DDK
+        // since the DDK header contains a prominent notice that drivers
+        // should treat this struct as opaque.
+        HANDLE thread_token;
+        HANDLE process_token;
+        uint64_t lock_count;
+    } SECURITY_SUBJECT_CONTEXT, *PSECURITY_SUBJECT_CONTEXT;
+
+    USERSIM_API
+    VOID
+    SeCaptureSubjectContext(_Out_ PSECURITY_SUBJECT_CONTEXT subject_context);
+
+    USERSIM_API
+    VOID
+    SeLockSubjectContext(_In_ PSECURITY_SUBJECT_CONTEXT subject_context);
+
+    USERSIM_API
+    VOID
+    SeUnlockSubjectContext(_In_ PSECURITY_SUBJECT_CONTEXT subject_context); 
+
+    _IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN
+    SeAccessCheck(
+        _In_ PSECURITY_DESCRIPTOR security_descriptor,
+        _In_ PSECURITY_SUBJECT_CONTEXT subject_security_context,
+        _In_ BOOLEAN subject_context_locked,
+        _In_ ACCESS_MASK desired_access,
+        _In_ ACCESS_MASK previously_granted_access,
+        _Outptr_opt_ PPRIVILEGE_SET* privileges,
+        _In_ PGENERIC_MAPPING generic_mapping,
+        _In_ KPROCESSOR_MODE access_mode,
+        _Out_ PACCESS_MASK granted_access,
+        _Out_ PNTSTATUS access_status);
+
     USERSIM_API
     BOOLEAN
     SeAccessCheckFromState(
@@ -140,6 +175,10 @@ typedef struct _SE_EXPORTS
         _In_ KPROCESSOR_MODE access_mode,
         _Out_ PACCESS_MASK granted_access,
         _Out_ NTSTATUS* access_status);
+
+    USERSIM_API
+    NTSTATUS
+    SeQueryAuthenticationIdToken(_In_ PACCESS_TOKEN token, _Out_ PLUID authentication_id);
 
     void
     usersim_initialize_se();
