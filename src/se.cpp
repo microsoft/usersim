@@ -5,6 +5,8 @@
 #include "kernel_um.h"
 #include "platform.h"
 #include "usersim/se.h"
+#include "utilities.h"
+#include <processthreadsapi.h>
 
 // Se* functions.
 
@@ -82,6 +84,78 @@ usersim_initialize_se()
     //    SeAppSiloProfilesRootMinimalCapabilitySid
 }
 
+VOID
+SeCaptureSubjectContext(_Out_ PSECURITY_SUBJECT_CONTEXT subject_context)
+{
+    subject_context->lock_count = 0;
+    subject_context->process_token = GetCurrentProcessToken();
+    subject_context->thread_token = GetCurrentThreadEffectiveToken();
+}
+
+VOID
+SeLockSubjectContext(_In_ PSECURITY_SUBJECT_CONTEXT subject_context)
+{
+    InterlockedIncrement(&subject_context->lock_count);
+}
+
+VOID
+SeUnlockSubjectContext(_In_ PSECURITY_SUBJECT_CONTEXT subject_context)
+{
+    uint64_t new_value = InterlockedDecrement(&subject_context->lock_count);
+    if (new_value == UINT64_MAX) {
+        // Underflow.
+        KeBugCheck(0);
+    }
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN
+SeAccessCheck(
+    _In_ PSECURITY_DESCRIPTOR security_descriptor,
+    _In_ PSECURITY_SUBJECT_CONTEXT subject_security_context,
+    _In_ BOOLEAN subject_context_locked,
+    _In_ ACCESS_MASK desired_access,
+    _In_ ACCESS_MASK previously_granted_access,
+    _Outptr_opt_ PPRIVILEGE_SET* privileges,
+    _In_ PGENERIC_MAPPING generic_mapping,
+    _In_ KPROCESSOR_MODE access_mode,
+    _Out_ PACCESS_MASK granted_access,
+    _Out_ PNTSTATUS access_status)
+{
+    if (!subject_context_locked) {
+        SeLockSubjectContext(subject_security_context);
+    }
+
+    char buffer[2048];
+    DWORD return_length = 0;
+    BOOLEAN result = !!GetTokenInformation(
+        subject_security_context->thread_token,
+        TokenAccessInformation,
+        buffer,
+        sizeof(buffer),
+        &return_length);
+    if (!result) {
+        *access_status = win32_error_to_usersim_error(GetLastError());
+    } else {
+        result = SeAccessCheckFromState(
+            security_descriptor,
+            (TOKEN_ACCESS_INFORMATION*)buffer,
+            nullptr,
+            desired_access,
+            previously_granted_access,
+            privileges,
+            generic_mapping,
+            access_mode,
+            granted_access,
+            access_status);
+    }
+
+    if (!subject_context_locked) {
+        SeUnlockSubjectContext(subject_security_context);
+    }
+
+    return result;
+}
+
 BOOLEAN
 SeAccessCheckFromState(
     _In_ PSECURITY_DESCRIPTOR security_descriptor,
@@ -95,6 +169,9 @@ SeAccessCheckFromState(
     _Out_ PACCESS_MASK granted_access,
     _Out_ NTSTATUS* access_status)
 {
+    // For now we just grant the requested access, except as part of
+    // fault injection.
+
     if (privileges != nullptr) {
         *privileges = nullptr;
     }
@@ -115,4 +192,43 @@ SeAccessCheckFromState(
     *access_status = STATUS_SUCCESS;
 
     return true;
+}
+
+// Convert a variable-length SID to some 64-bit unique id.
+// Currently we just do this with a simple hash.
+void
+usersim_convert_sid_to_luid(_In_ const PSID psid, _Out_ LUID* luid)
+{
+    const struct _SID* sid = (const struct _SID*)psid;
+    size_t size = FIELD_OFFSET(SID, SubAuthority[sid->SubAuthorityCount]);
+    uint64_t hash = 0;
+    for (size_t i = 0; i < size; i += sizeof(DWORD)) {
+        DWORD value = *(const DWORD *)(((const uint8_t*)psid) + i);
+        hash += value;
+    }
+    *(uint64_t*)luid = hash;
+}
+
+NTSTATUS
+SeQueryAuthenticationIdToken(_In_ PACCESS_TOKEN token, _Out_ PLUID authentication_id)
+{
+    HANDLE token_handle = token;
+    char token_owner_buffer[TOKEN_OWNER_MAX_SIZE];
+    DWORD return_length;
+
+    if (usersim_fault_injection_inject_fault()) {
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    if (!GetTokenInformation(
+        token_handle,
+        TokenOwner,
+        token_owner_buffer,
+        sizeof(token_owner_buffer),
+        &return_length)) {
+        return win32_error_to_usersim_error(GetLastError());
+    }
+
+    usersim_convert_sid_to_luid(((PTOKEN_OWNER)token_owner_buffer)->Owner, authentication_id);
+    return STATUS_SUCCESS;
 }
