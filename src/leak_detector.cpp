@@ -3,6 +3,7 @@
 
 #include "leak_detector.h"
 #include "symbol_decoder.h"
+#include "usersim/ke.h"
 
 #include <iostream>
 #include <sstream>
@@ -30,6 +31,9 @@ void
 _usersim_leak_detector::unregister_allocation(uintptr_t address)
 {
     std::unique_lock<std::mutex> lock(_mutex);
+    if (!_allocations.contains(address)) {
+        KeBugCheck(0);
+    }
     _allocations.erase(address);
 }
 

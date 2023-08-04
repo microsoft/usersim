@@ -22,11 +22,6 @@ __declspec(dllimport) const WDFFUNC* UsersimWdfFunctions;
 PWDF_DRIVER_GLOBALS WdfDriverGlobals = NULL;
 const WDFFUNC* WdfFunctions_01015 = NULL;
 
-    struct _driver_object
-    {
-        int dummy;
-    };
-
     NTSTATUS
     UsersimStartDriver()
     {
@@ -41,10 +36,11 @@ const WDFFUNC* WdfFunctions_01015 = NULL;
     void
     UsersimStopDriver()
     {
-        WDFDRIVER driver = WdfDriverGlobals->Driver;
-        if (driver.config.EvtDriverUnload != NULL) {
-            driver.config.EvtDriverUnload(driver);
+        DRIVER_OBJECT* driver = (DRIVER_OBJECT*)WdfDriverGlobals->Driver;
+        if (driver->config.EvtDriverUnload != NULL) {
+            driver->config.EvtDriverUnload(driver);
         }
+        WdfDriverGlobals->Driver = NULL;
     }
 
     BOOL APIENTRY

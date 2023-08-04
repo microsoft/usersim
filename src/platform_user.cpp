@@ -37,11 +37,8 @@ bool _usersim_platform_is_preemptible = true;
 int32_t _usersim_platform_initiate_count = 0;
 
 extern "C" bool usersim_fuzzing_enabled = false;
-extern "C" size_t usersim_fuzzing_memory_limit = MAXSIZE_T;
 
 static EX_RUNDOWN_REF _usersim_platform_preemptible_work_items_rundown;
-
-usersim_leak_detector_ptr _usersim_leak_detector_ptr;
 
 /**
  * @brief Environment variable to enable fault injection testing.
@@ -204,9 +201,9 @@ usersim_platform_initiate()
     try {
         _usersim_platform_maximum_group_count = GetMaximumProcessorGroupCount();
         _usersim_platform_maximum_processor_count = GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS);
-        auto fault_injection_stack_depth =
+        bool fault_injection_stack_depth =
             _get_environment_variable_as_size_t(USERSIM_FAULT_INJECTION_SIMULATION_ENVIRONMENT_VARIABLE_NAME);
-        auto leak_detector = _get_environment_variable_as_bool(USERSIM_MEMORY_LEAK_DETECTION_ENVIRONMENT_VARIABLE_NAME);
+        bool leak_detector = _get_environment_variable_as_bool(USERSIM_MEMORY_LEAK_DETECTION_ENVIRONMENT_VARIABLE_NAME);
         if (fault_injection_stack_depth || leak_detector) {
             _usersim_symbol_decoder_initialize();
         }
@@ -218,9 +215,7 @@ usersim_platform_initiate()
             usersim_fuzzing_enabled = true;
         }
 
-        if (leak_detector) {
-            _usersim_leak_detector_ptr = std::make_unique<usersim_leak_detector_t>();
-        }
+        usersim_initialize_ex(leak_detector);
 
         result = usersim_initialize_irql();
         if (result != STATUS_SUCCESS) {
@@ -269,10 +264,7 @@ usersim_platform_terminate()
     usersim_clean_up_dpcs();
     usersim_clean_up_irql();
     _clean_up_thread_pool();
-    if (_usersim_leak_detector_ptr) {
-        _usersim_leak_detector_ptr->dump_leaks();
-        _usersim_leak_detector_ptr.reset();
-    }
+    usersim_clean_up_ex();
 
     int32_t count = InterlockedDecrement((volatile long*)&_usersim_platform_initiate_count);
     if (count < 0) {
@@ -292,114 +284,6 @@ usersim_get_code_integrity_state(_Out_ usersim_code_integrity_state_t* state)
         *state = USERSIM_CODE_INTEGRITY_DEFAULT;
     }
     USERSIM_RETURN_RESULT(STATUS_SUCCESS);
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* usersim_allocate(size_t size)
-{
-    return usersim_allocate_with_tag(size, 'tset', true);
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* usersim_allocate_with_tag(size_t size, uint32_t tag, bool initialize)
-{
-    UNREFERENCED_PARAMETER(tag);
-    if (size == 0) {
-        KeBugCheckEx(BAD_POOL_CALLER, 0x00, 0, 0, 0);
-    }
-    if (size > usersim_fuzzing_memory_limit) {
-        return nullptr;
-    }
-
-    if (usersim_fault_injection_inject_fault()) {
-        return nullptr;
-    }
-
-    void* memory = calloc(size, 1);
-    if (!initialize) {
-        // The calloc call always zero-initializes memory.  To test
-        // returning uninitialized memory, we explicitly fill it with 0xcc.
-        memset(memory, 0xcc, size);
-    }
-
-    if (memory && _usersim_leak_detector_ptr) {
-        _usersim_leak_detector_ptr->register_allocation(reinterpret_cast<uintptr_t>(memory), size);
-    }
-
-    return memory;
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* usersim_reallocate(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size)
-{
-    UNREFERENCED_PARAMETER(old_size);
-    if (new_size > usersim_fuzzing_memory_limit) {
-        return nullptr;
-    }
-
-    if (usersim_fault_injection_inject_fault()) {
-        return nullptr;
-    }
-
-    void* p = realloc(memory, new_size);
-    if (p && (new_size > old_size)) {
-        memset(((char*)p) + old_size, 0, new_size - old_size);
-    }
-
-    if (_usersim_leak_detector_ptr) {
-        _usersim_leak_detector_ptr->unregister_allocation(reinterpret_cast<uintptr_t>(memory));
-        _usersim_leak_detector_ptr->register_allocation(reinterpret_cast<uintptr_t>(p), new_size);
-    }
-
-    return p;
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* usersim_reallocate_with_tag(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size, uint32_t tag)
-{
-    UNREFERENCED_PARAMETER(tag);
-
-    return usersim_reallocate(memory, old_size, new_size);
-}
-
-void
-usersim_free(_Frees_ptr_opt_ void* memory)
-{
-    if (_usersim_leak_detector_ptr) {
-        _usersim_leak_detector_ptr->unregister_allocation(reinterpret_cast<uintptr_t>(memory));
-    }
-    free(memory);
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* usersim_allocate_cache_aligned(size_t size)
-{
-    if (size > usersim_fuzzing_memory_limit) {
-        return nullptr;
-    }
-
-    if (usersim_fault_injection_inject_fault()) {
-        return nullptr;
-    }
-
-    void* memory = _aligned_malloc(size, USERSIM_CACHE_LINE_SIZE);
-    if (memory) {
-        memset(memory, 0, size);
-    }
-    return memory;
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* usersim_allocate_cache_aligned_with_tag(size_t size, uint32_t tag)
-{
-    UNREFERENCED_PARAMETER(tag);
-
-    return usersim_allocate_cache_aligned(size);
-}
-
-void
-usersim_free_cache_aligned(_Frees_ptr_opt_ void* memory)
-{
-    _aligned_free(memory);
 }
 
 struct _usersim_ring_descriptor
