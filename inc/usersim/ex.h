@@ -184,6 +184,77 @@ extern "C"
     USERSIM_API void
     ExRaiseDatatypeMisalignment();
 
+    /**
+     * @brief Allocate memory.
+     * @param[in] pool_type Pool type to use.
+     * @param[in] size Size of memory to allocate.
+     * @param[in] tag Pool tag to use.
+     * @param[in] initialize False to return "uninitialized" memory.
+     * @returns Pointer to memory block allocated, or null on failure.
+     */
+    __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* usersim_allocate_with_tag(
+        _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, size_t size, uint32_t tag, bool initialize);
+
+    /**
+     * @brief Allocate memory.
+     * @param[in] size Size of memory to allocate.
+     * @returns Pointer to memory block allocated, or null on failure.
+     */
+    __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* usersim_allocate(size_t size);
+
+    /**
+     * @brief Reallocate memory.
+     * @param[in] memory Allocation to be reallocated.
+     * @param[in] old_size Old size of memory to reallocate.
+     * @param[in] new_size New size of memory to reallocate.
+     * @returns Pointer to memory block allocated, or null on failure.
+     */
+    __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* usersim_reallocate(
+        _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size);
+
+    /**
+     * @brief Reallocate memory with tag.
+     * @param[in] memory Allocation to be reallocated.
+     * @param[in] old_size Old size of memory to reallocate.
+     * @param[in] new_size New size of memory to reallocate.
+     * @param[in] tag Pool tag to use.
+     * @returns Pointer to memory block allocated, or null on failure.
+     */
+    __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* usersim_reallocate_with_tag(
+        _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size, uint32_t tag);
+
+    /**
+     * @brief Free memory.
+     * @param[in] memory Allocation to be freed.
+     */
+    void
+    usersim_free(_Frees_ptr_opt_ void* memory);
+
+    /**
+     * @brief Allocate memory that has a starting address that is cache aligned.
+     * @param[in] size Size of memory to allocate
+     * @returns Pointer to memory block allocated, or null on failure.
+     */
+    USERSIM_API
+    __drv_allocatesMem(Mem) _Must_inspect_result_
+        _Ret_writes_maybenull_(size) void* usersim_allocate_cache_aligned(size_t size);
+
+    /**
+     * @brief Allocate memory that has a starting address that is cache aligned with tag.
+     * @param[in] size Size of memory to allocate
+     * @param[in] tag Pool tag to use.
+     * @returns Pointer to memory block allocated, or null on failure.
+     */
+    __drv_allocatesMem(Mem) _Must_inspect_result_
+        _Ret_writes_maybenull_(size) void* usersim_allocate_cache_aligned_with_tag(size_t size, uint32_t tag);
+
+    /**
+     * @brief Free memory that has a starting address that is cache aligned.
+     * @param[in] memory Allocation to be freed.
+     */
+    void
+    usersim_free_cache_aligned(_Frees_ptr_opt_ void* memory);
+
 #if defined(__cplusplus)
 }
 
@@ -197,80 +268,6 @@ ExFreePoolWithTagCPP(_Frees_ptr_ void* p, ULONG tag);
 USERSIM_API _Ret_maybenull_ void*
 ExAllocatePoolWithTagCPP(
     _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag);
-
-/**
- * @brief Allocate memory.
- * @param[in] pool_type Pool type to use.
- * @param[in] size Size of memory to allocate.
- * @param[in] tag Pool tag to use.
- * @param[in] initialize False to return "uninitialized" memory.
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* usersim_allocate_with_tag(
-    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type,
-    size_t size,
-    uint32_t tag,
-    bool initialize);
-
-    /**
- * @brief Allocate memory.
- * @param[in] size Size of memory to allocate.
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* usersim_allocate(size_t size);
-
-/**
- * @brief Reallocate memory.
- * @param[in] memory Allocation to be reallocated.
- * @param[in] old_size Old size of memory to reallocate.
- * @param[in] new_size New size of memory to reallocate.
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* usersim_reallocate(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size);
-
-/**
- * @brief Reallocate memory with tag.
- * @param[in] memory Allocation to be reallocated.
- * @param[in] old_size Old size of memory to reallocate.
- * @param[in] new_size New size of memory to reallocate.
- * @param[in] tag Pool tag to use.
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* usersim_reallocate_with_tag(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size, uint32_t tag);
-
-/**
- * @brief Free memory.
- * @param[in] memory Allocation to be freed.
- */
-void
-usersim_free(_Frees_ptr_opt_ void* memory);
-
-/**
- * @brief Allocate memory that has a starting address that is cache aligned.
- * @param[in] size Size of memory to allocate
- * @returns Pointer to memory block allocated, or null on failure.
- */
-USERSIM_API
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* usersim_allocate_cache_aligned(size_t size);
-
-/**
- * @brief Allocate memory that has a starting address that is cache aligned with tag.
- * @param[in] size Size of memory to allocate
- * @param[in] tag Pool tag to use.
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* usersim_allocate_cache_aligned_with_tag(size_t size, uint32_t tag);
-
-/**
- * @brief Free memory that has a starting address that is cache aligned.
- * @param[in] memory Allocation to be freed.
- */
-void
-usersim_free_cache_aligned(_Frees_ptr_opt_ void* memory);
 
 USERSIM_API _Ret_maybenull_ void*
 ExAllocatePoolUninitializedCPP(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag);

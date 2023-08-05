@@ -25,7 +25,7 @@ extern "C"
 
     typedef struct _DEVICE_OBJECT DEVICE_OBJECT;
 
-    typedef struct _DRIVER_OBJECT DRIVER_OBJECT;
+    typedef struct _DRIVER_OBJECT DRIVER_OBJECT, *PDRIVER_OBJECT;
 
     typedef struct _IO_WORKITEM IO_WORKITEM, *PIO_WORKITEM;
 

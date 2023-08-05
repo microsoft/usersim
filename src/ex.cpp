@@ -354,6 +354,7 @@ usersim_allocate_with_tag(
         // The pointer we return has to be cache aligned so we allocate
         // enough extra space to fill a cache line, and put the
         // usersim_allocation_header_t at the end of that space.
+        // TODO: move logic into usersim_allocate_cache_aligned_with_tag().
         size_t full_size = USERSIM_CACHE_LINE_SIZE + size;
         uint8_t* pointer = (uint8_t*)_aligned_malloc(full_size, USERSIM_CACHE_LINE_SIZE);
         if (pointer == nullptr) {

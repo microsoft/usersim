@@ -145,13 +145,15 @@ extern "C"
         _Out_ PSTRING destination_string,
         _In_opt_ __drv_aliasesMem PCSTR source_string);
 
-    _IRQL_requires_max_(DISPATCH_LEVEL) _At_(DestinationString->Buffer, _Post_equal_to_(SourceString))
-    _At_(DestinationString->Length, _Post_equal_to_(_String_length_(SourceString) * sizeof(WCHAR)))
-    _At_(DestinationString->MaximumLength, _Post_equal_to_((_String_length_(SourceString) + 1) * sizeof(WCHAR)))
+    _IRQL_requires_max_(DISPATCH_LEVEL) _At_(destination_string->Buffer, _Post_equal_to_(source_string))
+        _At_(destination_string->Length, _Post_equal_to_(_String_length_(source_string) * sizeof(WCHAR)))
+        _At_(destination_string->MaximumLength, _Post_equal_to_((_String_length_(source_string) + 1) * sizeof(WCHAR)))
     USERSIM_API VOID NTAPI
     RtlInitUnicodeString(
-        _Out_ PCUNICODE_STRING destination_string,
+        _Out_ PUNICODE_STRING destination_string,
         _In_opt_z_ __drv_aliasesMem PCWSTR source_string);
+
+    typedef struct _object_attributes OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
 
 // Include Rtl* implementations from ntdll.lib.
 #pragma comment(lib, "ntdll.lib")

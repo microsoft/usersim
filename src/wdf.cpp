@@ -9,6 +9,19 @@
 
 WDF_DRIVER_GLOBALS g_UsersimWdfDriverGlobals = {0};
 
+static WdfDriverCreate_t _WdfDriverCreate;
+static WdfDeviceCreate_t _WdfDeviceCreate;
+static WdfControlDeviceInitAllocate_t _WdfControlDeviceInitAllocate;
+static WdfDeviceInitFree_t _WdfDeviceInitFree;
+static WdfDeviceInitSetDeviceType_t _WdfDeviceInitSetDeviceType;
+static WdfDeviceInitSetCharacteristics_t _WdfDeviceInitSetCharacteristics;
+static WdfDeviceInitAssignName_t _WdfDeviceInitAssignName;
+static WdfDeviceInitSetFileObjectConfig_t _WdfDeviceInitSetFileObjectConfig;
+static WdfDeviceInitAssignWdmIrpPreprocessCallback_t _WdfDeviceInitAssignWdmIrpPreprocessCallback;
+static WdfDeviceCreateSymbolicLink_t _WdfDeviceCreateSymbolicLink;
+static WdfIoQueueCreate_t _WdfIoQueueCreate;
+static WdfObjectDelete_t _WdfObjectDelete;
+
 static NTSTATUS
 _WdfDriverCreate(
     _In_ WDF_DRIVER_GLOBALS* driver_globals,
@@ -42,7 +55,6 @@ _WdfDeviceCreate(
     _In_opt_ PWDF_OBJECT_ATTRIBUTES device_attributes,
     _Out_ WDFDEVICE* device)
 {
-    UNREFERENCED_PARAMETER(device_init);
     UNREFERENCED_PARAMETER(device_attributes);
 
     if (driver_globals != &g_UsersimWdfDriverGlobals) {
@@ -52,12 +64,10 @@ _WdfDeviceCreate(
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    *device = nullptr;
+    *device = *device_init;
     return STATUS_SUCCESS;
 }
 
-typedef struct _WDF_FILEOBJECT_CONFIG WDF_FILEOBJECT_CONFIG, *PWDF_FILEOBJECT_CONFIG;
-typedef struct _FN_WDFDEVICE_WDM_IRP_PREPROCESS FN_WDFDEVICE_WDM_IRP_PREPROCESS, *PFN_WDFDEVICE_WDM_IRP_PREPROCESS;
 #define IRP_MJ_MAXIMUM_FUNCTION 0x1b
 
 typedef struct _WDFDEVICE_INIT
@@ -89,12 +99,19 @@ _WdfControlDeviceInitAllocate(
     return device_init;
 }
 
+static _IRQL_requires_max_(DISPATCH_LEVEL) VOID
+_WdfDeviceInitFree(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ PWDFDEVICE_INIT device_init)
+{
+    UNREFERENCED_PARAMETER(driver_globals);
+    usersim_free(device_init);
+}
+
 static
 _IRQL_requires_max_(DISPATCH_LEVEL) VOID
 _WdfDeviceInitSetDeviceType(
     _In_ PWDF_DRIVER_GLOBALS driver_globals, 
     _In_ PWDFDEVICE_INIT device_init,
-    _In_ DEVICE_TYPE device_type)
+    DEVICE_TYPE device_type)
 {
     UNREFERENCED_PARAMETER(driver_globals);
     device_init->device_type = device_type;
@@ -105,8 +122,8 @@ _IRQL_requires_max_(DISPATCH_LEVEL) VOID
 _WdfDeviceInitSetCharacteristics(
     _In_ PWDF_DRIVER_GLOBALS driver_globals, 
     _In_ PWDFDEVICE_INIT device_init,
-    _In_ ULONG device_characteristics,
-    _In_ BOOLEAN or_in_values)
+    ULONG device_characteristics,
+    BOOLEAN or_in_values)
 {
     UNREFERENCED_PARAMETER(driver_globals);
     if (!or_in_values) {
@@ -155,10 +172,10 @@ _WdfDeviceInitAssignWdmIrpPreprocessCallback(
     _In_ PWDF_DRIVER_GLOBALS driver_globals,
     _In_ PWDFDEVICE_INIT device_init,
     _In_ PFN_WDFDEVICE_WDM_IRP_PREPROCESS evt_device_wdm_irp_preprocess,
-    _In_ UCHAR major_function,
+    UCHAR major_function,
     _When_(num_minor_functions > 0, _In_reads_bytes_(num_minor_functions)) _When_(num_minor_functions == 0, _In_opt_)
         PUCHAR minor_functions,
-    _In_ ULONG num_minor_functions)
+    ULONG num_minor_functions)
 {
     if (driver_globals != &g_UsersimWdfDriverGlobals) {
         return STATUS_INVALID_PARAMETER;
@@ -199,12 +216,6 @@ _WdfDeviceCreateSymbolicLink(
     return STATUS_SUCCESS;
 }
 
-typedef struct _WDF_IO_QUEUE_CONFIG WDF_IO_QUEUE_CONFIG, *PWDF_IO_QUEUE_CONFIG;
-typedef struct _WDFQUEUE
-{
-    int tbd;
-} WDFQUEUE;
-
 static
 _Must_inspect_result_
 _IRQL_requires_max_(DISPATCH_LEVEL)
@@ -232,13 +243,12 @@ _WdfIoQueueCreate(
     return STATUS_SUCCESS;
 }
 
-typedef HANDLE WDFOBJECT;
-
 _IRQL_requires_max_(DISPATCH_LEVEL) VOID
 _WdfObjectDelete(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFOBJECT object)
 {
     UNREFERENCED_PARAMETER(driver_globals);
-    UNREFERENCED_PARAMETER(object);
+
+    usersim_free(object);
 }
 
 WDFFUNC g_UsersimWdfFunctions[WdfFunctionTableNumEntries];
@@ -247,6 +257,7 @@ void
 usersim_initialize_wdf()
 {
     g_UsersimWdfFunctions[WdfControlDeviceInitAllocateTableIndex] = (WDFFUNC)_WdfControlDeviceInitAllocate;
+    g_UsersimWdfFunctions[WdfDeviceInitFreeTableIndex] = (WDFFUNC)_WdfDeviceInitFree;
     g_UsersimWdfFunctions[WdfDeviceInitSetDeviceTypeTableIndex] = (WDFFUNC)_WdfDeviceInitSetDeviceType;
     g_UsersimWdfFunctions[WdfDeviceInitAssignNameTableIndex] = (WDFFUNC)_WdfDeviceInitAssignName;
     g_UsersimWdfFunctions[WdfDeviceInitSetCharacteristicsTableIndex] = (WDFFUNC)_WdfDeviceInitSetCharacteristics;
