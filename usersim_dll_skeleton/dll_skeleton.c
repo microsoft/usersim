@@ -21,6 +21,7 @@ __declspec(dllimport) const WDFFUNC* UsersimWdfFunctions;
 
 PWDF_DRIVER_GLOBALS WdfDriverGlobals = NULL;
 const WDFFUNC* WdfFunctions_01015 = NULL;
+static DRIVER_OBJECT _driver_object = {0};
 
     NTSTATUS
     UsersimStartDriver()
@@ -28,9 +29,8 @@ const WDFFUNC* WdfFunctions_01015 = NULL;
         WdfDriverGlobals = UsersimWdfDriverGlobals;
         WdfFunctions_01015 = UsersimWdfFunctions;
 
-        DRIVER_OBJECT driver_object = {0};
         UNICODE_STRING registry_path = {0};
-        return DriverEntry(&driver_object, &registry_path);
+        return DriverEntry(&_driver_object, &registry_path);
     }
 
     void
