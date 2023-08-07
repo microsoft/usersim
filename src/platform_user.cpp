@@ -201,7 +201,7 @@ usersim_platform_initiate()
     try {
         _usersim_platform_maximum_group_count = GetMaximumProcessorGroupCount();
         _usersim_platform_maximum_processor_count = GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS);
-        bool fault_injection_stack_depth =
+        size_t fault_injection_stack_depth =
             _get_environment_variable_as_size_t(USERSIM_FAULT_INJECTION_SIMULATION_ENVIRONMENT_VARIABLE_NAME);
         bool leak_detector = _get_environment_variable_as_bool(USERSIM_MEMORY_LEAK_DETECTION_ENVIRONMENT_VARIABLE_NAME);
         if (fault_injection_stack_depth || leak_detector) {
