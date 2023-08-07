@@ -25,7 +25,7 @@ extern "C"
 
     typedef struct _DEVICE_OBJECT DEVICE_OBJECT;
 
-    typedef struct _DRIVER_OBJECT DRIVER_OBJECT;
+    typedef struct _DRIVER_OBJECT DRIVER_OBJECT, *PDRIVER_OBJECT;
 
     typedef struct _IO_WORKITEM IO_WORKITEM, *PIO_WORKITEM;
 
@@ -68,7 +68,13 @@ extern "C"
     IoGetFileObjectGenericMapping();
 
     USERSIM_API
-    _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI PEPROCESS IoGetCurrentProcess(VOID);
+    _IRQL_requires_max_(DISPATCH_LEVEL) PEPROCESS IoGetCurrentProcess(VOID);
+
+    typedef struct _IRP* PIRP;
+
+    USERSIM_API
+    _IRQL_requires_max_(DISPATCH_LEVEL) VOID
+    IofCompleteRequest(_In_ PIRP irp, _In_ CCHAR priority_boost);
 
 #if defined(__cplusplus)
 }

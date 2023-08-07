@@ -7,6 +7,11 @@
 #include <stdint.h>
 #include <ws2def.h>
 
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
 typedef struct _fwp_classify_parameters
 {
     ADDRESS_FAMILY family;
@@ -52,3 +57,7 @@ usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters);
 USERSIM_API void
 usersim_fwp_set_sublayer_guids(
     _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer);
+
+#if defined(__cplusplus)
+}
+#endif

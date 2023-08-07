@@ -3,6 +3,7 @@
 
 #include "platform.h"
 #include "usersim/etw.h"
+#include "usersim/ex.h"
 
 typedef struct
 {

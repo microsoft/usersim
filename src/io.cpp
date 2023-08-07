@@ -3,6 +3,7 @@
 
 #include "platform.h"
 #include "kernel_um.h"
+#include "usersim/ex.h"
 #include "usersim/io.h"
 
 // Io* functions.
@@ -116,4 +117,11 @@ IoFreeMdl(MDL* mdl)
 _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI PEPROCESS IoGetCurrentProcess(VOID)
 {
     return (PEPROCESS)GetCurrentProcess();
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL) VOID
+IofCompleteRequest(_In_ PIRP irp, _In_ CCHAR priority_boost)
+{
+    UNREFERENCED_PARAMETER(irp);
+    UNREFERENCED_PARAMETER(priority_boost);
 }

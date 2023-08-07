@@ -9,6 +9,11 @@
 #include <ndis/objectheader.h>
 #include <ndis/types.h>
 
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
 #define NET_BUFFER_FIRST_MDL(_NB) ((_NB)->MdlChain)
 #define NDIS_STATUS_SUCCESS ((NDIS_STATUS)STATUS_SUCCESS)
 #define NET_BUFFER_LIST_FIRST_NB(_NBL) ((_NBL)->FirstNetBuffer)
@@ -43,41 +48,41 @@ typedef struct _NET_BUFFER_LIST_CONTEXT NET_BUFFER_LIST_CONTEXT, *PNET_BUFFER_LI
 
 typedef struct _NDIS_GENERIC_OBJECT NDIS_GENERIC_OBJECT, *PNDIS_GENERIC_OBJECT;
 
-__declspec(dllexport) PNDIS_GENERIC_OBJECT
+USERSIM_API PNDIS_GENERIC_OBJECT
 NdisAllocateGenericObject(_In_opt_ DRIVER_OBJECT* driver_object, _In_ unsigned long tag, _In_ uint16_t size);
 
-__declspec(dllexport) NDIS_HANDLE
+USERSIM_API NDIS_HANDLE
 NdisAllocateNetBufferListPool(_In_opt_ NDIS_HANDLE ndis_handle, _In_ NET_BUFFER_LIST_POOL_PARAMETERS const* parameters);
 
-__declspec(dllexport) NET_BUFFER_LIST*
+USERSIM_API NET_BUFFER_LIST*
 NdisAllocateCloneNetBufferList(
     _In_ NET_BUFFER_LIST* original_net_buffer_list,
     _In_ NDIS_HANDLE net_buffer_list_pool_handle,
     _In_ NDIS_HANDLE net_buffer_pool_handle,
     ULONG allocate_clone_flags);
 
-__declspec(dllexport) void
+USERSIM_API void
 NdisFreeCloneNetBufferList(_In_ NET_BUFFER_LIST* clone_net_buffer_list, ULONG free_clone_flags);
 
-__declspec(dllexport) PNET_BUFFER_LIST
+USERSIM_API PNET_BUFFER_LIST
 NdisAllocateNetBufferList(_In_ NDIS_HANDLE nbl_pool_handle, _In_ USHORT context_size, _In_ USHORT context_backfill);
 
-__declspec(dllexport) _Must_inspect_result_ __drv_allocatesMem(mem) NET_BUFFER* NdisAllocateNetBuffer(
+USERSIM_API _Must_inspect_result_ __drv_allocatesMem(mem) NET_BUFFER* NdisAllocateNetBuffer(
     _In_ NDIS_HANDLE pool_handle, _In_opt_ MDL* mdl_chain, _In_ unsigned long data_offset, _In_ SIZE_T data_length);
 
-__declspec(dllexport) VOID
+USERSIM_API VOID
 NdisFreeNetBuffer(_In_ __drv_freesMem(mem) NET_BUFFER* net_buffer);
 
-__declspec(dllexport) VOID
+USERSIM_API VOID
 NdisFreeNetBufferList(_In_ __drv_freesMem(mem) NET_BUFFER_LIST* net_buffer_list);
 
-__declspec(dllexport) void
+USERSIM_API void
 NdisFreeNetBufferListPool(_In_ __drv_freesMem(mem) NDIS_HANDLE pool_handle);
 
-__declspec(dllexport) void
+USERSIM_API void
 NdisFreeGenericObject(_In_ PNDIS_GENERIC_OBJECT ndis_object);
 
-__declspec(dllexport) void*
+USERSIM_API void*
 NdisGetDataBuffer(
     _In_ NET_BUFFER* net_buffer,
     _In_ unsigned long bytes_needed,
@@ -85,16 +90,20 @@ NdisGetDataBuffer(
     _In_ unsigned long align_multiple,
     _In_ unsigned long align_offset);
 
-__declspec(dllexport) NDIS_STATUS
+USERSIM_API NDIS_STATUS
 NdisRetreatNetBufferDataStart(
     _In_ NET_BUFFER* net_buffer,
     _In_ unsigned long data_offset_delta,
     _In_ unsigned long data_back_fill,
     _In_opt_ void* allocate_mdl_handler);
 
-__declspec(dllexport) void
+USERSIM_API void
 NdisAdvanceNetBufferDataStart(
     _In_ NET_BUFFER* net_buffer,
     _In_ unsigned long data_offset_delta,
     _In_ BOOLEAN free_mdl,
     _In_opt_ void* free_mdl_handler);
+
+#if defined(__cplusplus)
+}
+#endif

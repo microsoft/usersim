@@ -4,6 +4,7 @@
 #include "fault_injection.h"
 #include "kernel_um.h"
 #include "platform.h"
+#include "usersim/ex.h"
 #include "usersim/se.h"
 #include "utilities.h"
 #include <processthreadsapi.h>

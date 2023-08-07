@@ -21,11 +21,7 @@ __declspec(dllimport) const WDFFUNC* UsersimWdfFunctions;
 
 PWDF_DRIVER_GLOBALS WdfDriverGlobals = NULL;
 const WDFFUNC* WdfFunctions_01015 = NULL;
-
-    struct _driver_object
-    {
-        int dummy;
-    };
+static DRIVER_OBJECT _driver_object = {0};
 
     NTSTATUS
     UsersimStartDriver()
@@ -33,18 +29,18 @@ const WDFFUNC* WdfFunctions_01015 = NULL;
         WdfDriverGlobals = UsersimWdfDriverGlobals;
         WdfFunctions_01015 = UsersimWdfFunctions;
 
-        DRIVER_OBJECT driver_object = {0};
         UNICODE_STRING registry_path = {0};
-        return DriverEntry(&driver_object, &registry_path);
+        return DriverEntry(&_driver_object, &registry_path);
     }
 
     void
     UsersimStopDriver()
     {
-        WDFDRIVER driver = WdfDriverGlobals->Driver;
-        if (driver.config.EvtDriverUnload != NULL) {
-            driver.config.EvtDriverUnload(driver);
+        DRIVER_OBJECT* driver = (DRIVER_OBJECT*)WdfDriverGlobals->Driver;
+        if (driver->config.EvtDriverUnload != NULL) {
+            driver->config.EvtDriverUnload(driver);
         }
+        WdfDriverGlobals->Driver = NULL;
     }
 
     BOOL APIENTRY

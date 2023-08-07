@@ -266,7 +266,7 @@ usersim_free_semaphores()
         for (auto handle : *g_usersim_semaphore_handles) {
             ::CloseHandle(handle);
         }
-        usersim_free(g_usersim_semaphore_handles);
+        delete g_usersim_semaphore_handles;
         g_usersim_semaphore_handles = nullptr;
     }
 }
@@ -731,7 +731,7 @@ usersim_free_threadpool_timers()
         for (TP_TIMER* threadpool_timer : *g_usersim_threadpool_timers) {
             CloseThreadpoolTimer(threadpool_timer);
         }
-        usersim_free(g_usersim_threadpool_timers);
+        delete g_usersim_threadpool_timers;
         g_usersim_threadpool_timers = nullptr;
     }
 }
