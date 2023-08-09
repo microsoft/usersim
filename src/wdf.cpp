@@ -12,6 +12,7 @@ WDF_DRIVER_GLOBALS g_UsersimWdfDriverGlobals = {0};
 static WdfDriverCreate_t _WdfDriverCreate;
 static WdfDeviceCreate_t _WdfDeviceCreate;
 static WdfControlDeviceInitAllocate_t _WdfControlDeviceInitAllocate;
+static WdfControlFinishInitializing_t _WdfControlFinishInitializing;
 static WdfDeviceInitFree_t _WdfDeviceInitFree;
 static WdfDeviceInitSetDeviceType_t _WdfDeviceInitSetDeviceType;
 static WdfDeviceInitSetCharacteristics_t _WdfDeviceInitSetCharacteristics;
@@ -20,6 +21,7 @@ static WdfDeviceInitSetFileObjectConfig_t _WdfDeviceInitSetFileObjectConfig;
 static WdfDeviceInitAssignWdmIrpPreprocessCallback_t _WdfDeviceInitAssignWdmIrpPreprocessCallback;
 static WdfDeviceCreateSymbolicLink_t _WdfDeviceCreateSymbolicLink;
 static WdfIoQueueCreate_t _WdfIoQueueCreate;
+static WdfDeviceWdmGetDeviceObject_t _WdfDeviceWdmGetDeviceObject;
 static WdfObjectDelete_t _WdfObjectDelete;
 
 static NTSTATUS
@@ -42,6 +44,7 @@ _WdfDriverCreate(
     }
     g_UsersimWdfDriverGlobals.Driver = driver_object;
     driver_object->config = *driver_config;
+    driver_object->device = nullptr;
     if (driver != nullptr) {
         *driver = driver_object;
     }
@@ -64,6 +67,8 @@ _WdfDeviceCreate(
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
+    DRIVER_OBJECT* driver_object = (DRIVER_OBJECT*)driver_globals->Driver;
+    driver_object->device = (PDEVICE_OBJECT)*device_init;
     *device = *device_init;
     return STATUS_SUCCESS;
 }
@@ -244,6 +249,20 @@ _WdfIoQueueCreate(
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) VOID
+_WdfControlFinishInitializing(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device)
+{
+    UNREFERENCED_PARAMETER(driver_globals);
+    UNREFERENCED_PARAMETER(device);
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL) PDEVICE_OBJECT
+_WdfDeviceWdmGetDeviceObject(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device)
+{
+    UNREFERENCED_PARAMETER(driver_globals);
+    return (PDEVICE_OBJECT)device;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL) VOID
 _WdfObjectDelete(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFOBJECT object)
 {
     UNREFERENCED_PARAMETER(driver_globals);
@@ -257,6 +276,8 @@ void
 usersim_initialize_wdf()
 {
     g_UsersimWdfFunctions[WdfControlDeviceInitAllocateTableIndex] = (WDFFUNC)_WdfControlDeviceInitAllocate;
+    g_UsersimWdfFunctions[WdfControlFinishInitializingTableIndex] = (WDFFUNC)_WdfControlFinishInitializing;
+    g_UsersimWdfFunctions[WdfDeviceWdmGetDeviceObjectTableIndex] = (WDFFUNC)_WdfDeviceWdmGetDeviceObject;
     g_UsersimWdfFunctions[WdfDeviceInitFreeTableIndex] = (WDFFUNC)_WdfDeviceInitFree;
     g_UsersimWdfFunctions[WdfDeviceInitSetDeviceTypeTableIndex] = (WDFFUNC)_WdfDeviceInitSetDeviceType;
     g_UsersimWdfFunctions[WdfDeviceInitAssignNameTableIndex] = (WDFFUNC)_WdfDeviceInitAssignName;

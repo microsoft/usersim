@@ -153,7 +153,15 @@ extern "C"
         _Out_ PUNICODE_STRING destination_string,
         _In_opt_z_ __drv_aliasesMem PCWSTR source_string);
 
-    typedef struct _object_attributes OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
+    typedef struct _OBJECT_ATTRIBUTES
+    {
+        ULONG Length;
+        HANDLE RootDirectory;
+        PUNICODE_STRING ObjectName;
+        ULONG Attributes;
+        SECURITY_DESCRIPTOR* SecurityDescriptor;
+        SECURITY_QUALITY_OF_SERVICE* SecurityQualityOfService;
+    } OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
 
 // Include Rtl* implementations from ntdll.lib.
 #pragma comment(lib, "ntdll.lib")

@@ -66,7 +66,8 @@ TEST_CASE("WdfDeviceCreate", "[wdf]")
     NTSTATUS status = WdfDriverCreate(UsersimWdfDriverGlobals, &driver_object, &registry_path, nullptr, &config, &driver);
     REQUIRE(status == STATUS_SUCCESS);
 
-    // Allocate control device object.
+    // Allocate control device object.  For usage discussion, see
+    // https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/using-control-device-objects#creating-a-control-device-object
     WdfControlDeviceInitAllocate_t* WdfControlDeviceInitAllocate =
         (WdfControlDeviceInitAllocate_t*)UsersimWdfFunctions[WdfControlDeviceInitAllocateTableIndex];
     DECLARE_CONST_UNICODE_STRING(security_descriptor, L"");
@@ -111,6 +112,11 @@ TEST_CASE("WdfDeviceCreate", "[wdf]")
     REQUIRE(status == STATUS_SUCCESS);
     REQUIRE(device != nullptr);
 
+    WdfDeviceWdmGetDeviceObject_t* WdfDeviceWdmGetDeviceObject =
+        (WdfDeviceWdmGetDeviceObject_t*)UsersimWdfFunctions[WdfDeviceWdmGetDeviceObjectTableIndex];
+    PDEVICE_OBJECT device_object = WdfDeviceWdmGetDeviceObject(UsersimWdfDriverGlobals, device);
+    REQUIRE(device_object != nullptr);
+
     // Create symbolic link for control object for user mode.
     UNICODE_STRING symbolic_device_name;
     RtlInitUnicodeString(&symbolic_device_name, L"symbolic device name");
@@ -126,6 +132,11 @@ TEST_CASE("WdfDeviceCreate", "[wdf]")
     status = WdfIoQueueCreate(
         UsersimWdfDriverGlobals, device, &io_queue_configuration, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
     REQUIRE(status == STATUS_SUCCESS);
+
+    // Finish initializing the control device object.
+    WdfControlFinishInitializing_t* WdfControlFinishInitializing =
+        (WdfControlFinishInitializing_t*)UsersimWdfFunctions[WdfControlFinishInitializingTableIndex];
+    WdfControlFinishInitializing(UsersimWdfDriverGlobals, device);
 
     // Free device, which will free the control device object.
     WdfObjectDelete_t* WdfObjectDelete = (WdfObjectDelete_t*)UsersimWdfFunctions[WdfObjectDeleteTableIndex];

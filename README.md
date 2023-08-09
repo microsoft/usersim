@@ -21,6 +21,9 @@ To use this repository from another project:
 7. Disable warning 4324 (structure was padded due to alignment) in the project properties, by adding 4324 to
    Configuration Properties -> C/C++ -> Advanced -> Disable Specific Warnings.
 8. Make sure you are not linking with any kernel libs, since they aren't usable by DLLs.
+9. Give usersim.lib preference over ntdll.lib as follows:
+   Under Configuration Properties -> Linker -> Input -> Ignore Specific Default Libraries, add ntdll.lib.
+   Under Configuration Properties -> Linker -> Input -> Additional Dependencies, add usersim.lib before ntdll.lib.
 
 ### Leak Detection
 

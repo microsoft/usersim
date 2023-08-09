@@ -42,6 +42,9 @@
     <ClCompile Include="ob_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="zw_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
