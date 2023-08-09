@@ -8,8 +8,6 @@
 #endif
 #include "usersim/zw.h"
 
-#define ZwClose CloseHandle
-
 static void
 _test_zwcreatekey(_In_ PCWSTR path)
 {
@@ -23,17 +21,23 @@ _test_zwcreatekey(_In_ PCWSTR path)
     REQUIRE(status == STATUS_SUCCESS);
     REQUIRE((disposition == REG_CREATED_NEW_KEY || disposition == REG_OPENED_EXISTING_KEY));
     REQUIRE(key_handle != nullptr);
+    REQUIRE(ZwClose(key_handle) == STATUS_SUCCESS);
 
-    ZwClose(key_handle);
-
-    // Try creating when already exists.
+    // Try creating when already exists.  We use KEY_QUERY_VALUE to make sure that read access
+    // still finds the same key we created above.
     status =
         ZwCreateKey(&key_handle, KEY_QUERY_VALUE, &object_attributes, 0, nullptr, REG_OPTION_VOLATILE, &disposition);
     REQUIRE(status == STATUS_SUCCESS);
     REQUIRE(disposition == REG_OPENED_EXISTING_KEY);
+    REQUIRE(ZwClose(key_handle) == STATUS_SUCCESS);
 
-    ZwDeleteKey(key_handle);
-    ZwClose(key_handle);
+    // Delete the key we created above.
+    status =
+        ZwCreateKey(&key_handle, DELETE, &object_attributes, 0, nullptr, REG_OPTION_VOLATILE, &disposition);
+    REQUIRE(status == STATUS_SUCCESS);
+    REQUIRE(disposition == REG_OPENED_EXISTING_KEY);
+    REQUIRE(ZwDeleteKey(key_handle) == STATUS_SUCCESS);
+    REQUIRE(ZwClose(key_handle) == STATUS_SUCCESS);
 }
 
 TEST_CASE("ZwCreateKey HKCU", "[zw]")

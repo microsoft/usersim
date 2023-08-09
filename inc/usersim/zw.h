@@ -7,9 +7,8 @@
 extern "C"
 {
 #endif
-
-    USERSIM_API
-    _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS ZwCreateKey(
+    USERSIM_API _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
+    ZwCreateKey(
         _Out_ PHANDLE key_handle,
         _In_ ACCESS_MASK desired_access,
         _In_ POBJECT_ATTRIBUTES object_attributes,
@@ -18,9 +17,14 @@ extern "C"
         _In_ ULONG create_options,
         _Out_opt_ PULONG disposition);
 
-    USERSIM_API NTSTATUS
-    ZwDeleteKey(
-        _In_ HANDLE key_handle);
+    // The following APIs are exported by ntdll.dll but the prototypes
+    // are not in system headers, so define them here.
+
+    NTSTATUS
+    ZwDeleteKey(_In_ HANDLE key_handle);
+
+    NTSTATUS
+    ZwClose(_In_ HANDLE handle);
 
 #if defined(__cplusplus)
 }

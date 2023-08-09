@@ -30,7 +30,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS ZwCreateKey(
     UNREFERENCED_PARAMETER(create_options);
 
     HKEY root_key = (HKEY)object_attributes->RootDirectory;
-    std::wstring relative_path = object_attributes->ObjectName->Buffer;
+    std::wstring relative_path(object_attributes->ObjectName->Buffer, object_attributes->ObjectName->Length);
     PCWSTR hklm_path = L"\\Registry\\Machine\\";
     PCWSTR hkcu_path = L"\\Registry\\User\\";
     if (relative_path.starts_with(hklm_path)) {
@@ -41,11 +41,15 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS ZwCreateKey(
         relative_path = relative_path.substr(wcslen(hkcu_path));
     }
 
+    std::wstring class_wstring;
+    if (class_string) {
+        class_wstring.assign(class_string->Buffer, class_string->Length);
+    }
     ULONG result = RegCreateKeyExW(
         root_key,
         relative_path.c_str(),
         0, // Reserved
-        (class_string ? class_string->Buffer : nullptr),
+        (class_string ? (PWSTR)class_wstring.c_str() : nullptr),
         REG_OPTION_VOLATILE,
         desired_access,
         nullptr,
@@ -66,7 +70,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS ZwCreateKey(
             root_key,
             relative_path.c_str(),
             0, // Reserved
-            (class_string ? class_string->Buffer : nullptr),
+            (class_string ? (PWSTR)class_wstring.c_str() : nullptr),
             REG_OPTION_VOLATILE,
             desired_access,
             nullptr,
@@ -74,12 +78,5 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS ZwCreateKey(
             disposition);
     }
 
-    return win32_error_code_to_usersim_result(result);
-}
-
-NTSTATUS
-ZwDeleteKey(_In_ HANDLE key_handle)
-{
-    ULONG result = RegDeleteKey((HKEY)key_handle, L"");
     return win32_error_code_to_usersim_result(result);
 }
