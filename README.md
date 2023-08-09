@@ -16,7 +16,7 @@ To use this repository from another project:
 3. Set the following property on the project: Configuration Properties -> General -> Platform Toolset to
    Visual Studio 2022 (v143).
 4. Add a reference from your DLL project to the usersim project and the usersim_dll_skeleton project.
-5. Define _AMD64_ in the project properties preprocessor defines.
+5. Define _AMD64_;_WIN32_WINNT=0x0a00 in the project properties preprocessor defines.
 6. Add to AdditionalIncludeDirectories: $(WindowsSdkDir)Include\10.0.22621.0\km;$(WindowsSdkDir)Include\wdf\kmdf\1.15
 7. Disable warning 4324 (structure was padded due to alignment) in the project properties, by adding 4324 to
    Configuration Properties -> C/C++ -> Advanced -> Disable Specific Warnings.
