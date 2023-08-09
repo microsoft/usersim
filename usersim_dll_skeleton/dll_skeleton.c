@@ -40,6 +40,12 @@ static DRIVER_OBJECT _driver_object = {0};
         if (driver->config.EvtDriverUnload != NULL) {
             driver->config.EvtDriverUnload(driver);
         }
+
+        // Free device, which will free the control device object.
+        WdfObjectDelete_t* WdfObjectDelete = (WdfObjectDelete_t*)UsersimWdfFunctions[WdfObjectDeleteTableIndex];
+        WdfObjectDelete(UsersimWdfDriverGlobals, driver->device);
+        driver->device = NULL;
+
         WdfDriverGlobals->Driver = NULL;
     }
 

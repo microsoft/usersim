@@ -75,6 +75,9 @@
     <ClCompile Include="ob.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="zw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fwp_um.h">
@@ -144,6 +147,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\inc\usersim\ob.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\usersim\zw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

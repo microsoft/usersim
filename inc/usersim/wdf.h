@@ -47,6 +47,7 @@ extern "C"
     struct _DRIVER_OBJECT
     {
         WDF_DRIVER_CONFIG config;
+        PDEVICE_OBJECT device;
     };
 
 #define WDF_DRIVER_GLOBALS_NAME_LEN (32)
@@ -130,7 +131,6 @@ extern "C"
         _In_ PWDF_FILEOBJECT_CONFIG file_object_config,
         _In_opt_ PWDF_OBJECT_ATTRIBUTES file_object_attributes);
 
-
     typedef NTSTATUS(FN_WDFDEVICE_WDM_IRP_PREPROCESS)(_In_ WDFDEVICE device, _Inout_ IRP* irp);
     typedef FN_WDFDEVICE_WDM_IRP_PREPROCESS* PFN_WDFDEVICE_WDM_IRP_PREPROCESS;
 
@@ -163,6 +163,12 @@ extern "C"
         _In_opt_ PWDF_OBJECT_ATTRIBUTES queue_attributes,
         _Out_opt_ WDFQUEUE* queue);
 
+    typedef _IRQL_requires_max_(DISPATCH_LEVEL)
+        VOID(WdfControlFinishInitializing_t)(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device);
+
+    typedef _IRQL_requires_max_(DISPATCH_LEVEL)
+        PDEVICE_OBJECT(WdfDeviceWdmGetDeviceObject_t)(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device);
+
     typedef HANDLE WDFOBJECT;
 
     typedef _IRQL_requires_max_(DISPATCH_LEVEL)
@@ -171,6 +177,8 @@ extern "C"
     typedef enum _WDFFUNCENUM
     {
         WdfControlDeviceInitAllocateTableIndex = 25,
+        WdfControlFinishInitializingTableIndex = 27,
+        WdfDeviceWdmGetDeviceObjectTableIndex = 31,
         WdfDeviceInitFreeTableIndex = 54,
         WdfDeviceInitSetDeviceTypeTableIndex = 66,
         WdfDeviceInitAssignNameTableIndex = 67,

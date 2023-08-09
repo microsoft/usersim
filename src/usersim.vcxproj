@@ -212,6 +212,7 @@
     <ClCompile Include="se.cpp" />
     <ClCompile Include="tracelog.c" />
     <ClCompile Include="wdf.cpp" />
+    <ClCompile Include="zw.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\inc\TraceLoggingProvider.h" />
@@ -221,6 +222,7 @@
     <ClInclude Include="..\inc\usersim\fwp_test.h" />
     <ClInclude Include="..\inc\usersim\ob.h" />
     <ClInclude Include="..\inc\usersim\wdf.h" />
+    <ClInclude Include="..\inc\usersim\zw.h" />
     <ClInclude Include="fault_injection.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="fwp_um.h" />
