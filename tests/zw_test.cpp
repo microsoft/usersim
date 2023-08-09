@@ -27,7 +27,8 @@ _test_zwcreatekey(_In_ PCWSTR path)
     ZwClose(key_handle);
 
     // Try creating when already exists.
-    status = ZwCreateKey(&key_handle, KEY_WRITE, &object_attributes, 0, nullptr, REG_OPTION_VOLATILE, &disposition);
+    status =
+        ZwCreateKey(&key_handle, KEY_QUERY_VALUE, &object_attributes, 0, nullptr, REG_OPTION_VOLATILE, &disposition);
     REQUIRE(status == STATUS_SUCCESS);
     REQUIRE(disposition == REG_OPENED_EXISTING_KEY);
 
@@ -38,12 +39,12 @@ _test_zwcreatekey(_In_ PCWSTR path)
 TEST_CASE("ZwCreateKey HKCU", "[zw]")
 {
     // In kernel-mode code, HKCU is \Registry\User.
-    _test_zwcreatekey(L"\\Registry\\User\\Software\\eBPF\\Test");
+    _test_zwcreatekey(L"\\Registry\\User\\Software\\Usersim\\Test");
 }
 
 TEST_CASE("ZwCreateKey HKLM", "[zw]")
 {
     // In kernel-mode code, HKLM is \Registry\Machine.
     // Usersim will internally use HKCU if the test is not run as admin.
-    _test_zwcreatekey(L"\\Registry\\Machine\\Software\\eBPF\\Test");
+    _test_zwcreatekey(L"\\Registry\\Machine\\Software\\Usersim\\Test");
 }

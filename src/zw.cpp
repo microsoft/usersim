@@ -1,5 +1,11 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
+//
+// This file contains Usersim overrides of some Zw* APIs
+// exposed by ntdll.dll, where the behavior of such APIs
+// differs between kernel mode and unprivileged user
+// mode, so that we can emulate kernel mode behavior to
+// unprivileged user mode test processes.
 #include "fault_injection.h"
 #include "usersim/zw.h"
 #include "utilities.h"
@@ -48,6 +54,13 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS ZwCreateKey(
     if (result == ERROR_ACCESS_DENIED && root_key == HKEY_LOCAL_MACHINE) {
         // Try again with HKCU, so access to \Registry\Machine will succeed
         // like it should when called from "kernel-mode" code.
+        //
+        // Note that HKLM will fail with access denied, even when the desired
+        // access is only read access, unless the process is running as admin,
+        // since we use RegCreateKey instead of RegOpenKey.  This ensures that
+        // the same registry key will be accessed across multiple calls
+        // regardless of desired access.
+
         root_key = HKEY_CURRENT_USER;
         result = RegCreateKeyExW(
             root_key,
