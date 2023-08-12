@@ -30,7 +30,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS ZwCreateKey(
     UNREFERENCED_PARAMETER(create_options);
 
     HKEY root_key = (HKEY)object_attributes->RootDirectory;
-    std::wstring relative_path(object_attributes->ObjectName->Buffer, object_attributes->ObjectName->Length);
+    std::wstring relative_path(object_attributes->ObjectName->Buffer, object_attributes->ObjectName->Length / sizeof(WCHAR));
     PCWSTR hklm_path = L"\\Registry\\Machine\\";
     PCWSTR hkcu_path = L"\\Registry\\User\\";
     if (relative_path.starts_with(hklm_path)) {
