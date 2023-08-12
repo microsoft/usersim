@@ -71,8 +71,7 @@ KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
     *old_irql = KfRaiseIrql(new_irql);
 }
 
-KIRQL
-KfRaiseIrql(_In_ KIRQL new_irql)
+_IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ KIRQL KfRaiseIrql(_In_ KIRQL new_irql)
 {
     KIRQL old_irql = KeGetCurrentIrql();
     _usersim_current_irql = new_irql;
@@ -668,7 +667,9 @@ _usersim_timer_callback(
     UNREFERENCED_PARAMETER(threadpool_timer);
 
     PKTIMER timer = (PKTIMER)context;
-    ASSERT(timer != nullptr);
+    if (timer == nullptr) {
+        return;
+    }
     ASSERT(timer->object_type == USERSIM_OBJECT_TYPE_TIMER);
     timer->signaled = TRUE;
 
@@ -706,7 +707,10 @@ KeSetCoalescableTimer(
     BOOLEAN running = (timer->threadpool_timer != nullptr);
     if (!running) {
         timer->threadpool_timer = CreateThreadpoolTimer(_usersim_timer_callback, timer, nullptr);
-        ASSERT(timer->threadpool_timer != nullptr);
+        if (timer->threadpool_timer == nullptr) {
+            KeBugCheck(0);
+            return FALSE; // Keep code analysis happy.
+        }
 
         // There is no kernel function to clean up a timer, but there is in user mode,
         // so add the handle to a list we can clean up later.

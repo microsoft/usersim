@@ -239,6 +239,13 @@ extern "C"
     void
     usersim_lock_destroy(_In_ _Post_invalid_ usersim_lock_t* lock);
 
+#undef PASSIVE_LEVEL
+#undef APC_LEVEL
+#undef DISPATCH_LEVEL
+#define PASSIVE_LEVEL THREAD_PRIORITY_NORMAL         // Passive release level.
+#define APC_LEVEL THREAD_PRIORITY_ABOVE_NORMAL       // APC interrupt level.
+#define DISPATCH_LEVEL THREAD_PRIORITY_TIME_CRITICAL // Dispatcher level.
+
     /**
      * @brief Acquire exclusive access to the lock.
      * @param[in, out] lock Pointer to memory location that contains the lock.
@@ -673,7 +680,7 @@ extern "C"
      *
      * @return result of the operation.
      */
-    USERSIM_API 
+    USERSIM_API
     _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ usersim_result_t
         usersim_platform_get_authentication_id(_Out_ uint64_t* authentication_id);
 
