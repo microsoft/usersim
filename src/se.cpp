@@ -7,6 +7,7 @@
 #include "usersim/ex.h"
 #include "usersim/se.h"
 #include "utilities.h"
+
 #include <processthreadsapi.h>
 
 // Se* functions.
@@ -109,14 +110,13 @@ SeUnlockSubjectContext(_In_ PSECURITY_SUBJECT_CONTEXT subject_context)
     }
 }
 
-_IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN
-SeAccessCheck(
+_IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN SeAccessCheck(
     _In_ PSECURITY_DESCRIPTOR security_descriptor,
     _In_ PSECURITY_SUBJECT_CONTEXT subject_security_context,
     _In_ BOOLEAN subject_context_locked,
     _In_ ACCESS_MASK desired_access,
     _In_ ACCESS_MASK previously_granted_access,
-    _Outptr_opt_ PPRIVILEGE_SET* privileges,
+    _Out_opt_ PPRIVILEGE_SET* privileges,
     _In_ PGENERIC_MAPPING generic_mapping,
     _In_ KPROCESSOR_MODE access_mode,
     _Out_ PACCESS_MASK granted_access,
@@ -124,6 +124,10 @@ SeAccessCheck(
 {
     TOKEN_ACCESS_INFORMATION* token_access_information = nullptr;
 
+    *granted_access = 0;
+    if (privileges) {
+        *privileges = nullptr;
+    }
     if (!subject_context_locked) {
         SeLockSubjectContext(subject_security_context);
     }
@@ -131,11 +135,7 @@ SeAccessCheck(
     // Get needed buffer size.
     DWORD length = 0;
     BOOLEAN result = !!GetTokenInformation(
-        subject_security_context->thread_token,
-        TokenAccessInformation,
-        token_access_information,
-        length,
-        &length);
+        subject_security_context->thread_token, TokenAccessInformation, token_access_information, length, &length);
     int error = GetLastError();
     if (error != ERROR_INSUFFICIENT_BUFFER || length == 0) {
         *access_status = win32_error_to_usersim_error(error);
@@ -217,7 +217,7 @@ usersim_convert_sid_to_luid(_In_ const PSID psid, _Out_ LUID* luid)
     size_t size = FIELD_OFFSET(SID, SubAuthority[sid->SubAuthorityCount]);
     uint64_t hash = 0;
     for (size_t i = 0; i < size; i += sizeof(DWORD)) {
-        DWORD value = *(const DWORD *)(((const uint8_t*)psid) + i);
+        DWORD value = *(const DWORD*)(((const uint8_t*)psid) + i);
         hash += value;
     }
     *(uint64_t*)luid = hash;
@@ -235,11 +235,7 @@ SeQueryAuthenticationIdToken(_In_ PACCESS_TOKEN token, _Out_ PLUID authenticatio
     }
 
     if (!GetTokenInformation(
-        token_handle,
-        TokenOwner,
-        token_owner_buffer,
-        sizeof(token_owner_buffer),
-        &return_length)) {
+            token_handle, TokenOwner, token_owner_buffer, sizeof(token_owner_buffer), &return_length)) {
         return win32_error_to_usersim_error(GetLastError());
     }
 

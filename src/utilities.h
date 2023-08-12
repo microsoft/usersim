@@ -2,17 +2,16 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-//#include "usersim_result.h"
 #include "platform.h"
 
+#include <limits.h>
 #include <stdint.h>
 #define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
 // Windows Header Files
 #include <windows.h>
 
 // Convert a Win32 failure error code to an NTSTATUS failure.
-_Ret_range_(LONG_MIN, -1) __forceinline usersim_result_t
-win32_error_to_usersim_error(uint32_t error)
+_Ret_range_(LONG_MIN, -1) __forceinline usersim_result_t win32_error_to_usersim_error(uint32_t error)
 {
     usersim_result_t result;
 
@@ -145,8 +144,7 @@ win32_error_to_usersim_error(uint32_t error)
 // Convert a Win32 error code (whether success or failure) to an NTSTATUS value.
 _When_(
     error != ERROR_SUCCESS && error != ERROR_IO_PENDING && error != ERROR_OBJECT_NAME_EXISTS,
-    _Ret_range_(LONG_MIN, -1)) __forceinline usersim_result_t
-    win32_error_code_to_usersim_result(uint32_t error)
+    _Ret_range_(LONG_MIN, -1)) __forceinline usersim_result_t win32_error_code_to_usersim_result(uint32_t error)
 {
     usersim_result_t result;
 
