@@ -35,14 +35,13 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS EtwUnregister(_In_ REGHANDLE reg_han
     return STATUS_SUCCESS;
 }
 
-NTSTATUS
-EtwWriteTransfer(
+_IRQL_requires_max_(HIGH_LEVEL) NTSTATUS EtwWriteTransfer(
     REGHANDLE reg_handle,
     _In_ EVENT_DESCRIPTOR const* desc,
     _In_opt_ LPCGUID activity_id,
     _In_opt_ LPCGUID related_activity_id,
     _In_range_(2, 128) UINT32 data_size,
-    _Inout_cap_(cData) EVENT_DATA_DESCRIPTOR* data)
+    _Inout_cap_(data_size) EVENT_DATA_DESCRIPTOR* data)
 {
     usersim_etw_provider_t* provider = (usersim_etw_provider_t*)reg_handle;
 

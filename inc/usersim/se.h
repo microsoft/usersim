@@ -11,7 +11,7 @@ extern "C"
 {
 #endif
 
-typedef struct _SE_EXPORTS
+    typedef struct _SE_EXPORTS
     {
         // Privilege values
         LUID SeCreateTokenPrivilege;
@@ -147,16 +147,15 @@ typedef struct _SE_EXPORTS
 
     USERSIM_API
     VOID
-    SeUnlockSubjectContext(_In_ PSECURITY_SUBJECT_CONTEXT subject_context); 
+    SeUnlockSubjectContext(_In_ PSECURITY_SUBJECT_CONTEXT subject_context);
 
-    _IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN
-    SeAccessCheck(
+    _IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN SeAccessCheck(
         _In_ PSECURITY_DESCRIPTOR security_descriptor,
         _In_ PSECURITY_SUBJECT_CONTEXT subject_security_context,
         _In_ BOOLEAN subject_context_locked,
         _In_ ACCESS_MASK desired_access,
         _In_ ACCESS_MASK previously_granted_access,
-        _Outptr_opt_ PPRIVILEGE_SET* privileges,
+        _Out_opt_ PPRIVILEGE_SET* privileges,
         _In_ PGENERIC_MAPPING generic_mapping,
         _In_ KPROCESSOR_MODE access_mode,
         _Out_ PACCESS_MASK granted_access,

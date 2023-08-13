@@ -53,13 +53,6 @@ extern "C"
     typedef uint8_t KIRQL;
     typedef KIRQL* PKIRQL;
 
-#undef PASSIVE_LEVEL
-#undef APC_LEVEL
-#undef DISPATCH_LEVEL
-#define PASSIVE_LEVEL THREAD_PRIORITY_NORMAL         // Passive release level.
-#define APC_LEVEL THREAD_PRIORITY_ABOVE_NORMAL       // APC interrupt level.
-#define DISPATCH_LEVEL THREAD_PRIORITY_TIME_CRITICAL // Dispatcher level.
-
     USERSIM_API
     KIRQL
     KeGetCurrentIrql();
@@ -69,8 +62,7 @@ extern "C"
     KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql);
 
     USERSIM_API
-    _IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ KIRQL
-    KfRaiseIrql(_In_ KIRQL new_irql);
+    _IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ KIRQL KfRaiseIrql(_In_ KIRQL new_irql);
 
     USERSIM_API
     KIRQL

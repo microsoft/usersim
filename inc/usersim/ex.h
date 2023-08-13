@@ -153,13 +153,12 @@ extern "C"
         _Inout_ _Requires_lock_held_(*_Curr_) _Releases_lock_(*_Curr_) EX_SPIN_LOCK* spin_lock);
 
     USERSIM_API
-    _Ret_maybenull_
-    void*
-    ExAllocatePoolUninitialized(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag);
+    _Ret_maybenull_ void*
+    ExAllocatePoolUninitialized(
+        _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, size_t number_of_bytes, unsigned long tag);
 
     USERSIM_API
-    _Ret_maybenull_
-    void*
+    _Ret_maybenull_ void*
     ExAllocatePoolWithTag(
         _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag);
 
@@ -278,8 +277,10 @@ ExRaiseAccessViolationCPP();
 USERSIM_API void
 ExRaiseDatatypeMisalignmentCPP();
 
-void usersim_initialize_ex(bool leak_detector);
-void usersim_clean_up_ex();
+void
+usersim_initialize_ex(bool leak_detector);
+void
+usersim_clean_up_ex();
 
 #ifdef __cplusplus
 #include <memory>
