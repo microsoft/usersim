@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include "platform.h"
+#include "../common.h"
+typedef _Return_type_success_(return >= 0) long NTSTATUS;
 
 #ifdef __cplusplus
 extern "C"
@@ -43,7 +44,7 @@ extern "C"
      * @retval true Fault injection is enabled.
      * @retval false Fault injection is disabled.
      */
-    USERSIM_API
+    CXPLAT_API
     bool
     usersim_fault_injection_is_enabled() noexcept;
 
