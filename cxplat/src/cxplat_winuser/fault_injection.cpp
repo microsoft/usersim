@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "cxplat_fault_injection.h"
+#include "cxplat.h"
 #include "symbol_decoder.h"
 
 #include <errno.h>
@@ -306,16 +306,15 @@ _cxplat_fault_injection::load_fault_log()
     _log_file << "# Iteration: " << ++_iteration << std::endl;
 }
 
-// Returns 0 on success, or errno value on failure.
-int
+cxplat_status_t
 cxplat_fault_injection_initialize(size_t stack_depth) noexcept
 {
     try {
         _cxplat_fault_injection_singleton = std::make_unique<_cxplat_fault_injection>(stack_depth);
     } catch (...) {
-        return ENOMEM;
+        return CXPLAT_STATUS_NO_MEMORY;
     }
-    return 0;
+    return CXPLAT_STATUS_SUCCESS;
 }
 
 void

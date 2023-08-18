@@ -86,7 +86,7 @@ _get_environment_variable_as_size_t(const std::string& name)
     }
 }
 
-int
+cxplat_status_t
 cxplat_initialize()
 {
     try {
@@ -99,7 +99,7 @@ cxplat_initialize()
         }
         if (fault_injection_stack_depth && !cxplat_fault_injection_is_enabled()) {
             if (cxplat_fault_injection_initialize(fault_injection_stack_depth) != 0) {
-                return STATUS_NO_MEMORY;
+                return CXPLAT_STATUS_NO_MEMORY;
             }
             // Set flag to remove some asserts that fire from incorrect client behavior.
             cxplat_fuzzing_enabled = true;
@@ -109,9 +109,9 @@ cxplat_initialize()
             _cxplat_leak_detector_ptr = std::make_unique<cxplat_leak_detector_t>();
         }
     } catch (const std::bad_alloc&) {
-        return ENOMEM;
+        return CXPLAT_STATUS_NO_MEMORY;
     }
-    return 0;
+    return CXPLAT_STATUS_SUCCESS;
 }
 
 void

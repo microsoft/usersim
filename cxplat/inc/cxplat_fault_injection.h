@@ -15,10 +15,10 @@ extern "C"
      *
      * @param[in] stack_depth Number of stack frames to capture when a fault is
      * injected.
-     * @retval 0 The operation was successful.
-     * @retval ENOMEM Operation failed due to memory allocation failure.
+     * @retval CXPLAT_STATUS_SUCCESS The operation was successful.
+     * @retval CXPLAT_STATUS_OUT_OF_MEMORY Operation failed due to memory allocation failure.
      */
-    int
+    cxplat_status_t
     cxplat_fault_injection_initialize(size_t stack_depth) NOEXCEPT;
 
     /**

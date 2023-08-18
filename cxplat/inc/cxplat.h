@@ -10,7 +10,7 @@ extern "C"
 {
 #endif
 
-    int // 0 on success, errno value on failure.
+    cxplat_status_t
     cxplat_initialize();
 
     void
