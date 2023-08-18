@@ -95,7 +95,10 @@ cxplat_initialize()
         auto leak_detector = _get_environment_variable_as_bool(CXPLAT_MEMORY_LEAK_DETECTION_ENVIRONMENT_VARIABLE_NAME);
 
         if (fault_injection_stack_depth || leak_detector) {
-            _cxplat_symbol_decoder_initialize();
+            cxplat_status_t status = _cxplat_symbol_decoder_initialize();
+            if (!CXPLAT_SUCCESS(status)) {
+                return status;
+            }
         }
         if (fault_injection_stack_depth && !cxplat_fault_injection_is_enabled()) {
             if (cxplat_fault_injection_initialize(fault_injection_stack_depth) != 0) {

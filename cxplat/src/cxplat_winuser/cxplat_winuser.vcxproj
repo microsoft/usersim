@@ -147,6 +147,8 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="leak_detector.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="symbol_decoder.h" />
+    <ClInclude Include="winuser_internal.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cxplat_winuser.cpp" />

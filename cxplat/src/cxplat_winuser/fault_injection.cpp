@@ -4,7 +4,6 @@
 #include "cxplat.h"
 #include "symbol_decoder.h"
 
-#include <errno.h>
 #include <DbgHelp.h>
 #include <cstddef>
 #include <fstream>
@@ -242,7 +241,7 @@ _cxplat_fault_injection::log_stack_trace(
             break;
         }
         log_record << "# ";
-        if (_cxplat_decode_symbol(frame, name, displacement, line_number, file_name) == 0) {
+        if (CXPLAT_SUCCESS(_cxplat_decode_symbol(frame, name, displacement, line_number, file_name))) {
             log_record << std::hex << frame << " " << name << " + " << displacement;
             string_stack_frame = name + " + " + std::to_string(displacement);
             if (line_number.has_value() && file_name.has_value()) {

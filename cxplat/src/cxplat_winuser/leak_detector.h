@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-//#include "platform.h"
-
 #include <mutex>
 #include <unordered_map>
 #include <vector>
