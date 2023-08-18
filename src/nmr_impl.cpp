@@ -309,7 +309,7 @@ _nmr::remove(_Inout_ collection_t& collection, _In_ collection_t::value_type::fi
                 break;
             }
             // Assert and continue waiting if bindings are still not zero.
-            usersim_assert(it->second.binding_count == 0);
+            CXPLAT_DEBUG_ASSERT(it->second.binding_count == 0);
         }
     }
 

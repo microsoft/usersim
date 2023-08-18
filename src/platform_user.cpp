@@ -1,9 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
-#include "leak_detector.h"
-#include "symbol_decoder.h"
+#include "cxplat.h"
 #include "tracelog.h"
 #include "usersim/ex.h"
 #include "usersim/ke.h"
@@ -36,16 +34,7 @@ bool _usersim_platform_is_preemptible = true;
 // to be called multiple times.
 int32_t _usersim_platform_initiate_count = 0;
 
-extern "C" bool usersim_fuzzing_enabled = false;
-
 static EX_RUNDOWN_REF _usersim_platform_preemptible_work_items_rundown;
-
-/**
- * @brief Environment variable to enable fault injection testing.
- *
- */
-#define USERSIM_FAULT_INJECTION_SIMULATION_ENVIRONMENT_VARIABLE_NAME "USERSIM_FAULT_INJECTION_SIMULATION"
-#define USERSIM_MEMORY_LEAK_DETECTION_ENVIRONMENT_VARIABLE_NAME "USERSIM_MEMORY_LEAK_DETECTION"
 
 // Thread pool related globals.
 static TP_CALLBACK_ENVIRON _callback_environment{};
@@ -121,72 +110,6 @@ _clean_up_thread_pool()
     _pool = nullptr;
 }
 
-/**
- * @brief Get an environment variable as a string.
- *
- * @param[in] name Environment variable name.
- * @return String value of environment variable or an empty string if not set.
- */
-static std::string
-_get_environment_variable_as_string(const std::string& name)
-{
-    std::string value;
-    size_t required_size = 0;
-    getenv_s(&required_size, nullptr, 0, name.c_str());
-    if (required_size > 0) {
-        value.resize(required_size);
-        getenv_s(&required_size, &value[0], required_size, name.c_str());
-        value.resize(required_size - 1);
-    }
-    return value;
-}
-
-/**
- * @brief Get an environment variable as a boolean.
- *
- * @param[in] name Environment variable name.
- * @retval false Environment variable is set to "false", "0", or if it's not set.
- * @retval true Environment variable is set to any other value.
- */
-static bool
-_get_environment_variable_as_bool(const std::string& name)
-{
-    std::string value = _get_environment_variable_as_string(name);
-    if (value.empty()) {
-        return false;
-    }
-
-    // Convert value to lower case.
-    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return (char)std::tolower(c); });
-    if (value == "false") {
-        return false;
-    }
-    if (value == "0") {
-        return false;
-    }
-    return true;
-}
-
-/**
- * @brief Get an environment variable as a size_t.
- *
- * @param[in] name Environment variable name.
- * @return Value of environment variable or 0 if it's not set or not a valid number.
- */
-static size_t
-_get_environment_variable_as_size_t(const std::string& name)
-{
-    std::string value = _get_environment_variable_as_string(name);
-    if (value.empty()) {
-        return 0;
-    }
-    try {
-        return std::stoull(value);
-    } catch (const std::exception&) {
-        return 0;
-    }
-}
-
 _Must_inspect_result_ usersim_result_t
 usersim_platform_initiate()
 {
@@ -198,24 +121,15 @@ usersim_platform_initiate()
         return STATUS_SUCCESS;
     }
 
+    int cxplat_error = cxplat_initialize();
+    if (cxplat_error != 0) {
+        result = STATUS_NO_MEMORY;
+        goto Exit;
+    }
+
     try {
         _usersim_platform_maximum_group_count = GetMaximumProcessorGroupCount();
         _usersim_platform_maximum_processor_count = GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS);
-        size_t fault_injection_stack_depth =
-            _get_environment_variable_as_size_t(USERSIM_FAULT_INJECTION_SIMULATION_ENVIRONMENT_VARIABLE_NAME);
-        bool leak_detector = _get_environment_variable_as_bool(USERSIM_MEMORY_LEAK_DETECTION_ENVIRONMENT_VARIABLE_NAME);
-        if (fault_injection_stack_depth || leak_detector) {
-            _usersim_symbol_decoder_initialize();
-        }
-        if (fault_injection_stack_depth && !usersim_fault_injection_is_enabled()) {
-            if (usersim_fault_injection_initialize(fault_injection_stack_depth) != STATUS_SUCCESS) {
-                return STATUS_NO_MEMORY;
-            }
-            // Set flag to remove some asserts that fire from incorrect client behavior.
-            usersim_fuzzing_enabled = true;
-        }
-
-        usersim_initialize_ex(leak_detector);
 
         result = usersim_initialize_irql();
         if (result != STATUS_SUCCESS) {
@@ -250,6 +164,7 @@ Exit:
     if (result != STATUS_SUCCESS) {
         // Clean up since usersim_platform_terminate() will not be called by the caller.
         usersim_platform_terminate();
+        cxplat_cleanup();
     }
     return result;
 }
@@ -264,7 +179,7 @@ usersim_platform_terminate()
     usersim_clean_up_dpcs();
     usersim_clean_up_irql();
     _clean_up_thread_pool();
-    usersim_clean_up_ex();
+    cxplat_cleanup();
 
     int32_t count = InterlockedDecrement((volatile long*)&_usersim_platform_initiate_count);
     if (count < 0) {
@@ -327,7 +242,7 @@ usersim_allocate_ring_buffer_memory(size_t length)
     }
 
     usersim_ring_descriptor_t* descriptor =
-        (usersim_ring_descriptor_t*)usersim_allocate(sizeof(usersim_ring_descriptor_t));
+        (usersim_ring_descriptor_t*)cxplat_allocate(sizeof(usersim_ring_descriptor_t));
     if (!descriptor) {
         goto Exit;
     }
@@ -409,7 +324,7 @@ usersim_allocate_ring_buffer_memory(size_t length)
     view2 = nullptr;
 Exit:
     if (!result) {
-        usersim_free(descriptor);
+        cxplat_free(descriptor);
         descriptor = nullptr;
     }
 
@@ -443,7 +358,7 @@ usersim_free_ring_buffer_memory(_Frees_ptr_opt_ usersim_ring_descriptor_t* ring)
     if (ring) {
         UnmapViewOfFile(ring->primary_view);
         UnmapViewOfFile(ring->secondary_view);
-        usersim_free(ring);
+        cxplat_free(ring);
     }
     USERSIM_RETURN_VOID();
 }
@@ -576,8 +491,8 @@ usersim_free_preemptible_work_item(_Frees_ptr_opt_ usersim_preemptible_work_item
     }
 
     CloseThreadpoolWork(work_item->work);
-    usersim_free(work_item->work_item_context);
-    usersim_free(work_item);
+    cxplat_free(work_item->work_item_context);
+    cxplat_free(work_item);
 
     ExReleaseRundownProtection(&_usersim_platform_preemptible_work_items_rundown);
 }
@@ -600,7 +515,7 @@ usersim_allocate_preemptible_work_item(
         return STATUS_UNSUCCESSFUL;
     }
 
-    *work_item = (usersim_preemptible_work_item_t*)usersim_allocate(sizeof(usersim_preemptible_work_item_t));
+    *work_item = (usersim_preemptible_work_item_t*)cxplat_allocate(sizeof(usersim_preemptible_work_item_t));
     if (*work_item == nullptr) {
         result = STATUS_NO_MEMORY;
         goto Done;
@@ -619,7 +534,7 @@ usersim_allocate_preemptible_work_item(
 Done:
     if (result != STATUS_SUCCESS) {
         ExReleaseRundownProtection(&_usersim_platform_preemptible_work_items_rundown);
-        usersim_free(*work_item);
+        cxplat_free(*work_item);
         *work_item = nullptr;
     }
     return result;
@@ -645,7 +560,7 @@ usersim_access_check(
     usersim_security_access_mask_t request_access,
     _In_ const usersim_security_generic_mapping_t* generic_mapping)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_ACCESS_DENIED;
     }
 
@@ -700,7 +615,7 @@ _Must_inspect_result_ NTSTATUS
 usersim_validate_security_descriptor(
     _In_ const usersim_security_descriptor_t* security_descriptor, size_t security_descriptor_length)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -755,7 +670,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSTATUS
     usersim_platform_get_authentication_id(_Out_ uint64_t* authentication_id)
 {
     // GetTokenInformation OS API can fail with return value of zero.
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -772,7 +687,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSTATUS
         return win32_error_to_usersim_error(GetLastError());
     }
 
-    privileges = (TOKEN_GROUPS_AND_PRIVILEGES*)usersim_allocate(size);
+    privileges = (TOKEN_GROUPS_AND_PRIVILEGES*)cxplat_allocate(size);
     if (privileges == nullptr) {
         return STATUS_NO_MEMORY;
     }
@@ -788,7 +703,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSTATUS
     *authentication_id = *(uint64_t*)&privileges->AuthenticationId;
 
 Exit:
-    usersim_free(privileges);
+    cxplat_free(privileges);
     return return_value;
 }
 
@@ -820,7 +735,7 @@ usersim_utf8_string_to_unicode(_In_ const usersim_utf8_string_t* input, _Outptr_
 
     result++;
 
-    unicode_string = (wchar_t*)usersim_allocate(result * sizeof(wchar_t));
+    unicode_string = (wchar_t*)cxplat_allocate(result * sizeof(wchar_t));
     if (unicode_string == NULL) {
         retval = STATUS_NO_MEMORY;
         goto Done;
@@ -838,7 +753,7 @@ usersim_utf8_string_to_unicode(_In_ const usersim_utf8_string_t* input, _Outptr_
     retval = STATUS_SUCCESS;
 
 Done:
-    usersim_free(unicode_string);
+    cxplat_free(unicode_string);
     return retval;
 }
 

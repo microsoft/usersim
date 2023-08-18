@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
+#include "cxplat/fault_injection.h"
 #include "nmr_impl.h"
 
 nmr_t _nmr::singleton;
@@ -12,7 +12,7 @@ NmrRegisterProvider(
     _In_opt_ __drv_aliasesMem void* provider_context,
     _Out_ HANDLE* nmr_provider_handle)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -65,7 +65,7 @@ NmrRegisterClient(
     _In_opt_ __drv_aliasesMem void* client_context,
     _Out_ HANDLE* nmr_client_handle)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -120,7 +120,7 @@ NmrClientAttachProvider(
     _Out_ void** provider_binding_context,
     _Out_ const void** provider_dispatch)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 

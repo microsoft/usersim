@@ -4,6 +4,8 @@
 #pragma once
 
 #include "usersim/common.h"
+#include <winsock2.h>
+#include <windows.h>
 #include <synchapi.h>
 #include <winnt.h>
 

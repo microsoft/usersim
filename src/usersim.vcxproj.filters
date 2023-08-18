@@ -33,12 +33,6 @@
     <ClCompile Include="platform_user.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="fault_injection.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="leak_detector.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="tracelog.c">
       <Filter>Source Files</Filter>
     </ClCompile>

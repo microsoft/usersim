@@ -1,15 +1,15 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
+#include "cxplat.h"
 #include "leak_detector.h"
 #include "symbol_decoder.h"
-#include "usersim/ke.h"
 
 #include <iostream>
 #include <sstream>
 
 void
-_usersim_leak_detector::register_allocation(uintptr_t address, size_t size)
+_cxplat_leak_detector::register_allocation(uintptr_t address, size_t size)
 {
     std::unique_lock<std::mutex> lock(_mutex);
     allocation_t allocation = {address, size, 0};
@@ -28,17 +28,15 @@ _usersim_leak_detector::register_allocation(uintptr_t address, size_t size)
 }
 
 void
-_usersim_leak_detector::unregister_allocation(uintptr_t address)
+_cxplat_leak_detector::unregister_allocation(uintptr_t address)
 {
     std::unique_lock<std::mutex> lock(_mutex);
-    if (!_allocations.contains(address)) {
-        KeBugCheck(0);
-    }
+    CXPLAT_RUNTIME_ASSERT(_allocations.contains(address));
     _allocations.erase(address);
 }
 
 void
-_usersim_leak_detector::dump_leaks()
+_cxplat_leak_detector::dump_leaks()
 {
     std::unique_lock<std::mutex> lock(_mutex);
     for (auto& allocation : _allocations) {
@@ -53,7 +51,7 @@ _usersim_leak_detector::dump_leaks()
         std::optional<uint32_t> line_number;
         std::optional<std::string> file_name;
         for (auto address : stack) {
-            if (_usersim_decode_symbol(address, name, displacement, line_number, file_name) == STATUS_SUCCESS) {
+            if (_cxplat_decode_symbol(address, name, displacement, line_number, file_name) == 0) {
                 output << "    " << name << " + " << displacement;
                 if (line_number.has_value() && file_name.has_value()) {
                     output << " (" << file_name.value() << ":" << line_number.value() << ")";
@@ -70,7 +68,7 @@ _usersim_leak_detector::dump_leaks()
     }
 
     // assert to make sure that a leaking test throws an exception thereby failing the test.
-    usersim_assert(_allocations.empty());
+    CXPLAT_DEBUG_ASSERT(_allocations.empty());
 
     _allocations.clear();
     _stack_hashes.clear();

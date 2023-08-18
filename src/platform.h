@@ -27,12 +27,6 @@ extern "C"
         ((uint8_t*)(x)), sizeof((x)) - 1         \
     }
 
-#define USERSIM_CACHE_LINE_SIZE 64
-#define USERSIM_CACHE_ALIGN_POINTER(P) \
-    (void*)(((uintptr_t)P + USERSIM_CACHE_LINE_SIZE - 1) & ~(USERSIM_CACHE_LINE_SIZE - 1))
-#define USERSIM_PAD_CACHE(X) ((X + USERSIM_CACHE_LINE_SIZE - 1) & ~(USERSIM_CACHE_LINE_SIZE - 1))
-#define USERSIM_PAD_8(X) ((X + 7) & ~7)
-
 #define USERSIM_NS_PER_FILETIME 100
 
 // Macro locally suppresses "Unreferenced variable" warning, which in 'Release' builds is treated as an error.
@@ -40,7 +34,7 @@ extern "C"
     _Pragma("warning(push)") _Pragma("warning(disable : 4189)") do \
     {                                                              \
         usersim_result_t _result = (x);                            \
-        usersim_assert(_result == STATUS_SUCCESS && #x);           \
+        CXPLAT_DEBUG_ASSERT(_result == STATUS_SUCCESS && #x);           \
     }                                                              \
     while (0)                                                      \
     _Pragma("warning(pop)")
@@ -80,7 +74,7 @@ extern "C"
     typedef struct _GENERIC_MAPPING usersim_security_generic_mapping_t;
     typedef uint32_t usersim_security_access_mask_t;
 
-    extern bool usersim_fuzzing_enabled;
+    extern bool cxplat_fuzzing_enabled;
 
     /**
      * @brief Initialize the usersim platform abstraction layer.
@@ -711,4 +705,21 @@ extern "C"
 
 #ifdef __cplusplus
 }
+
+#include <memory>
+namespace usersim_helper {
+
+struct _usersim_free_functor
+{
+    void
+    operator()(void* memory)
+    {
+        cxplat_free(memory);
+    }
+};
+
+typedef std::unique_ptr<void, _usersim_free_functor> usersim_memory_ptr;
+
+} // namespace usersim_helper
+
 #endif

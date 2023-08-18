@@ -2,22 +2,37 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include "platform.h"
+//#include "platform.h"
+#include <windows.h>
 
 #include <DbgHelp.h>
 #include <optional>
 #include <string>
 #include <vector>
 
-inline NTSTATUS
-_usersim_symbol_decoder_initialize()
+inline int
+win32_error_code_to_errno(int win32_error_code)
+{
+    switch (win32_error_code) {
+    case NO_ERROR:
+        return 0;
+    case DNS_ERROR_NO_MEMORY:
+        return ENOMEM;
+    default:
+        return EFAULT;
+    }
+}
+
+// Returns true on success, false on failure.
+inline bool
+_cxplat_symbol_decoder_initialize()
 {
     // Initialize DbgHelp.dll.
     SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
     if (!SymInitialize(GetCurrentProcess(), nullptr, TRUE)) {
-        return STATUS_NO_MEMORY;
+        return false;
     }
-    return STATUS_SUCCESS;
+    return true;
 }
 
 inline void
@@ -26,8 +41,9 @@ _usersim_symbol_decoder_deinitialize()
     SymCleanup(GetCurrentProcess());
 }
 
-inline NTSTATUS
-_usersim_decode_symbol(
+// Returns 0 on success, errno value on failure.
+inline int
+_cxplat_decode_symbol(
     uintptr_t address,
     std::string& name,
     uint64_t& displacement,
@@ -43,7 +59,7 @@ _usersim_decode_symbol(
         symbol->MaxNameLen = MAX_SYM_NAME;
 
         if (!SymFromAddr(GetCurrentProcess(), address, &displacement, symbol)) {
-            return STATUS_NO_MEMORY;
+            return win32_error_code_to_errno(GetLastError());
         }
 
         name = symbol->Name;
@@ -52,13 +68,13 @@ _usersim_decode_symbol(
         if (!SymGetLineFromAddr64(GetCurrentProcess(), address, &displacement32, &line)) {
             line_number = std::nullopt;
             file_name = std::nullopt;
-            return STATUS_SUCCESS;
+            return 0;
         }
 
         line_number = line.LineNumber;
         file_name = line.FileName;
-        return STATUS_SUCCESS;
+        return 0;
     } catch (std::bad_alloc&) {
-        return STATUS_NO_MEMORY;
+        return ENOMEM;
     }
 }

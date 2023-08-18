@@ -97,7 +97,7 @@ typedef class _fwp_engine
             for (auto& it : fwpm_flow_contexts) {
                 if (it.first == flow_id) {
                     callout = get_fwps_callout(callout_id);
-                    usersim_assert(callout != nullptr);
+                    CXPLAT_DEBUG_ASSERT(callout != nullptr);
                     flow_context = it.second;
                     break;
                 }
@@ -106,7 +106,7 @@ typedef class _fwp_engine
             fwpm_flow_contexts.erase(flow_id);
         }
 
-        usersim_assert(callout != nullptr);
+        CXPLAT_DEBUG_ASSERT(callout != nullptr);
         __analysis_assume(callout != nullptr);
         // Invoke flow delete notification callback.
         callout->flowDeleteFn(layer_id, callout_id, flow_context);
@@ -124,7 +124,7 @@ typedef class _fwp_engine
             fwpm_filters.insert({id, *filter});
 
             callout = get_fwps_callout(&filter->action.calloutKey);
-            usersim_assert(callout != nullptr);
+            CXPLAT_DEBUG_ASSERT(callout != nullptr);
             fwps_filter.context = filter->rawContext;
         }
 
@@ -145,7 +145,7 @@ typedef class _fwp_engine
             for (auto& it : fwpm_filters) {
                 if (it.first == id) {
                     callout = get_fwps_callout(&it.second.action.calloutKey);
-                    usersim_assert(callout != nullptr);
+                    CXPLAT_DEBUG_ASSERT(callout != nullptr);
                     fwps_filter.context = it.second.rawContext;
                     break;
                 }
@@ -154,7 +154,7 @@ typedef class _fwp_engine
             return_value = fwpm_filters.erase(id) == 1;
         }
 
-        usersim_assert(callout != nullptr);
+        CXPLAT_DEBUG_ASSERT(callout != nullptr);
         __analysis_assume(callout != nullptr);
         // Invoke filter delete notification callback.
         callout->notifyFn(FWPS_CALLOUT_NOTIFY_DELETE_FILTER, &callout->calloutKey, &fwps_filter);

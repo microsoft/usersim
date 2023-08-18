@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
+#include "cxplat/fault_injection.h"
 #include "kernel_um.h"
 #include "platform.h"
 #include "usersim/ex.h"
@@ -191,7 +191,7 @@ SeAccessCheckFromState(
     }
     *granted_access = desired_access;
 
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         *access_status = STATUS_ACCESS_DENIED;
         return false;
     }

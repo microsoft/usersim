@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
+#include "cxplat/cxplat_fault_injection.h"
 #include "symbol_decoder.h"
 
+#include <errno.h>
 #include <DbgHelp.h>
 #include <cstddef>
 #include <fstream>
@@ -19,19 +20,19 @@
  * increase the accuracy of the test, but also increase the time it takes to run
  * the test.
  */
-typedef class _usersim_fault_injection
+typedef class _cxplat_fault_injection
 {
   public:
     /**
      * @brief Construct a new fault injection object.
      * @param[in] stack_depth The number of stack frames to compare when tracking faults.
      */
-    _usersim_fault_injection(size_t stack_depth);
+    _cxplat_fault_injection(size_t stack_depth);
 
     /**
      * @brief Destroy the fault injection object.
      */
-    ~_usersim_fault_injection();
+    ~_cxplat_fault_injection();
 
     bool
     inject_fault();
@@ -101,9 +102,9 @@ typedef class _usersim_fault_injection
     size_t _stack_depth;
     _Guarded_by_(_mutex) std::vector<std::string> _last_fault_stack;
 
-} usersim_fault_injection_t;
+} cxplat_fault_injection_t;
 
-static std::unique_ptr<usersim_fault_injection_t> _usersim_fault_injection_singleton;
+static std::unique_ptr<cxplat_fault_injection_t> _cxplat_fault_injection_singleton;
 
 // Link with DbgHelp.lib
 #pragma comment(lib, "dbghelp.lib")
@@ -111,35 +112,35 @@ static std::unique_ptr<usersim_fault_injection_t> _usersim_fault_injection_singl
 /**
  * @brief Approximate size in bytes of the image being tested.
  */
-#define USERSIM_MODULE_SIZE_IN_BYTES (10 * 1024 * 1024)
+#define CXPLAT_MODULE_SIZE_IN_BYTES (10 * 1024 * 1024)
 
 /**
  * @brief The number of stack frames to write to the human readable log.
  */
-#define USERSIM_FAULT_STACK_CAPTURE_FRAME_COUNT 16
+#define CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT 16
 
 /**
  * @brief The number of stack frames to capture to uniquely identify an fault path.
  */
-#define USERSIM_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH 4
+#define CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH 4
 
-#define USERSIM_MODULE_SIZE_IN_BYTES (10 * 1024 * 1024)
+#define CXPLAT_MODULE_SIZE_IN_BYTES (10 * 1024 * 1024)
 
-#define USERSIM_FAULT_STACK_CAPTURE_FRAMES_TO_SKIP 3
+#define CXPLAT_FAULT_STACK_CAPTURE_FRAMES_TO_SKIP 3
 
 /**
  * @brief Thread local storage to track recursing from the fault injection callback.
  */
-static thread_local int _usersim_fault_injection_recursion = 0;
+static thread_local int _cxplat_fault_injection_recursion = 0;
 
 /**
  * @brief Class to automatically increment and decrement the recursion count.
  */
-class usersim_fault_injection_recursion_guard
+class cxplat_fault_injection_recursion_guard
 {
   public:
-    usersim_fault_injection_recursion_guard() { _usersim_fault_injection_recursion++; }
-    ~usersim_fault_injection_recursion_guard() { _usersim_fault_injection_recursion--; }
+    cxplat_fault_injection_recursion_guard() { _cxplat_fault_injection_recursion++; }
+    ~cxplat_fault_injection_recursion_guard() { _cxplat_fault_injection_recursion--; }
     /**
      * @brief Return true if the current thread is recursing from the fault injection callback.
      * @retval true The current thread is recursing from the fault injection callback.
@@ -148,55 +149,55 @@ class usersim_fault_injection_recursion_guard
     bool
     is_recursing()
     {
-        return (_usersim_fault_injection_recursion > 1);
+        return (_cxplat_fault_injection_recursion > 1);
     }
 };
 
-_usersim_fault_injection::_usersim_fault_injection(size_t stack_depth = USERSIM_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH)
+_cxplat_fault_injection::_cxplat_fault_injection(size_t stack_depth = CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH)
     : _stack_depth(stack_depth)
 {
     _base_address = (uintptr_t)(GetModuleHandle(nullptr));
     load_fault_log();
 }
 
-_usersim_fault_injection::~_usersim_fault_injection()
+_cxplat_fault_injection::~_cxplat_fault_injection()
 {
     _log_file.flush();
     _log_file.close();
 }
 
 bool
-_usersim_fault_injection::inject_fault()
+_cxplat_fault_injection::inject_fault()
 {
     return is_new_stack();
 }
 
 bool
-_usersim_fault_injection::is_new_stack()
+_cxplat_fault_injection::is_new_stack()
 {
     // Prevent infinite recursion during fault injection.
-    usersim_fault_injection_recursion_guard recursion_guard;
+    cxplat_fault_injection_recursion_guard recursion_guard;
     if (recursion_guard.is_recursing()) {
         return false;
     }
     bool new_stack = false;
 
-    std::vector<uintptr_t> stack(USERSIM_FAULT_STACK_CAPTURE_FRAME_COUNT);
+    std::vector<uintptr_t> stack(CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT);
     std::vector<uintptr_t> canonical_stack(_stack_depth);
 
     unsigned long hash;
-    // Capture USERSIM_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH frames of the current stack trace.
-    // The first USERSIM_FAULT_STACK_CAPTURE_FRAMES_TO_SKIP frames are skipped to avoid
+    // Capture CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH frames of the current stack trace.
+    // The first CXPLAT_FAULT_STACK_CAPTURE_FRAMES_TO_SKIP frames are skipped to avoid
     // capturing the fault injection code.
     if (CaptureStackBackTrace(
-            USERSIM_FAULT_STACK_CAPTURE_FRAMES_TO_SKIP,
+            CXPLAT_FAULT_STACK_CAPTURE_FRAMES_TO_SKIP,
             static_cast<unsigned int>(stack.size()),
             reinterpret_cast<void**>(stack.data()),
             &hash) > 0) {
         // Form the canonical stack.
         for (size_t i = 0; i < _stack_depth; i++) {
             uintptr_t frame = stack[i];
-            if (frame < _base_address || frame > (_base_address + USERSIM_MODULE_SIZE_IN_BYTES)) {
+            if (frame < _base_address || frame > (_base_address + CXPLAT_MODULE_SIZE_IN_BYTES)) {
                 frame = 0;
             } else {
                 frame -= _base_address;
@@ -219,7 +220,7 @@ _usersim_fault_injection::is_new_stack()
 }
 
 void
-_usersim_fault_injection::log_stack_trace(
+_cxplat_fault_injection::log_stack_trace(
     const std::vector<uintptr_t>& canonical_stack, const std::vector<uintptr_t>& stack)
 {
     // Decode stack trace outside of the lock.
@@ -241,7 +242,7 @@ _usersim_fault_injection::log_stack_trace(
             break;
         }
         log_record << "# ";
-        if (_usersim_decode_symbol(frame, name, displacement, line_number, file_name) == STATUS_SUCCESS) {
+        if (_cxplat_decode_symbol(frame, name, displacement, line_number, file_name) == 0) {
             log_record << std::hex << frame << " " << name << " + " << displacement;
             string_stack_frame = name + " + " + std::to_string(displacement);
             if (line_number.has_value() && file_name.has_value()) {
@@ -264,7 +265,7 @@ _usersim_fault_injection::log_stack_trace(
 }
 
 void
-_usersim_fault_injection::load_fault_log()
+_cxplat_fault_injection::load_fault_log()
 {
     // Get the path to the executable being run.
     char process_name[MAX_PATH];
@@ -305,29 +306,30 @@ _usersim_fault_injection::load_fault_log()
     _log_file << "# Iteration: " << ++_iteration << std::endl;
 }
 
-NTSTATUS
-usersim_fault_injection_initialize(size_t stack_depth) noexcept
+// Returns 0 on success, or errno value on failure.
+int
+cxplat_fault_injection_initialize(size_t stack_depth) noexcept
 {
     try {
-        _usersim_fault_injection_singleton = std::make_unique<_usersim_fault_injection>(stack_depth);
+        _cxplat_fault_injection_singleton = std::make_unique<_cxplat_fault_injection>(stack_depth);
     } catch (...) {
-        return STATUS_NO_MEMORY;
+        return ENOMEM;
     }
-    return STATUS_SUCCESS;
+    return 0;
 }
 
 void
-usersim_fault_injection_uninitialize() noexcept
+cxplat_fault_injection_uninitialize() noexcept
 {
-    _usersim_fault_injection_singleton.reset();
+    _cxplat_fault_injection_singleton.reset();
 }
 
 bool
-usersim_fault_injection_inject_fault() noexcept
+cxplat_fault_injection_inject_fault() noexcept
 {
     try {
-        if (_usersim_fault_injection_singleton) {
-            return _usersim_fault_injection_singleton->inject_fault();
+        if (_cxplat_fault_injection_singleton) {
+            return _cxplat_fault_injection_singleton->inject_fault();
         }
         return false;
     } catch (...) {
@@ -336,7 +338,7 @@ usersim_fault_injection_inject_fault() noexcept
 }
 
 bool
-usersim_fault_injection_is_enabled() noexcept
+cxplat_fault_injection_is_enabled() noexcept
 {
-    return _usersim_fault_injection_singleton != nullptr;
+    return _cxplat_fault_injection_singleton != nullptr;
 }
