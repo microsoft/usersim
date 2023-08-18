@@ -27,7 +27,10 @@ typedef struct
 {
     cxplat_pool_type_t pool_type;
     uint32_t tag;
+    size_t size;
 } cxplat_allocation_header_t;
+
+static_assert(sizeof(cxplat_allocation_header_t) <= CXPLAT_CACHE_LINE_SIZE);
 
 static inline cxplat_allocation_header_t*
 _header_from_pointer(const void* memory)
@@ -35,28 +38,31 @@ _header_from_pointer(const void* memory)
     return (cxplat_allocation_header_t*)((uint8_t*)memory - sizeof(cxplat_allocation_header_t));
 }
 
+#define ALIGNED_POINTER_OFFSET CXPLAT_CACHE_LINE_SIZE
+#define UNALIGNED_POINTER_OFFSET sizeof(cxplat_allocation_header_t)
+
 static inline uint8_t*
 _memory_block_from_aligned_pointer(const void* pointer)
 {
-    return ((uint8_t*)pointer) - CXPLAT_CACHE_LINE_SIZE;
+    return ((uint8_t*)pointer) - ALIGNED_POINTER_OFFSET;
 }
 
 static inline uint8_t*
 _memory_block_from_unaligned_pointer(const void* pointer)
 {
-    return ((uint8_t*)pointer) - sizeof(cxplat_allocation_header_t);
+    return ((uint8_t*)pointer) - UNALIGNED_POINTER_OFFSET;
 }
 
 static inline uint8_t*
 _aligned_pointer_from_memory_block(const void* memory)
 {
-    return ((uint8_t*)memory) + CXPLAT_CACHE_LINE_SIZE;
+    return ((uint8_t*)memory) + ALIGNED_POINTER_OFFSET;
 }
 
 static inline uint8_t*
 _unaligned_pointer_from_memory_block(const void* memory)
 {
-    return ((uint8_t*)memory) + sizeof(cxplat_allocation_header_t);
+    return ((uint8_t*)memory) + UNALIGNED_POINTER_OFFSET;
 }
 
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate_with_tag(
@@ -78,14 +84,14 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
         // enough extra space to fill a cache line, and put the
         // cxplat_allocation_header_t at the end of that space.
         // TODO: move logic into cxplat_allocate_cache_aligned_with_tag().
-        size_t full_size = CXPLAT_CACHE_LINE_SIZE + size;
+        size_t full_size = ALIGNED_POINTER_OFFSET + size;
         uint8_t* pointer = (uint8_t*)_aligned_malloc(full_size, CXPLAT_CACHE_LINE_SIZE);
         if (pointer == nullptr) {
             return nullptr;
         }
         memory = _aligned_pointer_from_memory_block(pointer);
     } else {
-        size_t full_size = sizeof(cxplat_allocation_header_t) + size;
+        size_t full_size = UNALIGNED_POINTER_OFFSET + size;
         uint8_t* pointer = (uint8_t*)calloc(full_size, 1);
         if (pointer == nullptr) {
             return nullptr;
@@ -97,6 +103,7 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
     auto header = (cxplat_allocation_header_t*)((uint8_t*)memory - sizeof(cxplat_allocation_header_t));
     header->pool_type = pool_type;
     header->tag = tag;
+    header->size = size;
     if (!initialize) {
         // The calloc call always zero-initializes memory.  To test
         // returning uninitialized memory, we explicitly fill it with 0xcc.
@@ -119,7 +126,6 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) v
     _In_ _Post_invalid_ void* pointer, size_t old_size, size_t new_size, uint32_t tag)
 {
     UNREFERENCED_PARAMETER(tag);
-    UNREFERENCED_PARAMETER(old_size);
 
     if (new_size > cxplat_fuzzing_memory_limit) {
         return nullptr;
@@ -130,15 +136,17 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) v
     }
 
     cxplat_allocation_header_t* header = _header_from_pointer(pointer);
+    CXPLAT_DEBUG_ASSERT(header->size == old_size);
     void* p;
     if (header->pool_type == CxPlatNonPagedPoolNxCacheAligned) {
         uint8_t* old_memory_block = _memory_block_from_aligned_pointer(pointer);
-        void* new_memory_block = _aligned_realloc(old_memory_block, new_size, CXPLAT_CACHE_LINE_SIZE);
+        size_t full_size = ALIGNED_POINTER_OFFSET + new_size;
+        void* new_memory_block = _aligned_realloc(old_memory_block, full_size, CXPLAT_CACHE_LINE_SIZE);
         p = (new_memory_block) ? _aligned_pointer_from_memory_block(new_memory_block) : nullptr;
     } else {
         uint8_t* old_memory_block = _memory_block_from_unaligned_pointer(pointer);
-        size_t full_size = sizeof(cxplat_allocation_header_t) + new_size;
-        void* new_memory_block = realloc(old_memory_block, new_size);
+        size_t full_size = UNALIGNED_POINTER_OFFSET + new_size;
+        void* new_memory_block = realloc(old_memory_block, full_size);
         p = (new_memory_block) ? _unaligned_pointer_from_memory_block(new_memory_block) : nullptr;
     }
 
