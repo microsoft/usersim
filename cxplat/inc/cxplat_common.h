@@ -8,11 +8,11 @@
 #include <assert.h>
 
 #define CXPLAT_RUNTIME_ASSERT(x) assert(x)
-#ifdef _DEBUG
-#define CXPLAT_DEBUG_ASSERT(x) assert(x)
-#else
+#ifdef NDEBUG
 #define CXPLAT_DEBUG_ASSERT(x) (void)(x)
-#endif //!_DEBUG
+#else
+#define CXPLAT_DEBUG_ASSERT(x) assert(x)
+#endif //!NDEBUG
 
 #ifdef __cplusplus
 #define NOEXCEPT noexcept
