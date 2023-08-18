@@ -705,21 +705,4 @@ extern "C"
 
 #ifdef __cplusplus
 }
-
-#include <memory>
-namespace usersim_helper {
-
-struct _usersim_free_functor
-{
-    void
-    operator()(void* memory)
-    {
-        cxplat_free(memory);
-    }
-};
-
-typedef std::unique_ptr<void, _usersim_free_functor> usersim_memory_ptr;
-
-} // namespace usersim_helper
-
 #endif

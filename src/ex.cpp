@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "cxplat/fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "platform.h"
 #include "kernel_um.h"
 #include "usersim/ex.h"
@@ -14,9 +14,6 @@
 #include <tuple>
 
 // Ex* functions.
-
-extern "C" size_t usersim_fuzzing_memory_limit = MAXSIZE_T;
-usersim_leak_detector_ptr _usersim_leak_detector_ptr;
 
 /***
  * @brief This following class implements a mock of the Windows Kernel's rundown reference implementation.
@@ -302,7 +299,7 @@ ExAllocatePoolUninitializedCPP(
     if (tag == 0) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_type, number_of_bytes, 0);
     }
-    return cxplat_allocate_with_tag(pool_type, number_of_bytes, tag, false);
+    return cxplat_allocate_with_tag((cxplat_pool_type_t)pool_type, number_of_bytes, tag, false);
 }
 
 _Ret_maybenull_ void*
@@ -318,10 +315,10 @@ ExAllocatePoolWithTagCPP(
     SIZE_T number_of_bytes,
     ULONG tag)
 {
-    if (tag == 0) {
+    if (tag == 0 || number_of_bytes == 0) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_type, number_of_bytes, 0);
     }
-    return cxplat_allocate_with_tag(pool_type, number_of_bytes, tag, true);
+    return cxplat_allocate_with_tag((cxplat_pool_type_t)pool_type, number_of_bytes, tag, true);
 }
 
 _Ret_maybenull_ void*

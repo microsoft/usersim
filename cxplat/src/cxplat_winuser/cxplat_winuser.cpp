@@ -94,7 +94,7 @@ cxplat_initialize()
             _get_environment_variable_as_size_t(CXPLAT_FAULT_INJECTION_SIMULATION_ENVIRONMENT_VARIABLE_NAME);
         auto leak_detector = _get_environment_variable_as_bool(CXPLAT_MEMORY_LEAK_DETECTION_ENVIRONMENT_VARIABLE_NAME);
 
-               if (fault_injection_stack_depth || leak_detector) {
+        if (fault_injection_stack_depth || leak_detector) {
             _cxplat_symbol_decoder_initialize();
         }
         if (fault_injection_stack_depth && !cxplat_fault_injection_is_enabled()) {
@@ -121,4 +121,5 @@ cxplat_cleanup()
         _cxplat_leak_detector_ptr->dump_leaks();
         _cxplat_leak_detector_ptr.reset();
     }
+    _cxplat_symbol_decoder_deinitialize();
 }

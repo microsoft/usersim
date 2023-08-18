@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "cxplat/fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "net_platform.h"
 #include "ndis.h"
 #include "usersim/io.h"

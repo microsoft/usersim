@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include "cxplat/fault_injection.h"
-#include "cxplat/memory.h"
+#include "cxplat_fault_injection.h"
+#include "cxplat_memory.h"
 
 #ifdef __cplusplus
 extern "C"

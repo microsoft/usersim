@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "cxplat/fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "fwp_um.h"
 #define htonl(x) _byteswap_ulong(x) /* TODO: replace with RtlUlongByteSwap */
 #define htons(x) _byteswap_ushort(x) /* TODO: replace with RtlUShortByteSwap */

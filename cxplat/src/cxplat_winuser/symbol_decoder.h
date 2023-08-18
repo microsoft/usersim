@@ -36,7 +36,7 @@ _cxplat_symbol_decoder_initialize()
 }
 
 inline void
-_usersim_symbol_decoder_deinitialize()
+_cxplat_symbol_decoder_deinitialize()
 {
     SymCleanup(GetCurrentProcess());
 }
