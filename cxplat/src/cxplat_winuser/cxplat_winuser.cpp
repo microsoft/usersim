@@ -96,7 +96,7 @@ cxplat_initialize()
 
         if (fault_injection_stack_depth || leak_detector) {
             cxplat_status_t status = _cxplat_symbol_decoder_initialize();
-            if (!CXPLAT_SUCCESS(status)) {
+            if (!CXPLAT_SUCCEEDED(status)) {
                 return status;
             }
         }

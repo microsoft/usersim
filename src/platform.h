@@ -34,7 +34,7 @@ extern "C"
     _Pragma("warning(push)") _Pragma("warning(disable : 4189)") do \
     {                                                              \
         usersim_result_t _result = (x);                            \
-        CXPLAT_DEBUG_ASSERT(_result == STATUS_SUCCESS && #x);           \
+        CXPLAT_DEBUG_ASSERT(_result == STATUS_SUCCESS && #x);      \
     }                                                              \
     while (0)                                                      \
     _Pragma("warning(pop)")

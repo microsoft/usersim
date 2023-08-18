@@ -241,7 +241,7 @@ _cxplat_fault_injection::log_stack_trace(
             break;
         }
         log_record << "# ";
-        if (CXPLAT_SUCCESS(_cxplat_decode_symbol(frame, name, displacement, line_number, file_name))) {
+        if (CXPLAT_SUCCEEDED(_cxplat_decode_symbol(frame, name, displacement, line_number, file_name))) {
             log_record << std::hex << frame << " " << name << " + " << displacement;
             string_stack_frame = name + " + " + std::to_string(displacement);
             if (line_number.has_value() && file_name.has_value()) {

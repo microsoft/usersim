@@ -51,7 +51,7 @@ _cxplat_leak_detector::dump_leaks()
         std::optional<uint32_t> line_number;
         std::optional<std::string> file_name;
         for (auto address : stack) {
-            if (CXPLAT_SUCCESS(_cxplat_decode_symbol(address, name, displacement, line_number, file_name))) {
+            if (CXPLAT_SUCCEEDED(_cxplat_decode_symbol(address, name, displacement, line_number, file_name))) {
                 output << "    " << name << " + " << displacement;
                 if (line_number.has_value() && file_name.has_value()) {
                     output << " (" << file_name.value() << ":" << line_number.value() << ")";
