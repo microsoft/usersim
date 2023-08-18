@@ -128,7 +128,7 @@
       <PreprocessorDefinitions>CXPLAT_SOURCE;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)../../inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../inc;$(ProjectDir)../../inc/winuser</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -145,9 +145,7 @@
     <ClInclude Include="..\..\inc\cxplat_memory.h" />
     <ClInclude Include="..\..\inc\winuser\cxplat_platform.h" />
     <ClInclude Include="..\..\inc\winuser\cxplat_winuser.h" />
-    <ClInclude Include="framework.h" />
     <ClInclude Include="leak_detector.h" />
-    <ClInclude Include="pch.h" />
     <ClInclude Include="symbol_decoder.h" />
     <ClInclude Include="winuser_internal.h" />
   </ItemGroup>
