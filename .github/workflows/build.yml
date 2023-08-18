@@ -96,4 +96,5 @@ jobs:
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
+        .\cxplat_test -d yes
         .\usersim_tests -d yes
