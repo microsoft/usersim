@@ -10,3 +10,9 @@
 #else
 #define CXPLAT_DEBUG_ASSERT(x) (void)(x)
 #endif //!_DEBUG
+
+#ifdef __cplusplus
+#define NOEXCEPT noexcept
+#else
+#define NOEXCEPT
+#endif

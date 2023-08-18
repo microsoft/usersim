@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 #pragma once
-#include "cxplat/common.h"
+
+#include "cxplat/fault_injection.h"
+#include "cxplat/memory.h"
 
 #ifdef __cplusplus
 extern "C"

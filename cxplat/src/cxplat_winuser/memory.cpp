@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "cxplat/fault_injection.h"
+#include "cxplat.h"
 #include "leak_detector.h"
 #if !defined(UNREFERENCED_PARAMETER)
 #define UNREFERENCED_PARAMETER(X) (X)
@@ -33,7 +33,7 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
     if (size == 0) {
         KeBugCheckEx(BAD_POOL_CALLER, 0x00, 0, 0, 0);
     }
-    if (size > usersim_fuzzing_memory_limit) {
+    if (size > cxplat_fuzzing_memory_limit) {
         return nullptr;
     }
 
@@ -121,7 +121,7 @@ _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate_w
 }
 
 void
-cxplat_free(_Frees_ptr_opt_ void* memory)
+cxplat_free(_Pre_maybenull_ _Post_ptr_invalid_ void* memory)
 {
     if (_cxplat_leak_detector_ptr) {
         _cxplat_leak_detector_ptr->unregister_allocation(reinterpret_cast<uintptr_t>(memory));
@@ -156,7 +156,7 @@ _Must_inspect_result_
 }
 
 void
-cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory)
+cxplat_free_cache_aligned(_Pre_maybenull_ _Post_ptr_invalid_ void* memory)
 {
     _aligned_free(memory);
 }

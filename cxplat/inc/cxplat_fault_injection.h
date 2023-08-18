@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include "cxplat.h"
-typedef _Return_type_success_(return >= 0) long NTSTATUS;
+#include "cxplat/common.h"
+//typedef _Return_type_success_(return >= 0) long NTSTATUS;
 
 #ifdef __cplusplus
 extern "C"
@@ -20,14 +20,14 @@ extern "C"
      * @retval ENOMEM Operation failed due to memory allocation failure.
      */
     int
-    cxplat_fault_injection_initialize(size_t stack_depth) noexcept;
+    cxplat_fault_injection_initialize(size_t stack_depth) NOEXCEPT;
 
     /**
      * @brief Uninitialize fault injection. This must be called after all other
      * fault injection functions. This function is not thread safe.
      */
     void
-    cxplat_fault_injection_uninitialize() noexcept;
+    cxplat_fault_injection_uninitialize() NOEXCEPT;
 
     /**
      * @brief Enable fault injection. This function is thread safe.
@@ -36,7 +36,7 @@ extern "C"
      * @retval false Fault should not be injected.
      */
     bool
-    cxplat_fault_injection_inject_fault() noexcept;
+    cxplat_fault_injection_inject_fault() NOEXCEPT;
 
     /**
      * @brief Test if fault injection is enabled. This function is thread safe.
@@ -45,7 +45,7 @@ extern "C"
      * @retval false Fault injection is disabled.
      */
     bool
-    cxplat_fault_injection_is_enabled() noexcept;
+    cxplat_fault_injection_is_enabled() NOEXCEPT;
 
 #ifdef __cplusplus
 }

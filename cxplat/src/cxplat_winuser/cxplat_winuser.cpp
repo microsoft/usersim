@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 // This file contains initialization/cleanup routines for the Windows user-mode cxplat library.
-#include "cxplat/fault_injection.h"
+#include "cxplat.h"
 #include "leak_detector.h"
 #include "symbol_decoder.h"
 #include <algorithm>
