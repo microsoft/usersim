@@ -53,7 +53,10 @@
     <ClCompile Include="cxplat_winuser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="memory.cpp">
+    <ClCompile Include="memory_winuser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\memory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

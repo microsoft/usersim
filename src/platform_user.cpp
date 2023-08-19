@@ -720,7 +720,7 @@ usersim_leave_critical_region()
 }
 
 usersim_result_t
-usersim_utf8_string_to_unicode(_In_ const usersim_utf8_string_t* input, _Outptr_ wchar_t** output)
+usersim_utf8_string_to_unicode(_In_ const cxplat_utf8_string_t* input, _Outptr_ wchar_t** output)
 {
     wchar_t* unicode_string = NULL;
     usersim_result_t retval;

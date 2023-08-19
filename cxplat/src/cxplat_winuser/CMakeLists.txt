@@ -12,7 +12,8 @@ add_library(cxplat_winuser STATIC
   fault_injection.cpp
   leak_detector.cpp
   leak_detector.h
-  memory.cpp
+  ../memory.c
+  memory_winuser.cpp
   symbol_decoder.h
   winuser_internal.h
 )

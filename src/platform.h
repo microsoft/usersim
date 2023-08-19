@@ -22,11 +22,6 @@ extern "C"
 #define USERSIM_OFFSET_OF(s, m) (((size_t) & ((s*)0)->m))
 #define USERSIM_FROM_FIELD(s, m, o) (s*)((uint8_t*)o - USERSIM_OFFSET_OF(s, m))
 
-#define USERSIM_UTF8_STRING_FROM_CONST_STRING(x) \
-    {                                            \
-        ((uint8_t*)(x)), sizeof((x)) - 1         \
-    }
-
 #define USERSIM_NS_PER_FILETIME 100
 
 // Macro locally suppresses "Unreferenced variable" warning, which in 'Release' builds is treated as an error.
@@ -38,20 +33,6 @@ extern "C"
     }                                                              \
     while (0)                                                      \
     _Pragma("warning(pop)")
-
-    /**
-     * @brief A UTF-8 encoded string.
-     * Notes:
-     * 1) This string is not NULL terminated, instead relies on length.
-     * 2) A single UTF-8 code point (aka character) could be 1-4 bytes in
-     *  length.
-     *
-     */
-    typedef struct _usersim_utf8_string
-    {
-        uint8_t* value;
-        size_t length;
-    } usersim_utf8_string_t;
 
     typedef enum _usersim_code_integrity_state
     {
@@ -141,36 +122,6 @@ extern "C"
      */
     _Ret_maybenull_ void*
     usersim_ring_map_readonly_user(_In_ const usersim_ring_descriptor_t* ring);
-
-    /**
-     * @brief Allocate and copy a UTF-8 string.
-     *
-     * @param[out] destination Pointer to memory where the new UTF-8 character
-     * sequence will be allocated.
-     * @param[in] source UTF-8 string that will be copied.
-     * @retval USERSIM_SUCCESS The operation was successful.
-     * @retval USERSIM_NO_MEMORY Unable to allocate resources for this
-     *  UTF-8 string.
-     */
-    _Must_inspect_result_ usersim_result_t
-    usersim_duplicate_utf8_string(_Out_ usersim_utf8_string_t* destination, _In_ const usersim_utf8_string_t* source);
-
-    /**
-     * @brief Free a UTF-8 string allocated by usersim_duplicate_utf8_string.
-     *
-     * @param[in,out] string The string to free.
-     */
-    void
-    usersim_utf8_string_free(_Inout_ usersim_utf8_string_t* string);
-
-    /**
-     * @brief Duplicate a null-terminated string.
-     *
-     * @param[in] source String to duplicate.
-     * @return Pointer to the duplicated string or NULL if out of memory.
-     */
-    _Must_inspect_result_ char*
-    usersim_duplicate_string(_In_z_ const char* source);
 
     /**
      * @brief Get the code integrity state from the platform.
@@ -607,7 +558,7 @@ extern "C"
      */
     _Must_inspect_result_ usersim_result_t
     usersim_cryptographic_hash_create(
-        _In_ const usersim_utf8_string_t* algorithm, _Outptr_ usersim_cryptographic_hash_t** hash);
+        _In_ const cxplat_utf8_string_t* algorithm, _Outptr_ usersim_cryptographic_hash_t** hash);
 
     /**
      * @brief Destroy a cryptographic hash object.
@@ -701,7 +652,7 @@ extern "C"
      * @retval USERSIM_INVALID_ARGUMENT Unable to convert the string.
      */
     usersim_result_t
-    usersim_utf8_string_to_unicode(_In_ const usersim_utf8_string_t* input, _Outptr_ wchar_t** output);
+    usersim_utf8_string_to_unicode(_In_ const cxplat_utf8_string_t* input, _Outptr_ wchar_t** output);
 
 #ifdef __cplusplus
 }

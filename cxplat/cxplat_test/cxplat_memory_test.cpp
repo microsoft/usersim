@@ -63,4 +63,28 @@ TEST_CASE("reallocate aligned", "[memory]")
     cxplat_free(new_buffer);
 }
 
-TEST_CASE("cxplat_free null", "[ex]") { cxplat_free(nullptr); }
+TEST_CASE("cxplat_free null", "[memory]") { cxplat_free(nullptr); }
+
+TEST_CASE("cxplat_duplicate_string", "[memory]")
+{
+    char* string = cxplat_duplicate_string("test");
+    REQUIRE(string != nullptr);
+    REQUIRE(strcmp(string, "test") == 0);
+
+    cxplat_free(string);
+}
+
+TEST_CASE("cxplat_duplicate_utf8_string", "[memory]")
+{
+    const char string[] = "test";
+    cxplat_utf8_string_t source = CXPLAT_UTF8_STRING_FROM_CONST_STRING(string);
+    REQUIRE(source.length == strlen(string));
+
+    cxplat_utf8_string_t destination;
+    cxplat_status_t status = cxplat_duplicate_utf8_string(&destination, &source);
+    REQUIRE(status == CXPLAT_STATUS_SUCCESS);
+    REQUIRE(destination.length == source.length);
+    REQUIRE(memcmp(destination.value, source.value, source.length) == 0);
+
+    cxplat_utf8_string_free(&destination);
+}

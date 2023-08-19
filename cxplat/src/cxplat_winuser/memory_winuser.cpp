@@ -21,8 +21,6 @@ extern cxplat_leak_detector_ptr _cxplat_leak_detector_ptr;
 
 extern "C" size_t cxplat_fuzzing_memory_limit = MAXSIZE_T;
 
-#define CXPLAT_DEFAULT_TAG 'lpxc'
-
 typedef struct
 {
     cxplat_pool_type_t pool_type;
@@ -117,11 +115,6 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
     return memory;
 }
 
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate(size_t size)
-{
-    return cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, size, CXPLAT_DEFAULT_TAG, true);
-}
-
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate_with_tag(
     _In_ _Post_invalid_ void* pointer, size_t old_size, size_t new_size, uint32_t tag)
 {
@@ -166,12 +159,6 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) v
     return p;
 }
 
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size)
-{
-    return cxplat_reallocate_with_tag(memory, old_size, new_size, CXPLAT_DEFAULT_TAG);
-}
-
 void
 cxplat_free(_Frees_ptr_opt_ void* pointer)
 {
@@ -195,10 +182,11 @@ cxplat_free(_Frees_ptr_opt_ void* pointer)
     }
 }
 
-__drv_allocatesMem(Mem) _Must_inspect_result_
-_Ret_writes_maybenull_(size) void*
-cxplat_allocate_cache_aligned(size_t size)
+_Must_inspect_result_
+    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned_with_tag(size_t size, uint32_t tag)
 {
+    UNREFERENCED_PARAMETER(tag);
+
     if (size > cxplat_fuzzing_memory_limit) {
         return nullptr;
     }
@@ -212,14 +200,6 @@ cxplat_allocate_cache_aligned(size_t size)
         memset(memory, 0, size);
     }
     return memory;
-}
-
-_Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned_with_tag(size_t size, uint32_t tag)
-{
-    UNREFERENCED_PARAMETER(tag);
-
-    return cxplat_allocate_cache_aligned(size);
 }
 
 void

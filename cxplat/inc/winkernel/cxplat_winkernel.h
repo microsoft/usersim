@@ -1,7 +1,10 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 #pragma once
-#include <ntdef.h>
+#if !defined(_AMD64_) && defined(_M_AMD64)
+#define _AMD64_
+#endif
+#include <ntdef.h> // for NTSTATUS
 #include <ntstatus.h>
 
 // Map specific cxplat_status_t values to HRESULT values.

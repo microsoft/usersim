@@ -150,10 +150,11 @@
     <ClInclude Include="winuser_internal.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\memory.c" />
     <ClCompile Include="cxplat_winuser.cpp" />
     <ClCompile Include="fault_injection.cpp" />
     <ClCompile Include="leak_detector.cpp" />
-    <ClCompile Include="memory.cpp" />
+    <ClCompile Include="memory_winuser.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
