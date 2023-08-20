@@ -32,9 +32,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\memory.c" />
-    <ClCompile Include="memory_winkernel.c">
-      <ShowIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ShowIncludes>
-    </ClCompile>
+    <ClCompile Include="memory_winkernel.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\inc\cxplat.h" />

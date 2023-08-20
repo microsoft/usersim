@@ -140,7 +140,7 @@ extern "C"
      * @param[in] source String to duplicate.
      * @return Pointer to the duplicated string or NULL if out of memory.
      */
-    _Must_inspect_result_ char*
+    _Must_inspect_result_ _Ret_maybenull_z_ char*
     cxplat_duplicate_string(_In_z_ const char* source);
 
 #ifdef __cplusplus

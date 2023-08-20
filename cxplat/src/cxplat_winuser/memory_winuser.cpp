@@ -182,8 +182,9 @@ cxplat_free(_Frees_ptr_opt_ void* pointer)
     }
 }
 
-_Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned_with_tag(size_t size, uint32_t tag)
+__drv_allocatesMem(Mem) _Must_inspect_result_
+_Ret_writes_maybenull_(size) void*
+cxplat_allocate_cache_aligned_with_tag(size_t size, uint32_t tag)
 {
     UNREFERENCED_PARAMETER(tag);
 
@@ -203,7 +204,7 @@ _Must_inspect_result_
 }
 
 void
-cxplat_free_cache_aligned(_Pre_maybenull_ _Post_ptr_invalid_ void* memory)
+cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory)
 {
     _aligned_free(memory);
 }

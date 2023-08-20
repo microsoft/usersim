@@ -23,7 +23,7 @@
 // This enumeration is not considered strict, in that other values are permitted.
 // There may be multiple values that constitute "success".  Use CXPLAT_SUCCEEDED(value)
 // to determine success rather than comparing against CXPLAT_SUCCESS.
-typedef enum
+typedef _Return_type_success_(CXPLAT_SUCCEEDED(return)) enum
 {
     CXPLAT_STATUS_SUCCESS = CXPLAT_PLATFORM_STATUS_SUCCESS,
     CXPLAT_STATUS_NO_MEMORY = CXPLAT_PLATFORM_STATUS_NO_MEMORY,
