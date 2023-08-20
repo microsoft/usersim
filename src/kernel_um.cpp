@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "kernel_um.h"
 #include "platform.h"
 
@@ -24,5 +24,5 @@ FatalListEntryError(_In_ void* p1, _In_ void* p2, _In_ void* p3)
     UNREFERENCED_PARAMETER(p1);
     UNREFERENCED_PARAMETER(p2);
     UNREFERENCED_PARAMETER(p3);
-    usersim_assert("FatalListEntryError");
+    CXPLAT_DEBUG_ASSERT("FatalListEntryError");
 }

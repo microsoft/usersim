@@ -20,14 +20,9 @@ typedef NTSTATUS* PNTSTATUS;
 #include "kernel_um.h"
 #include <netiodef.h>
 #define STATUS_NOINTERFACE ((NTSTATUS)0xC00002B9L)
+#include "cxplat.h"
 
 #pragma comment(lib, "rpcrt4")
-
-#ifdef _DEBUG
-#define usersim_assert(x) assert(x)
-#else
-#define usersim_assert(x) (void)(x)
-#endif //!_DEBUG
 
 #if !defined(UNREFERENCED_PARAMETER)
 #define UNREFERENCED_PARAMETER(X) (X)
@@ -66,8 +61,8 @@ extern "C"
         entry->Blink = previous_entry;
         previous_entry->Flink = entry;
         list_head->Blink = entry;
-        usersim_assert(list_head->Blink->Flink == list_head);
-        usersim_assert(list_head->Flink->Blink == list_head);
+        CXPLAT_DEBUG_ASSERT(list_head->Blink->Flink == list_head);
+        CXPLAT_DEBUG_ASSERT(list_head->Flink->Blink == list_head);
         return;
     }
 

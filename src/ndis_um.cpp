@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "net_platform.h"
 #include "ndis.h"
 #include "usersim/io.h"
@@ -22,7 +22,7 @@ typedef struct _NDIS_BUFFER_LIST_POOL
 PNDIS_GENERIC_OBJECT
 NdisAllocateGenericObject(_In_opt_ DRIVER_OBJECT* driver_object, _In_ unsigned long tag, _In_ uint16_t size)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return nullptr;
     }
 
@@ -38,7 +38,7 @@ NdisAllocateGenericObject(_In_opt_ DRIVER_OBJECT* driver_object, _In_ unsigned l
 NDIS_HANDLE
 NdisAllocateNetBufferListPool(_In_opt_ NDIS_HANDLE ndis_handle, _In_ NET_BUFFER_LIST_POOL_PARAMETERS const* parameters)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return nullptr;
     }
 
@@ -59,7 +59,7 @@ NdisFreeNetBufferListPool(_In_ __drv_freesMem(mem) NDIS_HANDLE pool_handle)
 PNET_BUFFER_LIST
 NdisAllocateNetBufferList(_In_ NDIS_HANDLE nbl_pool_handle, _In_ USHORT context_size, _In_ USHORT context_backfill)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return nullptr;
     }
 
@@ -82,7 +82,7 @@ NdisAllocateCloneNetBufferList(
     _In_ NDIS_HANDLE net_buffer_pool_handle,
     ULONG allocate_clone_flags)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return nullptr;
     }
 
@@ -117,7 +117,7 @@ NdisFreeGenericObject(_In_ PNDIS_GENERIC_OBJECT ndis_object)
 _Must_inspect_result_ __drv_allocatesMem(mem) NET_BUFFER* NdisAllocateNetBuffer(
     _In_ NDIS_HANDLE pool_handle, _In_opt_ MDL* mdl_chain, _In_ unsigned long data_offset, _In_ SIZE_T data_length)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return nullptr;
     }
 
@@ -145,7 +145,7 @@ NdisGetDataBuffer(
     _In_ unsigned long align_multiple,
     _In_ unsigned long align_offset)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return nullptr;
     }
 

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "fwp_um.h"
 #define htonl(x) _byteswap_ulong(x) /* TODO: replace with RtlUlongByteSwap */
 #define htons(x) _byteswap_ushort(x) /* TODO: replace with RtlUShortByteSwap */
@@ -42,8 +42,8 @@ _is_connection_redirected(
 void static _allocate_and_initialize_connection_request(
     ADDRESS_FAMILY family, _In_ const fwp_classify_parameters_t* parameters)
 {
-    usersim_assert(_fwp_um_connect_request == nullptr);
-    _fwp_um_connect_request = (FWPS_CONNECT_REQUEST0*)usersim_allocate(sizeof(FWPS_CONNECT_REQUEST0));
+    CXPLAT_DEBUG_ASSERT(_fwp_um_connect_request == nullptr);
+    _fwp_um_connect_request = (FWPS_CONNECT_REQUEST0*)cxplat_allocate(sizeof(FWPS_CONNECT_REQUEST0));
     if (_fwp_um_connect_request == nullptr) {
         // Most likely we are under fault injection simulation. Return.
         return;
@@ -56,7 +56,7 @@ void static _allocate_and_initialize_connection_request(
 
 void static _free_connection_request()
 {
-    usersim_free(_fwp_um_connect_request);
+    cxplat_free(_fwp_um_connect_request);
     _fwp_um_connect_request = nullptr;
 }
 
@@ -245,7 +245,7 @@ _fwp_engine::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* parameter
     bool redirected = false;
     uint16_t redirected_port = 0;
     uint8_t* redirected_address = nullptr;
-    bool fault_injection_enabled = usersim_fault_injection_is_enabled();
+    bool fault_injection_enabled = cxplat_fault_injection_is_enabled();
 
     _allocate_and_initialize_connection_request(AF_INET, parameters);
 
@@ -264,7 +264,7 @@ _fwp_engine::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* parameter
 
     action = test_callout(
         FWPS_LAYER_ALE_CONNECT_REDIRECT_V4, FWPM_LAYER_ALE_CONNECT_REDIRECT_V4, _default_sublayer, incoming_value);
-    usersim_assert(action == FWP_ACTION_PERMIT || fault_injection_enabled);
+    CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || fault_injection_enabled);
 
     if (_fwp_um_connect_request != nullptr) {
         redirected =
@@ -289,7 +289,7 @@ _fwp_engine::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* parameter
 
     if (redirected) {
         // In case the connection is redirected, AUTH_CONNECT callout will be invoked twice.
-        usersim_assert(action == FWP_ACTION_PERMIT || fault_injection_enabled);
+        CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || fault_injection_enabled);
 
         incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_PORT].value.uint16 = ntohs(redirected_port);
         incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32 =
@@ -312,7 +312,7 @@ _fwp_engine::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameter
     bool redirected = false;
     uint16_t redirected_port = 0;
     uint8_t* redirected_address = nullptr;
-    bool fault_injection_enabled = usersim_fault_injection_is_enabled();
+    bool fault_injection_enabled = cxplat_fault_injection_is_enabled();
 
     _allocate_and_initialize_connection_request(AF_INET6, parameters);
 
@@ -333,7 +333,7 @@ _fwp_engine::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameter
     // TODO: why does this use _connect_v6_sublayer but test_cgroup_inet4_connect uses _default_sublayer?
     action = test_callout(
         FWPS_LAYER_ALE_CONNECT_REDIRECT_V6, FWPM_LAYER_ALE_CONNECT_REDIRECT_V6, _connect_v6_sublayer, incoming_value);
-    usersim_assert(action == FWP_ACTION_PERMIT || fault_injection_enabled);
+    CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || fault_injection_enabled);
 
     if (_fwp_um_connect_request != nullptr) {
         redirected =
@@ -359,7 +359,7 @@ _fwp_engine::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameter
 
     if (redirected) {
         // In case the connection is redirected, AUTH_CONNECT callout will be invoked twice.
-        usersim_assert(action == FWP_ACTION_PERMIT || fault_injection_enabled);
+        CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || fault_injection_enabled);
 
         FWP_BYTE_ARRAY16 destination_ip = {0};
         memcpy(destination_ip.byteArray16, redirected_address, 16);
@@ -434,7 +434,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmFilterDeleteById0(_In_ HANDLE en
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
     FwpmTransactionBegin0(_In_ _Acquires_lock_(_Curr_) HANDLE engine_handle, _In_ uint32_t flags)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -449,7 +449,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmFilterAdd0(
     _In_opt_ PSECURITY_DESCRIPTOR sd,
     _Out_opt_ uint64_t* id)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -486,7 +486,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmCalloutAdd0(
     _In_opt_ PSECURITY_DESCRIPTOR sd,
     _Out_opt_ uint32_t* id)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -508,7 +508,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmEngineOpen0(
     _In_opt_ const FWPM_SESSION0* session,
     _Out_ HANDLE* engine_handle)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -524,7 +524,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmEngineOpen0(
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
     FwpmProviderAdd0(_In_ HANDLE engine_handle, _In_ const FWPM_PROVIDER0* provider, _In_opt_ PSECURITY_DESCRIPTOR sd)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -539,7 +539,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
     FwpmSubLayerAdd0(_In_ HANDLE engine_handle, _In_ const FWPM_SUBLAYER0* sub_layer, _In_opt_ PSECURITY_DESCRIPTOR sd)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -553,7 +553,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmEngineClose0(_Inout_ HANDLE engine_handle)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -579,7 +579,7 @@ static std::unique_ptr<fwp_injection_handle> _injection_handle;
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
     FwpsCalloutRegister3(_Inout_ void* device_object, _In_ const FWPS_CALLOUT3* callout, _Out_opt_ uint32_t* callout_id)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -598,7 +598,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpsCalloutUnregisterById0(_In_ const uint32_t callout_id)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -614,7 +614,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpsCalloutUnregisterById0(_In_ cons
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpsInjectionHandleCreate0(
     _In_opt_ ADDRESS_FAMILY address_family, _In_ uint32_t flags, _Out_ HANDLE* injection_handle)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -626,7 +626,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpsInjectionHandleCreate0(
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpsInjectionHandleDestroy0(_In_ HANDLE injection_handle)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -651,7 +651,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS
 _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS FwpsFlowAssociateContext0(
     _In_ uint64_t flow_id, _In_ UINT16 layer_id, _In_ uint32_t callout_id, _In_ uint64_t flowContext)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -672,7 +672,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS FwpsAllocateNetBufferAndNetBufferLi
     _In_ size_t data_length,
     _Outptr_ NET_BUFFER_LIST** net_buffer_list)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -806,7 +806,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS NTAPI FwpsAcquireWritableLayerDataP
     _Out_ void** writableLayerData,
     _Inout_opt_ FWPS_CLASSIFY_OUT0* classifyOut)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -827,7 +827,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS NTAPI FwpsAcquireWritableLayerDataP
 _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS NTAPI
     FwpsAcquireClassifyHandle0(_In_ void* classifyContext, _In_ UINT32 flags, _Out_ UINT64* classifyHandle)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NO_MEMORY;
     }
 
@@ -851,7 +851,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) void NTAPI
     UNREFERENCED_PARAMETER(classifyHandle);
     UNREFERENCED_PARAMETER(flags);
 
-    usersim_assert(modifiedLayerData != nullptr);
+    CXPLAT_DEBUG_ASSERT(modifiedLayerData != nullptr);
 }
 
 _IRQL_requires_(PASSIVE_LEVEL) NTSTATUS NTAPI
@@ -861,7 +861,7 @@ _IRQL_requires_(PASSIVE_LEVEL) NTSTATUS NTAPI
     UNREFERENCED_PARAMETER(flags);
 
     // Fault injection is implicitly introduced by usersim_allocate().
-    *redirectHandle = (HANDLE)usersim_allocate(1);
+    *redirectHandle = (HANDLE)cxplat_allocate(1);
     if (*redirectHandle == nullptr) {
         return STATUS_NO_MEMORY;
     }
@@ -871,7 +871,7 @@ _IRQL_requires_(PASSIVE_LEVEL) NTSTATUS NTAPI
 
 _IRQL_requires_(PASSIVE_LEVEL) void NTAPI FwpsRedirectHandleDestroy0(_In_ HANDLE redirectHandle)
 {
-    usersim_free(redirectHandle);
+    cxplat_free(redirectHandle);
 }
 
 _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(DISPATCH_LEVEL) FWPS_CONNECTION_REDIRECT_STATE NTAPI
@@ -882,7 +882,7 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(DISPATCH_LEVEL) FWPS_CONN
         *redirectContext = NULL;
     }
 
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return FWPS_CONNECTION_REDIRECTED_BY_SELF;
     }
 

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "kernel_um.h"
 #include "platform.h"
 #include "tracelog.h"
@@ -106,7 +106,7 @@ MmMapLockedPagesSpecifyCache(
         KeBugCheck(0);
     }
 
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return nullptr;
     }
 

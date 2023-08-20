@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include "platform.h"
+#include "cxplat_common.h"
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -15,18 +16,18 @@ extern "C"
      *
      * @param[in] stack_depth Number of stack frames to capture when a fault is
      * injected.
-     * @retval STATUS_SUCCESS The operation was successful.
-     * @retval STATUS_NO_MEMORY Operation failed due to memory allocation failure.
+     * @retval CXPLAT_STATUS_SUCCESS The operation was successful.
+     * @retval CXPLAT_STATUS_OUT_OF_MEMORY Operation failed due to memory allocation failure.
      */
-    NTSTATUS
-    usersim_fault_injection_initialize(size_t stack_depth) noexcept;
+    cxplat_status_t
+    cxplat_fault_injection_initialize(size_t stack_depth) NOEXCEPT;
 
     /**
      * @brief Uninitialize fault injection. This must be called after all other
      * fault injection functions. This function is not thread safe.
      */
     void
-    usersim_fault_injection_uninitialize() noexcept;
+    cxplat_fault_injection_uninitialize() NOEXCEPT;
 
     /**
      * @brief Enable fault injection. This function is thread safe.
@@ -35,7 +36,7 @@ extern "C"
      * @retval false Fault should not be injected.
      */
     bool
-    usersim_fault_injection_inject_fault() noexcept;
+    cxplat_fault_injection_inject_fault() NOEXCEPT;
 
     /**
      * @brief Test if fault injection is enabled. This function is thread safe.
@@ -43,9 +44,8 @@ extern "C"
      * @retval true Fault injection is enabled.
      * @retval false Fault injection is disabled.
      */
-    USERSIM_API
     bool
-    usersim_fault_injection_is_enabled() noexcept;
+    cxplat_fault_injection_is_enabled() NOEXCEPT;
 
 #ifdef __cplusplus
 }

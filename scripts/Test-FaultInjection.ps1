@@ -14,7 +14,7 @@ param ($OutputFolder, $Timeout, $TestProgram, $StackDepth)
 # Gather list of all possible tests
 $tests = & $TestProgram "--list-tests" "--verbosity=quiet"
 
-$env:USERSIM_FAULT_INJECTION_SIMULATION = $StackDepth
+$env:CXPLAT_FAULT_INJECTION_SIMULATION = $StackDepth
 $env:EBPF_ENABLE_WER_REPORT = "yes"
 
 Set-Content -Path ($TestProgram + ".passed.log") ""
