@@ -18,7 +18,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS EtwRegister(
     _In_opt_ PVOID callback_context,
     _Out_ PREGHANDLE reg_handle)
 {
-    usersim_etw_provider_t* provider = (usersim_etw_provider_t*)usersim_allocate(sizeof(*provider));
+    usersim_etw_provider_t* provider = (usersim_etw_provider_t*)cxplat_allocate(sizeof(*provider));
     if (provider == nullptr) {
         return STATUS_NO_MEMORY;
     }
@@ -31,7 +31,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS EtwRegister(
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS EtwUnregister(_In_ REGHANDLE reg_handle)
 {
-    usersim_free((void*)(uintptr_t)reg_handle);
+    cxplat_free((void*)(uintptr_t)reg_handle);
     return STATUS_SUCCESS;
 }
 

@@ -5,8 +5,6 @@ add_library(usersim SHARED
   dllmain.cpp
   etw.cpp
   ex.cpp
-  fault_injection.cpp
-  fault_injection.h
   framework.h
   fwp_um.cpp
   fwp_um.h
@@ -14,8 +12,6 @@ add_library(usersim SHARED
   ke.cpp
   kernel_um.cpp
   kernel_um.h
-  leak_detector.cpp
-  leak_detector.h
   mm.cpp
   ndis_um.cpp
   ndis.h
@@ -29,7 +25,6 @@ add_library(usersim SHARED
   ps.cpp
   rtl.cpp
   se.cpp
-  symbol_decoder.h
   tracelog.c
   tracelog.h
   utilities.h
@@ -40,10 +35,22 @@ add_library(usersim SHARED
 
 target_include_directories(usersim PRIVATE
   "."
-  "../inc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../inc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cxplat/inc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cxplat/inc/winuser"
   "${WDK_ROOT}/include/${WDK_VERSION}/km"
   "${WindowsSdkDir}include/10.0.22621.0"
 )
 
+target_link_directories(usersim PRIVATE
+  "${CMAKE_BINARY_DIR}/lib/${CONFIG}"
+)
+
+target_link_libraries(usersim PRIVATE
+  "cxplat_winuser.lib"
+)
+
 set(defs UNICODE _UNICODE USERSIM_SOURCE)
 target_compile_definitions(usersim PRIVATE ${defs})
+
+add_dependencies(usersim cxplat_winuser)

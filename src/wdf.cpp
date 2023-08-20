@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "framework.h"
 #include "platform.h"
 #include "usersim/ex.h"
@@ -63,7 +63,7 @@ _WdfDeviceCreate(
     if (driver_globals != &g_UsersimWdfDriverGlobals) {
         return STATUS_INVALID_PARAMETER;
     }
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
@@ -100,7 +100,7 @@ _WdfControlDeviceInitAllocate(
     UNREFERENCED_PARAMETER(driver);
     UNREFERENCED_PARAMETER(sddl_string);
 
-    PWDFDEVICE_INIT device_init = (PWDFDEVICE_INIT)usersim_allocate(sizeof(*device_init));
+    PWDFDEVICE_INIT device_init = (PWDFDEVICE_INIT)cxplat_allocate(sizeof(*device_init));
     return device_init;
 }
 
@@ -108,7 +108,7 @@ static _IRQL_requires_max_(DISPATCH_LEVEL) VOID
 _WdfDeviceInitFree(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ PWDFDEVICE_INIT device_init)
 {
     UNREFERENCED_PARAMETER(driver_globals);
-    usersim_free(device_init);
+    cxplat_free(device_init);
 }
 
 static
@@ -148,7 +148,7 @@ _WdfDeviceInitAssignName(
     if (driver_globals != &g_UsersimWdfDriverGlobals) {
         return STATUS_INVALID_PARAMETER;
     }
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
     if (device_name != nullptr) {
@@ -191,7 +191,7 @@ _WdfDeviceInitAssignWdmIrpPreprocessCallback(
     if (major_function >= IRP_MJ_MAXIMUM_FUNCTION) {
         return STATUS_INVALID_PARAMETER;
     }
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
@@ -215,7 +215,7 @@ _WdfDeviceCreateSymbolicLink(
     if (driver_globals != &g_UsersimWdfDriverGlobals) {
         return STATUS_INVALID_PARAMETER;
     }
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
     return STATUS_SUCCESS;
@@ -239,7 +239,7 @@ _WdfIoQueueCreate(
     if (driver_globals != &g_UsersimWdfDriverGlobals) {
         return STATUS_INVALID_PARAMETER;
     }
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
     if (queue != nullptr) {
@@ -267,7 +267,7 @@ _WdfObjectDelete(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFOBJECT object)
 {
     UNREFERENCED_PARAMETER(driver_globals);
 
-    usersim_free(object);
+    cxplat_free(object);
 }
 
 WDFFUNC g_UsersimWdfFunctions[WdfFunctionTableNumEntries];

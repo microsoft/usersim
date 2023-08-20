@@ -6,7 +6,7 @@
 // differs between kernel mode and unprivileged user
 // mode, so that we can emulate kernel mode behavior to
 // unprivileged user mode test processes.
-#include "fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "usersim/zw.h"
 #include "utilities.h"
 #include <string>
@@ -20,7 +20,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS ZwCreateKey(
     _In_ ULONG create_options,
     _Out_opt_ PULONG disposition)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
     if (class_string != nullptr || title_index != 0) {

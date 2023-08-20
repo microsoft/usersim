@@ -46,7 +46,7 @@ IoAllocateMdl(
     UNREFERENCED_PARAMETER(charge_quota);
     UNREFERENCED_PARAMETER(irp);
 
-    mdl = reinterpret_cast<MDL*>(usersim_allocate(sizeof(MDL)));
+    mdl = reinterpret_cast<MDL*>(cxplat_allocate(sizeof(MDL)));
     if (mdl == NULL) {
         return mdl;
     }
@@ -73,14 +73,14 @@ PIO_WORKITEM
 IoAllocateWorkItem(_In_ DEVICE_OBJECT* device_object)
 {
     // Skip Fault Injection as it is already added in usersim_allocate.
-    auto work_item = reinterpret_cast<IO_WORKITEM*>(usersim_allocate(sizeof(IO_WORKITEM)));
+    auto work_item = reinterpret_cast<IO_WORKITEM*>(cxplat_allocate(sizeof(IO_WORKITEM)));
     if (!work_item) {
         return nullptr;
     }
     work_item->device = device_object;
     work_item->work_item = CreateThreadpoolWork(io_work_item_wrapper, work_item, nullptr);
     if (work_item->work_item == nullptr) {
-        usersim_free(work_item);
+        cxplat_free(work_item);
         work_item = nullptr;
     }
     return work_item;
@@ -104,14 +104,14 @@ IoFreeWorkItem(_In_ __drv_freesMem(Mem) PIO_WORKITEM io_workitem)
 {
     if (io_workitem) {
         CloseThreadpoolWork(io_workitem->work_item);
-        usersim_free(io_workitem);
+        cxplat_free(io_workitem);
     }
 }
 
 void
 IoFreeMdl(MDL* mdl)
 {
-    usersim_free(mdl);
+    cxplat_free(mdl);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI PEPROCESS IoGetCurrentProcess(VOID)

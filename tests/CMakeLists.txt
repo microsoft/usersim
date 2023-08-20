@@ -27,6 +27,8 @@ target_include_directories(usersim_tests PRIVATE
   "${CMAKE_BINARY_DIR}/generated-includes/"
   "${CMAKE_BINARY_DIR}/_deps/catch2-src/src/"
   "${CMAKE_CURRENT_SOURCE_DIR}/../inc/"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cxplat/inc/"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../cxplat/inc/winuser"
   "${WDK_ROOT}/include/${WDK_VERSION}/km"
 )
 

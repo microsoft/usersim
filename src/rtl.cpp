@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "platform.h"
 #include "kernel_um.h"
 #include "usersim/ke.h"
@@ -62,7 +62,7 @@ RtlValidSid(_In_ PSID sid)
 NTSTATUS
 RtlAddAccessAllowedAce(_Inout_ PACL Acl, _In_ unsigned long AceRevision, _In_ ACCESS_MASK AccessMask, _In_ PSID Sid)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 

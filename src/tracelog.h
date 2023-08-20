@@ -164,7 +164,7 @@ extern "C"
         usersim_tracelog_level_t trace_level,
         usersim_tracelog_keyword_t keyword,
         _In_z_ const char* message,
-        _In_ const usersim_utf8_string_t* string);
+        _In_ const cxplat_utf8_string_t* string);
 #define USERSIM_LOG_MESSAGE_UTF8_STRING(trace_level, keyword, message, value)            \
     if (TraceLoggingProviderEnabled(usersim_tracelog_provider, trace_level, keyword)) {  \
         usersim_log_message_utf8_string(_##trace_level##, _##keyword##, message, value); \

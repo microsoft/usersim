@@ -27,11 +27,11 @@ To use this repository from another project:
 
 ### Leak Detection
 
-To detect memory leaks on exit, define the environment variable USERSIM_MEMORY_LEAK_DETECTION=true
+To detect memory leaks on exit, define the environment variable CXPLAT_MEMORY_LEAK_DETECTION=true
 
 ### Fault Injection
 
-To use fault injection, define the environment variable USERSIM_FAULT_INJECTION_SIMULATION=4
+To use fault injection, define the environment variable CXPLAT_FAULT_INJECTION_SIMULATION=4
 where the value (4 in this example) is the number of stack frames to use to determine whether a call stack is unique.
 Fault injection will cause one call into the UserSim library to fail, for every unique call stack.
 

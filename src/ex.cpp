@@ -1,8 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
-#include "leak_detector.h"
+#include "cxplat_fault_injection.h"
 #include "platform.h"
 #include "kernel_um.h"
 #include "usersim/ex.h"
@@ -15,9 +14,6 @@
 #include <tuple>
 
 // Ex* functions.
-
-extern "C" size_t usersim_fuzzing_memory_limit = MAXSIZE_T;
-usersim_leak_detector_ptr _usersim_leak_detector_ptr;
 
 /***
  * @brief This following class implements a mock of the Windows Kernel's rundown reference implementation.
@@ -303,7 +299,7 @@ ExAllocatePoolUninitializedCPP(
     if (tag == 0) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_type, number_of_bytes, 0);
     }
-    return usersim_allocate_with_tag(pool_type, number_of_bytes, tag, false);
+    return cxplat_allocate_with_tag((cxplat_pool_type_t)pool_type, number_of_bytes, tag, false);
 }
 
 _Ret_maybenull_ void*
@@ -319,174 +315,10 @@ ExAllocatePoolWithTagCPP(
     SIZE_T number_of_bytes,
     ULONG tag)
 {
-    if (tag == 0) {
+    if (tag == 0 || number_of_bytes == 0) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_type, number_of_bytes, 0);
     }
-    return usersim_allocate_with_tag(pool_type, number_of_bytes, tag, true);
-}
-
-#define USERSIM_CACHE_LINE_SIZE 64
-
-typedef struct
-{
-    POOL_TYPE pool_type;
-    uint32_t tag;
-} usersim_allocation_header_t;
-
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
-usersim_allocate_with_tag(
-    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, size_t size, uint32_t tag, bool initialize)
-{
-    if (size == 0) {
-        KeBugCheckEx(BAD_POOL_CALLER, 0x00, 0, 0, 0);
-    }
-    if (size > usersim_fuzzing_memory_limit) {
-        return nullptr;
-    }
-
-    if (usersim_fault_injection_inject_fault()) {
-        return nullptr;
-    }
-
-    // Allocate space with a usersim_allocation_header_t prepended.
-    void* memory;
-    if (pool_type == NonPagedPoolNxCacheAligned) {
-        // The pointer we return has to be cache aligned so we allocate
-        // enough extra space to fill a cache line, and put the
-        // usersim_allocation_header_t at the end of that space.
-        // TODO: move logic into usersim_allocate_cache_aligned_with_tag().
-        size_t full_size = USERSIM_CACHE_LINE_SIZE + size;
-        uint8_t* pointer = (uint8_t*)_aligned_malloc(full_size, USERSIM_CACHE_LINE_SIZE);
-        if (pointer == nullptr) {
-            return nullptr;
-        }
-        memory = pointer + USERSIM_CACHE_LINE_SIZE;
-    } else {
-        size_t full_size = sizeof(usersim_allocation_header_t) + size;
-        uint8_t* pointer = (uint8_t*)calloc(full_size, 1);
-        if (pointer == nullptr) {
-            return nullptr;
-        }
-        memory = pointer + sizeof(usersim_allocation_header_t);
-    }
-
-    // Do any initialization.
-    auto header = (usersim_allocation_header_t*)((uint8_t*)memory - sizeof(usersim_allocation_header_t));
-    header->pool_type = pool_type;
-    header->tag = tag;
-    if (!initialize) {
-        // The calloc call always zero-initializes memory.  To test
-        // returning uninitialized memory, we explicitly fill it with 0xcc.
-        memset(memory, 0xcc, size);
-    }
-
-    if (memory && _usersim_leak_detector_ptr) {
-        _usersim_leak_detector_ptr->register_allocation(reinterpret_cast<uintptr_t>(memory), size);
-    }
-
-    return memory;
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void*
-usersim_reallocate(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size)
-{
-    return usersim_reallocate_with_tag(memory, old_size, new_size, 0);
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void*
-usersim_reallocate_with_tag(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size, uint32_t tag)
-{
-    UNREFERENCED_PARAMETER(tag);
-    UNREFERENCED_PARAMETER(old_size);
-
-    if (new_size > usersim_fuzzing_memory_limit) {
-        return nullptr;
-    }
-
-    if (usersim_fault_injection_inject_fault()) {
-        return nullptr;
-    }
-
-    void* p;
-    auto header = (usersim_allocation_header_t*)((uint8_t*)memory - sizeof(usersim_allocation_header_t));
-    if (header->pool_type == NonPagedPoolNxCacheAligned) {
-        uint8_t* pointer = ((uint8_t*)memory) - USERSIM_CACHE_LINE_SIZE;
-        p = _aligned_realloc(pointer, USERSIM_CACHE_LINE_SIZE + new_size, USERSIM_CACHE_LINE_SIZE);
-    } else {
-        uint8_t* pointer = ((uint8_t*)memory) - sizeof(usersim_allocation_header_t);
-        p = realloc(pointer, sizeof(usersim_allocation_header_t)  + new_size);
-    }
-
-    if (p && (new_size > old_size)) {
-        memset(((char*)p) + old_size, 0, new_size - old_size);
-    }
-
-    if (_usersim_leak_detector_ptr) {
-        _usersim_leak_detector_ptr->unregister_allocation(reinterpret_cast<uintptr_t>(memory));
-        _usersim_leak_detector_ptr->register_allocation(reinterpret_cast<uintptr_t>(p), new_size);
-    }
-
-    return p;
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* usersim_allocate(size_t size)
-{
-    return usersim_allocate_with_tag(NonPagedPool, size, 'tset', true);
-}
-
-void
-usersim_free(_Frees_ptr_opt_ void* memory)
-{
-    if (memory == nullptr) {
-        return;
-    }
-    auto header = (usersim_allocation_header_t*)((uint8_t*)memory - sizeof(usersim_allocation_header_t));
-    if (_usersim_leak_detector_ptr) {
-        _usersim_leak_detector_ptr->unregister_allocation(reinterpret_cast<uintptr_t>(memory));
-    }
-    if (header->pool_type == NonPagedPoolNxCacheAligned) {
-        uint8_t* pointer = ((uint8_t*)memory) - USERSIM_CACHE_LINE_SIZE;
-        _aligned_free(pointer);
-    } else {
-        uint8_t* pointer = ((uint8_t*)memory) - sizeof(usersim_allocation_header_t);
-        free(pointer);
-    }
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_
-_Ret_writes_maybenull_(size) void*
-usersim_allocate_cache_aligned(size_t size)
-{
-    if (size > usersim_fuzzing_memory_limit) {
-        return nullptr;
-    }
-
-    if (usersim_fault_injection_inject_fault()) {
-        return nullptr;
-    }
-
-    void* memory = _aligned_malloc(size, USERSIM_CACHE_LINE_SIZE);
-    if (memory) {
-        memset(memory, 0, size);
-    }
-    return memory;
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_
-_Ret_writes_maybenull_(size) void*
-usersim_allocate_cache_aligned_with_tag(size_t size, uint32_t tag)
-{
-    UNREFERENCED_PARAMETER(tag);
-
-    return usersim_allocate_cache_aligned(size);
-}
-
-void
-usersim_free_cache_aligned(_Frees_ptr_opt_ void* memory)
-{
-    _aligned_free(memory);
+    return cxplat_allocate_with_tag((cxplat_pool_type_t)pool_type, number_of_bytes, tag, true);
 }
 
 _Ret_maybenull_ void*
@@ -501,7 +333,7 @@ ExFreePoolCPP(_Frees_ptr_ void* p)
     if (p == nullptr) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x46, 0, 0, 0);
     }
-    usersim_free(p);
+    cxplat_free(p);
 }
 
 void
@@ -517,7 +349,7 @@ ExFreePoolWithTagCPP(_Frees_ptr_ void* p, ULONG tag)
     if (p == nullptr) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x46, 0, 0, 0);
     }
-    usersim_free(p);
+    cxplat_free(p);
 }
 
 void
@@ -534,7 +366,7 @@ ExInitializePushLock(_Out_ EX_PUSH_LOCK* push_lock)
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTKERNELAPI NTSTATUS ExUuidCreate(_Out_ UUID* uuid)
 {
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_NOT_SUPPORTED;
     }
 
@@ -577,21 +409,4 @@ void
 ExRaiseDatatypeMisalignment()
 {
     ExRaiseDatatypeMisalignmentCPP();
-}
-
-void
-usersim_initialize_ex(bool leak_detector)
-{
-    if (leak_detector) {
-        _usersim_leak_detector_ptr = std::make_unique<usersim_leak_detector_t>();
-    }
-}
-
-void
-usersim_clean_up_ex()
-{
-    if (_usersim_leak_detector_ptr) {
-        _usersim_leak_detector_ptr->dump_leaks();
-        _usersim_leak_detector_ptr.reset();
-    }
 }

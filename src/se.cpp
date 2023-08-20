@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "fault_injection.h"
+#include "cxplat_fault_injection.h"
 #include "kernel_um.h"
 #include "platform.h"
 #include "usersim/ex.h"
@@ -143,7 +143,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN SeAccessCheck(
     }
 
     // Allocate buffer.
-    token_access_information = (TOKEN_ACCESS_INFORMATION*)usersim_allocate(length);
+    token_access_information = (TOKEN_ACCESS_INFORMATION*)cxplat_allocate(length);
     if (token_access_information == nullptr) {
         *access_status = STATUS_NO_MEMORY;
         goto Done;
@@ -162,7 +162,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN SeAccessCheck(
         access_status);
 
 Done:
-    usersim_free(token_access_information);
+    cxplat_free(token_access_information);
     if (!subject_context_locked) {
         SeUnlockSubjectContext(subject_security_context);
     }
@@ -191,7 +191,7 @@ SeAccessCheckFromState(
     }
     *granted_access = desired_access;
 
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         *access_status = STATUS_ACCESS_DENIED;
         return false;
     }
@@ -230,7 +230,7 @@ SeQueryAuthenticationIdToken(_In_ PACCESS_TOKEN token, _Out_ PLUID authenticatio
     char token_owner_buffer[TOKEN_OWNER_MAX_SIZE];
     DWORD return_length;
 
-    if (usersim_fault_injection_inject_fault()) {
+    if (cxplat_fault_injection_inject_fault()) {
         return STATUS_UNSUCCESSFUL;
     }
 
