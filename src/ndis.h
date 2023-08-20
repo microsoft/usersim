@@ -9,10 +9,7 @@
 #include <ndis/objectheader.h>
 #include <ndis/types.h>
 
-#if defined(__cplusplus)
-extern "C"
-{
-#endif
+CXPLAT_EXTERN_C_BEGIN
 
 #define NET_BUFFER_FIRST_MDL(_NB) ((_NB)->MdlChain)
 #define NDIS_STATUS_SUCCESS ((NDIS_STATUS)STATUS_SUCCESS)
@@ -104,6 +101,4 @@ NdisAdvanceNetBufferDataStart(
     _In_ BOOLEAN free_mdl,
     _In_opt_ void* free_mdl_handler);
 
-#if defined(__cplusplus)
-}
-#endif
+CXPLAT_EXTERN_C_END

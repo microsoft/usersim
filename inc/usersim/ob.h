@@ -3,18 +3,11 @@
 #pragma once
 #include "usersim/ke.h"
 
-#if defined(__cplusplus)
-extern "C"
-{
-#endif
+CXPLAT_EXTERN_C_BEGIN
 
-_IRQL_requires_max_(DISPATCH_LEVEL)
-USERSIM_API LONG_PTR 
-ObfReferenceObject(_In_ PVOID object);
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API LONG_PTR ObfReferenceObject(_In_ PVOID object);
 
-_IRQL_requires_max_(DISPATCH_LEVEL)
-USERSIM_API LONG_PTR
-ObfDereferenceObject(_In_ PVOID object);
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API LONG_PTR ObfDereferenceObject(_In_ PVOID object);
 
 typedef struct _OBJECT_TYPE* POBJECT_TYPE;
 
@@ -24,8 +17,7 @@ typedef struct _OBJECT_HANDLE_INFORMATION
     ACCESS_MASK GrantedAccess;
 } OBJECT_HANDLE_INFORMATION, *POBJECT_HANDLE_INFORMATION;
 
-_IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API NTSTATUS
-ObReferenceObjectByHandle(
+_IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API NTSTATUS ObReferenceObjectByHandle(
     _In_ HANDLE handle,
     _In_ ACCESS_MASK desired_access,
     _In_opt_ POBJECT_TYPE object_type,
@@ -37,6 +29,4 @@ USERSIM_API
 NTSTATUS
 ObCloseHandle(_In_ _Post_ptr_invalid_ HANDLE handle, _In_ KPROCESSOR_MODE previous_mode);
 
-#if defined(__cplusplus)
-}
-#endif
+CXPLAT_EXTERN_C_END

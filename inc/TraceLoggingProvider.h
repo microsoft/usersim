@@ -8,51 +8,53 @@
 
 #ifndef NO_TRACE_LOGGING_OVERRIDE
 
-#ifdef __cplusplus
-extern "C"
+CXPLAT_EXTERN_C_BEGIN
+
+// Data item type values.
+typedef enum
 {
-#endif
+    _tlgLevel = 0,
+    _tlgKeyword,
+    _tlgOpcode,
+    _tlgCountedUtf8String,
+    _tlgPsz,
+    _tlgPwsz,
+    _tlgPointer,
+    _tlgUInt64,
+    _tlgUInt32,
+    _tlgUInt16,
+    _tlgIPv4Address,
+    _tlgNTStatus,
+    _tlgWinError,
+    _tlgInt32,
+    _tlgLong,
+    _tlgBool,
+    _tlgGuid,
+    _tlgIPv6Address,
+} usersim_tlg_type_t;
 
-    // Data item type values.
-    typedef enum
-    {
-        _tlgLevel = 0,
-        _tlgKeyword,
-        _tlgOpcode,
-        _tlgCountedUtf8String,
-        _tlgPsz,
-        _tlgPwsz,
-        _tlgPointer,
-        _tlgUInt64,
-        _tlgUInt32,
-        _tlgUInt16,
-        _tlgIPv4Address,
-        _tlgNTStatus,
-        _tlgWinError,
-        _tlgInt32,
-        _tlgLong,
-        _tlgBool,
-        _tlgGuid,
-        _tlgIPv6Address,
-    } usersim_tlg_type_t;
+USERSIM_API
+void
+usersim_trace_logging_write(
+    _In_ const TraceLoggingHProvider hProvider, _In_z_ const char* event_name, size_t argc, ...);
 
-    __declspec(dllexport)
-    void
-    usersim_trace_logging_write(_In_ const TraceLoggingHProvider hProvider, _In_z_ const char* event_name, size_t argc, ...);
+USERSIM_API
+BOOLEAN
+usersim_trace_logging_provider_enabled(
+    _In_ const TraceLoggingHProvider hProvider, UCHAR event_level, ULONGLONG event_keyword);
 
-    __declspec(dllexport)
-    BOOLEAN
-    usersim_trace_logging_provider_enabled(
-        _In_ const TraceLoggingHProvider hProvider, UCHAR event_level, ULONGLONG event_keyword);
+USERSIM_API
+void
+usersim_trace_logging_set_enabled(bool enabled, UCHAR event_level, ULONGLONG event_keyword);
 
-    __declspec(dllexport)
-    void
-    usersim_trace_logging_set_enabled(bool enabled, UCHAR event_level, ULONGLONG event_keyword);
-
-#define USERSIM_GET_NTH_ARG(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, N, ...) N
+#define USERSIM_GET_NTH_ARG(                                                                                         \
+    _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, N, ...) \
+    N
 #define USERSIM_APPEND(X, Y) X Y
 #define USERSIM_VA_ARGS(...) __VA_ARGS__
-#define USERSIM_COUNT_VA_ARGS(...) USERSIM_VA_ARGS(USERSIM_GET_NTH_ARG(__VA_ARGS__, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
+#define USERSIM_COUNT_VA_ARGS(...)       \
+    USERSIM_VA_ARGS(USERSIM_GET_NTH_ARG( \
+        __VA_ARGS__, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 #define USERSIM_VA_ARGC(...) USERSIM_APPEND(USERSIM_COUNT_VA_ARGS, (, __VA_ARGS__))
 
 // Redefine calls we want to override
@@ -121,7 +123,5 @@ extern "C"
 
 #define _tlgWriteTransfer_EtwWriteTransfer(...)
 
-#ifdef __cplusplus
-}
-#endif
+CXPLAT_EXTERN_C_END
 #endif // NO_TRACE_LOGGING_OVERRIDE

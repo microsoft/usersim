@@ -5,20 +5,15 @@
 #include "..\src\platform.h"
 #include "usersim\io.h"
 
-#if defined(__cplusplus)
-extern "C"
-{
-#endif
+CXPLAT_EXTERN_C_BEGIN
 
-    #define PsGetCurrentProcess IoGetCurrentProcess
+#define PsGetCurrentProcess IoGetCurrentProcess
 
-    USERSIM_API
-	HANDLE
-    PsGetCurrentProcessId();
+USERSIM_API
+HANDLE
+PsGetCurrentProcessId();
 
-    USERSIM_API
-    _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE PsGetCurrentThreadId();
+USERSIM_API
+_IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE PsGetCurrentThreadId();
 
-#if defined(__cplusplus)
-}
-#endif
+CXPLAT_EXTERN_C_END
