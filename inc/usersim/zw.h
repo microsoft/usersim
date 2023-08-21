@@ -3,29 +3,24 @@
 #pragma once
 #include "usersim/rtl.h" // For UNICODE_STRING
 
-#if defined(__cplusplus)
-extern "C"
-{
-#endif
-    USERSIM_API _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
-    ZwCreateKey(
-        _Out_ PHANDLE key_handle,
-        _In_ ACCESS_MASK desired_access,
-        _In_ POBJECT_ATTRIBUTES object_attributes,
-        _Reserved_ ULONG title_index,
-        _In_opt_ PUNICODE_STRING class_string,
-        _In_ ULONG create_options,
-        _Out_opt_ PULONG disposition);
+CXPLAT_EXTERN_C_BEGIN
 
-    // The following APIs are exported by ntdll.dll but the prototypes
-    // are not in system headers, so define them here.
+USERSIM_API _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS ZwCreateKey(
+    _Out_ PHANDLE key_handle,
+    _In_ ACCESS_MASK desired_access,
+    _In_ POBJECT_ATTRIBUTES object_attributes,
+    _Reserved_ ULONG title_index,
+    _In_opt_ PUNICODE_STRING class_string,
+    _In_ ULONG create_options,
+    _Out_opt_ PULONG disposition);
 
-    NTSTATUS
-    ZwDeleteKey(_In_ HANDLE key_handle);
+// The following APIs are exported by ntdll.dll but the prototypes
+// are not in system headers, so define them here.
 
-    NTSTATUS
-    ZwClose(_In_ HANDLE handle);
+NTSTATUS
+ZwDeleteKey(_In_ HANDLE key_handle);
 
-#if defined(__cplusplus)
-}
-#endif
+NTSTATUS
+ZwClose(_In_ HANDLE handle);
+
+CXPLAT_EXTERN_C_END

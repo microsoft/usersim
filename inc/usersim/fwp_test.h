@@ -2,15 +2,13 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "usersim/common.h"
+
+#include <ws2def.h>
 #include <fwpmtypes.h>
 #include <ifdef.h>
 #include <stdint.h>
-#include <ws2def.h>
 
-#if defined(__cplusplus)
-extern "C"
-{
-#endif
+CXPLAT_EXTERN_C_BEGIN
 
 typedef struct _fwp_classify_parameters
 {
@@ -58,6 +56,4 @@ USERSIM_API void
 usersim_fwp_set_sublayer_guids(
     _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer);
 
-#if defined(__cplusplus)
-}
-#endif
+CXPLAT_EXTERN_C_END

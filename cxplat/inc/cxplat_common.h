@@ -12,19 +12,26 @@
 #define CXPLAT_DEBUG_ASSERT(x) (void)(x)
 #else
 #define CXPLAT_DEBUG_ASSERT(x) assert(x)
-#endif //!NDEBUG
+#endif //! NDEBUG
 
 #ifdef __cplusplus
-#define NOEXCEPT noexcept
+#define CXPLAT_NOEXCEPT noexcept
+#define CXPLAT_EXTERN_C extern "C"
+#define CXPLAT_EXTERN_C_BEGIN \
+    extern "C"                \
+    {
+#define CXPLAT_EXTERN_C_END }
 #else
-#define NOEXCEPT
+#define CXPLAT_NOEXCEPT
+#define CXPLAT_EXTERN_C
+#define CXPLAT_EXTERN_C_BEGIN
+#define CXPLAT_EXTERN_C_END
 #endif
 
 // This enumeration is not considered strict, in that other values are permitted.
 // There may be multiple values that constitute "success".  Use CXPLAT_SUCCEEDED(value)
 // to determine success rather than comparing against CXPLAT_SUCCESS.
-typedef _Return_type_success_(CXPLAT_SUCCEEDED(return)) enum
-{
+typedef _Return_type_success_(CXPLAT_SUCCEEDED(return )) enum {
     CXPLAT_STATUS_SUCCESS = CXPLAT_PLATFORM_STATUS_SUCCESS,
     CXPLAT_STATUS_NO_MEMORY = CXPLAT_PLATFORM_STATUS_NO_MEMORY,
 } cxplat_status_t;
