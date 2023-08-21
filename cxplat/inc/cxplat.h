@@ -4,6 +4,7 @@
 
 #include "cxplat_fault_injection.h"
 #include "cxplat_memory.h"
+#include "cxplat_size.h"
 
 CXPLAT_EXTERN_C_BEGIN
 
