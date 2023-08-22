@@ -143,6 +143,7 @@
     <ClInclude Include="..\..\inc\cxplat_common.h" />
     <ClInclude Include="..\..\inc\cxplat_fault_injection.h" />
     <ClInclude Include="..\..\inc\cxplat_memory.h" />
+    <ClInclude Include="..\..\inc\cxplat_size.h" />
     <ClInclude Include="..\..\inc\winuser\cxplat_platform.h" />
     <ClInclude Include="..\..\inc\winuser\cxplat_winuser.h" />
     <ClInclude Include="leak_detector.h" />
@@ -155,6 +156,7 @@
     <ClCompile Include="fault_injection.cpp" />
     <ClCompile Include="leak_detector.cpp" />
     <ClCompile Include="memory_winuser.cpp" />
+    <ClCompile Include="size_winuser.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

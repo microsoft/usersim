@@ -41,5 +41,8 @@
     <ClInclude Include="..\..\inc\winkernel\cxplat_winkernel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\inc\cxplat_size.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
