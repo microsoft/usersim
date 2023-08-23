@@ -12,7 +12,11 @@
 // Windows Header Files
 #include <windows.h>
 #include <rpc.h>
+// winioctl.h does not protect against multiple inclusion, so we need to
+// do so ourselves.
+#ifndef WDI_STORAGE_PREDICT_FAILURE_DPS_GUID
 #include <winioctl.h>
+#endif
 typedef _Return_type_success_(return >= 0) long NTSTATUS;
 typedef NTSTATUS* PNTSTATUS;
 #define NT_SUCCESS(status) (((NTSTATUS)(status)) >= 0)

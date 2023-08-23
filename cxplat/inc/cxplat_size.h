@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include "cxplat_common.h"
 #include <stdbool.h>
 
 CXPLAT_EXTERN_C_BEGIN
