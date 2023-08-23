@@ -4,8 +4,8 @@
 add_library(cxplat_winkernel STATIC
   ../../inc/cxplat.h
   ../../inc/cxplat_common.h
-  ../../inc/cxplat_fault_injection.h
   ../../inc/cxplat_memory.h
+  ../../inc/winkernel/cxplat_fault_injection.h
   ../../inc/winkernel/cxplat_platform.h
   ../../inc/winkernel/cxplat_winkernel.h
   ../memory.c

@@ -4,11 +4,11 @@
 add_library(cxplat_winuser STATIC
   ../../inc/cxplat.h
   ../../inc/cxplat_common.h
-  ../../inc/cxplat_fault_injection.h
   ../../inc/cxplat_memory.h
+  ../../inc/winuser/cxplat_fault_injection.h
   ../../inc/winuser/cxplat_platform.h
-  cxplat_winuser.cpp
   ../../inc/winuser/cxplat_winuser.h
+  cxplat_winuser.cpp
   fault_injection.cpp
   leak_detector.cpp
   leak_detector.h

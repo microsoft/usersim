@@ -5,6 +5,7 @@
 
 // Include original TraceLoggingProvider.h
 #include "../shared/TraceLoggingProvider.h"
+#include "usersim/common.h"
 
 #ifndef NO_TRACE_LOGGING_OVERRIDE
 
