@@ -32,15 +32,20 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\memory.c" />
+    <ClCompile Include="cxplat_winkernel.c" />
     <ClCompile Include="memory_winkernel.c" />
+    <ClCompile Include="rundown_winkernel.c" />
     <ClCompile Include="size_winkernel.c" />
+    <ClCompile Include="workitem_winkernel.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\inc\cxplat.h" />
     <ClInclude Include="..\..\inc\cxplat_common.h" />
     <ClInclude Include="..\..\inc\cxplat_fault_injection.h" />
     <ClInclude Include="..\..\inc\cxplat_memory.h" />
+    <ClInclude Include="..\..\inc\cxplat_rundown.h" />
     <ClInclude Include="..\..\inc\cxplat_size.h" />
+    <ClInclude Include="..\..\inc\cxplat_workitem.h" />
     <ClInclude Include="..\..\inc\winkernel\cxplat_platform.h" />
     <ClInclude Include="..\..\inc\winkernel\cxplat_winkernel.h" />
   </ItemGroup>

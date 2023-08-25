@@ -5,6 +5,8 @@ add_library(cxplat_winuser STATIC
   ../../inc/cxplat.h
   ../../inc/cxplat_common.h
   ../../inc/cxplat_memory.h
+  ../../inc/cxplat_rundown.h
+  ../../inc/cxplat_workitem.h
   ../../inc/winuser/cxplat_fault_injection.h
   ../../inc/winuser/cxplat_platform.h
   ../../inc/winuser/cxplat_winuser.h
@@ -14,6 +16,8 @@ add_library(cxplat_winuser STATIC
   leak_detector.h
   ../memory.c
   memory_winuser.cpp
+  rundown_winuser.cpp
+  workitem_winuser.cpp
   symbol_decoder.h
   winuser_internal.h
 )

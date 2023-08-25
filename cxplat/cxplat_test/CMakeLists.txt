@@ -13,6 +13,8 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(cxplat_test
   cxplat_memory_test.cpp
+  cxplat_rundown_test.cpp
+  cxplat_workitem_test.cpp
 )
 
 target_include_directories(cxplat_test PRIVATE

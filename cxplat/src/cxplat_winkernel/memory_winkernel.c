@@ -47,3 +47,4 @@ cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory)
 {
     cxplat_free(memory);
 }
+

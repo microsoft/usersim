@@ -34,81 +34,12 @@ bool _usersim_platform_is_preemptible = true;
 // to be called multiple times.
 int32_t _usersim_platform_initiate_count = 0;
 
-static EX_RUNDOWN_REF _usersim_platform_preemptible_work_items_rundown;
-
-// Thread pool related globals.
-static TP_CALLBACK_ENVIRON _callback_environment{};
-static PTP_POOL _pool = nullptr;
-static PTP_CLEANUP_GROUP _cleanup_group = nullptr;
-
 static uint32_t _usersim_platform_maximum_group_count = 0;
 static uint32_t _usersim_platform_maximum_processor_count = 0;
 
 // The starting index of the first processor in each group.
 // Used to compute the current CPU index.
 static std::vector<uint32_t> _usersim_platform_group_to_index_map;
-
-static usersim_result_t
-_initialize_thread_pool()
-{
-    usersim_result_t result = STATUS_SUCCESS;
-    bool cleanup_group_created = false;
-    bool return_value;
-
-    // Initialize a callback environment for the thread pool.
-    InitializeThreadpoolEnvironment(&_callback_environment);
-
-    _pool = CreateThreadpool(nullptr);
-    if (_pool == nullptr) {
-        result = win32_error_code_to_usersim_result(GetLastError());
-        goto Exit;
-    }
-
-    SetThreadpoolThreadMaximum(_pool, 1);
-    return_value = SetThreadpoolThreadMinimum(_pool, 1);
-    if (!return_value) {
-        result = win32_error_code_to_usersim_result(GetLastError());
-        goto Exit;
-    }
-
-    _cleanup_group = CreateThreadpoolCleanupGroup();
-    if (_cleanup_group == nullptr) {
-        result = win32_error_code_to_usersim_result(GetLastError());
-        goto Exit;
-    }
-    cleanup_group_created = true;
-
-    SetThreadpoolCallbackPool(&_callback_environment, _pool);
-    SetThreadpoolCallbackCleanupGroup(&_callback_environment, _cleanup_group, nullptr);
-
-Exit:
-    if (result != STATUS_SUCCESS) {
-        if (cleanup_group_created) {
-            CloseThreadpoolCleanupGroup(_cleanup_group);
-        }
-        if (_pool) {
-            CloseThreadpool(_pool);
-            _pool = nullptr;
-        }
-    }
-    return result;
-}
-
-static void
-_clean_up_thread_pool()
-{
-    if (!_pool) {
-        return;
-    }
-
-    if (_cleanup_group) {
-        CloseThreadpoolCleanupGroupMembers(_cleanup_group, false, nullptr);
-        CloseThreadpoolCleanupGroup(_cleanup_group);
-        _cleanup_group = nullptr;
-    }
-    CloseThreadpool(_pool);
-    _pool = nullptr;
-}
 
 _Must_inspect_result_ usersim_result_t
 usersim_platform_initiate()
@@ -146,17 +77,10 @@ usersim_platform_initiate()
             base_index += GetMaximumProcessorCount((uint16_t)i);
         }
 
-        ExInitializeRundownProtection(&_usersim_platform_preemptible_work_items_rundown);
-
         usersim_initialize_se();
         usersim_initialize_wdf();
     } catch (const std::bad_alloc&) {
         result = STATUS_NO_MEMORY;
-        goto Exit;
-    }
-
-    result = _initialize_thread_pool();
-    if (result != STATUS_SUCCESS) {
         goto Exit;
     }
 
@@ -172,13 +96,12 @@ Exit:
 void
 usersim_platform_terminate()
 {
-    ExWaitForRundownProtectionRelease(&_usersim_platform_preemptible_work_items_rundown);
+    cxplat_wait_for_preemptible_work_items_complete();
 
     usersim_free_semaphores();
     usersim_free_threadpool_timers();
     usersim_clean_up_dpcs();
     usersim_clean_up_irql();
-    _clean_up_thread_pool();
     cxplat_cleanup();
 
     int32_t count = InterlockedDecrement((volatile long*)&_usersim_platform_initiate_count);
@@ -458,86 +381,6 @@ uint64_t
 usersim_get_current_thread_id()
 {
     return GetCurrentThreadId();
-}
-
-typedef struct _usersim_preemptible_work_item
-{
-    PTP_WORK work;
-    void (*work_item_routine)(_Inout_opt_ void* work_item_context);
-    void* work_item_context;
-} usersim_preemptible_work_item_t;
-
-static void
-_usersim_preemptible_routine(_Inout_ PTP_CALLBACK_INSTANCE instance, _In_opt_ void* parameter, _Inout_ PTP_WORK work)
-{
-    UNREFERENCED_PARAMETER(instance);
-    UNREFERENCED_PARAMETER(work);
-
-    if (parameter == nullptr) {
-        return;
-    }
-
-    usersim_preemptible_work_item_t* work_item = (usersim_preemptible_work_item_t*)parameter;
-    work_item->work_item_routine(work_item->work_item_context);
-
-    usersim_free_preemptible_work_item(work_item);
-}
-
-void
-usersim_free_preemptible_work_item(_Frees_ptr_opt_ usersim_preemptible_work_item_t* work_item)
-{
-    if (!work_item) {
-        return;
-    }
-
-    CloseThreadpoolWork(work_item->work);
-    cxplat_free(work_item->work_item_context);
-    cxplat_free(work_item);
-
-    ExReleaseRundownProtection(&_usersim_platform_preemptible_work_items_rundown);
-}
-
-void
-usersim_queue_preemptible_work_item(_Inout_ usersim_preemptible_work_item_t* work_item)
-{
-    SubmitThreadpoolWork(work_item->work);
-}
-
-_Must_inspect_result_ usersim_result_t
-usersim_allocate_preemptible_work_item(
-    _Outptr_ usersim_preemptible_work_item_t** work_item,
-    _In_ void (*work_item_routine)(_Inout_opt_ void* work_item_context),
-    _Inout_opt_ void* work_item_context)
-{
-    usersim_result_t result = STATUS_SUCCESS;
-
-    if (!ExAcquireRundownProtection(&_usersim_platform_preemptible_work_items_rundown)) {
-        return STATUS_UNSUCCESSFUL;
-    }
-
-    *work_item = (usersim_preemptible_work_item_t*)cxplat_allocate(sizeof(usersim_preemptible_work_item_t));
-    if (*work_item == nullptr) {
-        result = STATUS_NO_MEMORY;
-        goto Done;
-    }
-
-    // It is required to use the InitializeThreadpoolEnvironment function to
-    // initialize the _callback_environment structure before calling CreateThreadpoolWork.
-    (*work_item)->work = CreateThreadpoolWork(_usersim_preemptible_routine, *work_item, &_callback_environment);
-    if ((*work_item)->work == nullptr) {
-        result = win32_error_to_usersim_error(GetLastError());
-        goto Done;
-    }
-    (*work_item)->work_item_routine = work_item_routine;
-    (*work_item)->work_item_context = work_item_context;
-
-Done:
-    if (result != STATUS_SUCCESS) {
-        ExReleaseRundownProtection(&_usersim_platform_preemptible_work_items_rundown);
-        cxplat_free(*work_item);
-        *work_item = nullptr;
-    }
-    return result;
 }
 
 int32_t

@@ -110,6 +110,11 @@ cxplat_initialize()
         if (leak_detector) {
             _cxplat_leak_detector_ptr = std::make_unique<cxplat_leak_detector_t>();
         }
+
+        cxplat_status_t status = cxplat_winuser_initialize_thread_pool();
+        if (!CXPLAT_SUCCEEDED(status)) {
+            return status;
+        }
     } catch (const std::bad_alloc&) {
         return CXPLAT_STATUS_NO_MEMORY;
     }
@@ -119,6 +124,8 @@ cxplat_initialize()
 void
 cxplat_cleanup()
 {
+    cxplat_winuser_clean_up_thread_pool();
+
     if (_cxplat_leak_detector_ptr) {
         _cxplat_leak_detector_ptr->dump_leaks();
         _cxplat_leak_detector_ptr.reset();
