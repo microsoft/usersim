@@ -9,21 +9,31 @@
 #include <string>
 #include <vector>
 
+static bool _symbol_decoder_initialized = false;
+
 inline cxplat_status_t
 _cxplat_symbol_decoder_initialize()
 {
     // Initialize DbgHelp.dll.
     SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
     if (!SymInitialize(GetCurrentProcess(), nullptr, TRUE)) {
+        int err = GetLastError();
+        if (err == ERROR_INVALID_PARAMETER) {
+            // The process already did SymInitialize(), which is fine.
+            return CXPLAT_STATUS_SUCCESS;
+        }
         return CXPLAT_STATUS_FROM_WIN32(GetLastError());
     }
+    _symbol_decoder_initialized = true;
     return CXPLAT_STATUS_SUCCESS;
 }
 
 inline void
 _cxplat_symbol_decoder_deinitialize()
 {
-    SymCleanup(GetCurrentProcess());
+    if (_symbol_decoder_initialized) {
+        SymCleanup(GetCurrentProcess());
+    }
 }
 
 inline cxplat_status_t
