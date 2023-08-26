@@ -39,7 +39,7 @@ cxplat_free(_Frees_ptr_opt_ void* pointer)
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
 cxplat_allocate_cache_aligned_with_tag(size_t size, uint32_t tag)
 {
-    return cxplat_allocate_with_tag(CxPlatNonPagedPoolNxCacheAligned, size, tag, false);
+    return cxplat_allocate_with_tag(CxPlatNonPagedPoolNxCacheAligned, size, tag, true);
 }
 
 void

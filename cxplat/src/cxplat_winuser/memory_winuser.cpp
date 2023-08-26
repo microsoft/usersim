@@ -88,6 +88,9 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
             return nullptr;
         }
         memory = _aligned_pointer_from_memory_block(pointer);
+        if (initialize) {
+            memset(memory, 0, size);
+        }
     } else {
         size_t full_size = UNALIGNED_POINTER_OFFSET + size;
         uint8_t* pointer = (uint8_t*)calloc(full_size, 1);
@@ -95,6 +98,11 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
             return nullptr;
         }
         memory = _unaligned_pointer_from_memory_block(pointer);
+        if (!initialize) {
+            // The calloc call always zero-initializes memory.  To test
+            // returning uninitialized memory, we explicitly fill it with 0xcc.
+            memset(memory, 0xcc, size);
+        }
     }
 
     // Do any initialization.
@@ -102,11 +110,6 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
     header->pool_type = pool_type;
     header->tag = tag;
     header->size = size;
-    if (!initialize) {
-        // The calloc call always zero-initializes memory.  To test
-        // returning uninitialized memory, we explicitly fill it with 0xcc.
-        memset(memory, 0xcc, size);
-    }
 
     if (memory && _cxplat_leak_detector_ptr) {
         _cxplat_leak_detector_ptr->register_allocation(reinterpret_cast<uintptr_t>(memory), size);
