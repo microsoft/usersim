@@ -304,6 +304,9 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _When_((timeout == NULL || timeout->QuadPart 
         timeout_ms = (DWORD)(timeout->QuadPart / 10000);
     }
 
+    // Unify semaphore and event handling once https://github.com/microsoft/usersim/issues/95
+    // is fixed.
+
     // Get handle from object.
     usersim_object_type_t type = *(usersim_object_type_t*)object;
     switch (type) {
@@ -319,6 +322,48 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _When_((timeout == NULL || timeout->QuadPart 
         case WAIT_FAILED:
         default:
             return STATUS_UNSUCCESSFUL;
+        }
+    }
+    case USERSIM_OBJECT_TYPE_EVENT: {
+        PRKEVENT event = (PRKEVENT)object;
+        uint64_t qpc_time_stamp = 0;
+        // Compute the end time for the wait, if any.
+        uint64_t start_time = KeQueryInterruptTimePrecise(&qpc_time_stamp);
+        uint64_t end_time;
+        if (timeout == nullptr) {
+            end_time = UINT64_MAX;
+        } else if (timeout->QuadPart > 0) {
+            end_time = timeout->QuadPart;
+        } else {
+            end_time = start_time - timeout->QuadPart;
+        }
+
+        for (;;) {
+            // Compute the remaining time in milliseconds for the wait.
+            timeout_ms = (DWORD)((end_time - start_time) / 10000);
+
+            KIRQL old_irql;
+            KeAcquireSpinLock(&event->spin_lock, &old_irql);
+            if (event->signalled) {
+                if (event->type == SynchronizationEvent) {
+                    event->signalled = 0;
+                }
+                KeReleaseSpinLock(&event->spin_lock, old_irql);
+                return STATUS_SUCCESS;
+            } else {
+                KeReleaseSpinLock(&event->spin_lock, old_irql);
+                // Wait for event->signalled to change.
+                uint64_t old_state = event->signalled;
+                bool wait_return = WaitOnAddress(&event->signalled, &old_state, sizeof(event->signalled), timeout_ms);
+                if (!wait_return) {
+                    return STATUS_TIMEOUT;
+                }
+            }
+            // Check if the wait timed out outside of the WaitOnAddress() call.
+            start_time = KeQueryInterruptTimePrecise(&qpc_time_stamp);
+            if (start_time >= end_time) {
+                return STATUS_TIMEOUT;
+            }
         }
     }
     default:
@@ -779,3 +824,51 @@ KeReadStateTimer(_In_ PKTIMER timer)
 }
 
 #pragma endregion timers
+
+#pragma region events
+USERSIM_API
+void
+KeInitializeEvent(_Out_ PKEVENT event, _In_ EVENT_TYPE type, _In_ BOOLEAN initial_state)
+{
+    event->signalled = initial_state ? 1 : 0;
+    event->type = type;
+    event->object_type = USERSIM_OBJECT_TYPE_EVENT;
+    KeInitializeSpinLock(&event->spin_lock);
+}
+
+USERSIM_API
+LONG
+KeSetEvent(_Inout_ PKEVENT event, _In_ KPRIORITY increment, _In_ BOOLEAN wait)
+{
+    UNREFERENCED_PARAMETER(increment);
+    UNREFERENCED_PARAMETER(wait);
+
+    ASSERT(event->object_type == USERSIM_OBJECT_TYPE_EVENT);
+    KIRQL old_irql;
+    LONG previous_state;
+    KeAcquireSpinLock(&event->spin_lock, &old_irql);
+
+    previous_state = event->signalled;
+    event->signalled = 1;
+
+    KeReleaseSpinLock(&event->spin_lock, old_irql);
+
+    // Wake up any waiters.
+    WakeByAddressAll(&event->signalled);
+    return previous_state;
+}
+
+USERSIM_API
+void
+KeClearEvent(_Inout_ PKEVENT event)
+{
+    ASSERT(event->object_type == USERSIM_OBJECT_TYPE_EVENT);
+    KIRQL old_irql;
+    KeAcquireSpinLock(&event->spin_lock, &old_irql);
+
+    event->signalled = 0;
+
+    KeReleaseSpinLock(&event->spin_lock, old_irql);
+}
+
+#pragma endregion events

@@ -23,6 +23,7 @@ typedef enum _usersim_object_type
     USERSIM_OBJECT_TYPE_UNKNOWN,
     USERSIM_OBJECT_TYPE_SEMAPHORE,
     USERSIM_OBJECT_TYPE_TIMER,
+    USERSIM_OBJECT_TYPE_EVENT,
 } usersim_object_type_t;
 
 typedef enum
@@ -172,6 +173,38 @@ void
 usersim_free_semaphores();
 
 #pragma endregion semaphores
+
+#pragma region events
+
+typedef enum _EVENT_TYPE
+{
+    NotificationEvent,
+    SynchronizationEvent
+} EVENT_TYPE;
+
+typedef struct _kevent
+{
+    usersim_object_type_t object_type;
+    EVENT_TYPE type;
+    KSPIN_LOCK spin_lock;
+    LONG signalled;
+} KEVENT;
+typedef KEVENT* PKEVENT;
+typedef KEVENT* PRKEVENT;
+
+USERSIM_API
+void
+KeInitializeEvent(_Out_ PKEVENT event, _In_ EVENT_TYPE type, _In_ BOOLEAN initial_state);
+
+USERSIM_API
+LONG
+KeSetEvent(_Inout_ PRKEVENT Event, _In_ KPRIORITY Increment, _In_ _Literal_ BOOLEAN Wait);
+
+USERSIM_API
+void
+KeClearEvent(_Inout_ PRKEVENT Event);
+
+#pragma endregion events
 
 USERSIM_API
 _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
