@@ -187,7 +187,7 @@ typedef struct _kevent
     usersim_object_type_t object_type;
     EVENT_TYPE type;
     KSPIN_LOCK spin_lock;
-    LONG signalled;
+    BOOLEAN signaled;
 } KEVENT;
 typedef KEVENT* PKEVENT;
 typedef KEVENT* PRKEVENT;
@@ -198,11 +198,11 @@ KeInitializeEvent(_Out_ PKEVENT event, _In_ EVENT_TYPE type, _In_ BOOLEAN initia
 
 USERSIM_API
 LONG
-KeSetEvent(_Inout_ PRKEVENT Event, _In_ KPRIORITY Increment, _In_ _Literal_ BOOLEAN Wait);
+KeSetEvent(_Inout_ PRKEVENT event, _In_ KPRIORITY increment, _In_ _Literal_ BOOLEAN wait);
 
 USERSIM_API
 void
-KeClearEvent(_Inout_ PRKEVENT Event);
+KeClearEvent(_Inout_ PRKEVENT event);
 
 #pragma endregion events
 
