@@ -5,6 +5,7 @@
 #include "cxplat.h"
 #include "leak_detector.h"
 #include "symbol_decoder.h"
+
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -85,9 +86,17 @@ _get_environment_variable_as_size_t(const std::string& name)
     }
 }
 
+static std::mutex cxplat_initialization_mutex;
+static ULONG _cxplat_initialization_count = 0;
+
 cxplat_status_t
 cxplat_initialize()
 {
+    std::unique_lock lock(cxplat_initialization_mutex);
+    if (_cxplat_initialization_count > 0) {
+        return CXPLAT_STATUS_INVALID_STATE;
+    }
+
     try {
         auto fault_injection_stack_depth =
             _get_environment_variable_as_size_t(CXPLAT_FAULT_INJECTION_SIMULATION_ENVIRONMENT_VARIABLE_NAME);
@@ -118,12 +127,17 @@ cxplat_initialize()
     } catch (const std::bad_alloc&) {
         return CXPLAT_STATUS_NO_MEMORY;
     }
+    _cxplat_initialization_count++;
     return CXPLAT_STATUS_SUCCESS;
 }
 
 void
 cxplat_cleanup()
 {
+    std::unique_lock lock(cxplat_initialization_mutex);
+    CXPLAT_DEBUG_ASSERT(_cxplat_initialization_count == 1);
+    _cxplat_initialization_count--;
+
     cxplat_winuser_clean_up_thread_pool();
 
     if (_cxplat_leak_detector_ptr) {
