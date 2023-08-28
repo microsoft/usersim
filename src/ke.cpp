@@ -25,6 +25,9 @@ thread_local GROUP_AFFINITY _usersim_dispatch_previous_affinity;
 static uint32_t _usersim_original_priority_class;
 static std::vector<std::mutex> _usersim_dispatch_locks;
 
+static NTSTATUS
+_wait_for_kevent(_Inout_ KEVENT* event, _In_opt_ PLARGE_INTEGER timeout);
+
 usersim_result_t
 usersim_initialize_irql()
 {
@@ -320,6 +323,9 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _When_((timeout == NULL || timeout->QuadPart 
         default:
             return STATUS_UNSUCCESSFUL;
         }
+    }
+    case USERSIM_OBJECT_TYPE_EVENT: {
+        return _wait_for_kevent((KEVENT*)object, timeout);
     }
     default:
         ASSERT(FALSE);
@@ -779,3 +785,107 @@ KeReadStateTimer(_In_ PKTIMER timer)
 }
 
 #pragma endregion timers
+
+#pragma region events
+USERSIM_API
+void
+KeInitializeEvent(_Out_ PKEVENT event, _In_ EVENT_TYPE type, _In_ BOOLEAN initial_state)
+{
+    event->signaled = initial_state;
+    event->type = type;
+    event->object_type = USERSIM_OBJECT_TYPE_EVENT;
+    KeInitializeSpinLock(&event->spin_lock);
+}
+
+USERSIM_API
+LONG
+KeSetEvent(_Inout_ PKEVENT event, _In_ KPRIORITY increment, _In_ _Literal_ BOOLEAN wait)
+{
+    UNREFERENCED_PARAMETER(increment);
+    UNREFERENCED_PARAMETER(wait);
+
+    ASSERT(event->object_type == USERSIM_OBJECT_TYPE_EVENT);
+    KIRQL old_irql;
+    LONG previous_state;
+    KeAcquireSpinLock(&event->spin_lock, &old_irql);
+
+    previous_state = event->signaled ? 1 : 0;
+    event->signaled = TRUE;
+
+    KeReleaseSpinLock(&event->spin_lock, old_irql);
+
+    // Wake up any waiters.
+    WakeByAddressAll(&event->signaled);
+    return previous_state;
+}
+
+USERSIM_API
+void
+KeClearEvent(_Inout_ PKEVENT event)
+{
+    ASSERT(event->object_type == USERSIM_OBJECT_TYPE_EVENT);
+    KIRQL old_irql;
+    KeAcquireSpinLock(&event->spin_lock, &old_irql);
+
+    event->signaled = FALSE;
+
+    KeReleaseSpinLock(&event->spin_lock, old_irql);
+}
+
+/**
+ * @brief Wait for an event to be signaled.
+ *
+ * @param[in,out] event The KEVENT to wait on.
+ * @param[in,opt] timeout The timeout for the wait, or nullptr for no timeout.
+ * @retval STATUS_SUCCESS The event was signaled.
+ * @retval STATUS_TIMEOUT The wait timed out.
+ */
+static NTSTATUS
+_wait_for_kevent(_Inout_ KEVENT* event, _In_opt_ PLARGE_INTEGER timeout)
+{
+    uint64_t qpc_time_stamp = 0;
+    // Compute the end time for the wait, if any.
+    uint64_t start_time = KeQueryInterruptTimePrecise(&qpc_time_stamp);
+    uint64_t end_time;
+    if (timeout == nullptr) {
+        end_time = UINT64_MAX;
+    } else if (timeout->QuadPart > 0) {
+        end_time = timeout->QuadPart;
+    } else {
+        end_time = start_time - timeout->QuadPart;
+    }
+
+    for (;;) {
+        // Compute the remaining time in milliseconds for the wait.
+        DWORD timeout_ms = (DWORD)((end_time - start_time) / 10000);
+
+        KIRQL old_irql;
+        KeAcquireSpinLock(&event->spin_lock, &old_irql);
+        // Check if the event is signaled.
+        if (event->signaled) {
+            // Clear the event if it is an auto-reset event.
+            if (event->type == SynchronizationEvent) {
+                event->signaled = FALSE;
+            }
+            KeReleaseSpinLock(&event->spin_lock, old_irql);
+            return STATUS_SUCCESS;
+        } else {
+            // Capture the current state of event->signaled, so we can wait for it to change.
+            uint64_t old_state = event->signaled;
+            KeReleaseSpinLock(&event->spin_lock, old_irql);
+
+            // Wait for event->signaled to change.
+            bool wait_return = WaitOnAddress(&event->signaled, &old_state, sizeof(event->signaled), timeout_ms);
+            if (!wait_return) {
+                return STATUS_TIMEOUT;
+            }
+        }
+        // Check if the wait timed out outside of the WaitOnAddress() call.
+        start_time = KeQueryInterruptTimePrecise(&qpc_time_stamp);
+        if (start_time >= end_time) {
+            return STATUS_TIMEOUT;
+        }
+    }
+}
+
+#pragma endregion events
