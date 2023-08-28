@@ -98,12 +98,14 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
             return nullptr;
         }
         memory = _unaligned_pointer_from_memory_block(pointer);
-        if (!initialize) {
-            // The calloc call always zero-initializes memory.  To test
-            // returning uninitialized memory, we explicitly fill it with 0xcc.
-            memset(memory, 0xcc, size);
-        }
     }
+#ifndef NDEBUG
+    if (!initialize) {
+        // The calloc call always zero-initializes memory.  To test
+        // returning uninitialized memory, we explicitly fill it with 0xcc.
+        memset(memory, 0xcc, size);
+    }
+#endif
 
     // Do any initialization.
     auto header = (cxplat_allocation_header_t*)((uint8_t*)memory - sizeof(cxplat_allocation_header_t));
