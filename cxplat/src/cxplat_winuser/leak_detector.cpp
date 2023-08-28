@@ -6,7 +6,6 @@
 #include "symbol_decoder.h"
 
 #include <iostream>
-#include <sstream>
 
 void
 _cxplat_leak_detector::register_allocation(uintptr_t address, size_t size)
@@ -28,53 +27,45 @@ _cxplat_leak_detector::register_allocation(uintptr_t address, size_t size)
 }
 
 void
+_cxplat_leak_detector::flush_output(std::ostringstream& output)
+{
+    _in_memory_log.push_back(output.str());
+    std::cout << output.str();
+    output.str("");
+}
+
+void
+_cxplat_leak_detector::output_stack_trace(std::ostringstream& output, std::string label, unsigned long stack_hash)
+{
+    std::vector<uintptr_t> stack = _stack_hashes[stack_hash];
+    std::string name;
+    uint64_t displacement;
+    std::optional<uint32_t> line_number;
+    std::optional<std::string> file_name;
+    output << "  " << label << " stack:" << std::endl;
+    for (auto address : stack) {
+        if (CXPLAT_SUCCEEDED(_cxplat_decode_symbol(address, name, displacement, line_number, file_name))) {
+            output << "    " << name << " + " << displacement;
+            if (line_number.has_value() && file_name.has_value()) {
+                output << " (" << file_name.value() << ":" << line_number.value() << ")";
+            }
+            output << std::endl;
+        }
+        flush_output(output);
+    }
+}
+
+void
 _cxplat_leak_detector::unregister_allocation(uintptr_t address)
 {
     std::unique_lock<std::mutex> lock(_mutex);
     if (!_allocations.contains(address)) {
         auto allocation = _freed_allocations[address];
         std::ostringstream output;
-        std::vector<uintptr_t> stack = _stack_hashes[allocation.alloc_stack_hash];
         output << "Double-free of " << allocation.size << " bytes at " << allocation.address << std::endl;
-        _in_memory_log.push_back(output.str());
-        std::cout << output.str();
-        output.str("");
-        std::string name;
-        uint64_t displacement;
-        std::optional<uint32_t> line_number;
-        std::optional<std::string> file_name;
-        output << "  Alloc:" << std::endl;
-        for (auto address : stack) {
-            if (CXPLAT_SUCCEEDED(_cxplat_decode_symbol(address, name, displacement, line_number, file_name))) {
-                output << "    " << name << " + " << displacement;
-                if (line_number.has_value() && file_name.has_value()) {
-                    output << " (" << file_name.value() << ":" << line_number.value() << ")";
-                }
-                output << std::endl;
-            }
-            _in_memory_log.push_back(output.str());
-            std::cout << output.str();
-            output.str("");
-        }
-
-        output << "  Free:" << std::endl;
-        stack = _stack_hashes[allocation.free_stack_hash];
-        for (auto address : stack) {
-            if (CXPLAT_SUCCEEDED(_cxplat_decode_symbol(address, name, displacement, line_number, file_name))) {
-                output << "    " << name << " + " << displacement;
-                if (line_number.has_value() && file_name.has_value()) {
-                    output << " (" << file_name.value() << ":" << line_number.value() << ")";
-                }
-                output << std::endl;
-            }
-            _in_memory_log.push_back(output.str());
-            std::cout << output.str();
-            output.str("");
-        }
-
-        _in_memory_log.push_back(output.str());
-        std::cout << output.str();
-        output.str("");
+        flush_output(output);
+        output_stack_trace(output, "Allocation", allocation.alloc_stack_hash);
+        output_stack_trace(output, "Free", allocation.free_stack_hash);
     }
     CXPLAT_RUNTIME_ASSERT(_allocations.contains(address));
     _freed_allocations[address] = _allocations[address];
@@ -101,30 +92,9 @@ _cxplat_leak_detector::dump_leaks()
     std::unique_lock<std::mutex> lock(_mutex);
     for (auto& allocation : _allocations) {
         std::ostringstream output;
-        std::vector<uintptr_t> stack = _stack_hashes[allocation.second.alloc_stack_hash];
         output << "Leak of " << allocation.second.size << " bytes at " << allocation.second.address << std::endl;
-        _in_memory_log.push_back(output.str());
-        std::cout << output.str();
-        output.str("");
-        std::string name;
-        uint64_t displacement;
-        std::optional<uint32_t> line_number;
-        std::optional<std::string> file_name;
-        for (auto address : stack) {
-            if (CXPLAT_SUCCEEDED(_cxplat_decode_symbol(address, name, displacement, line_number, file_name))) {
-                output << "    " << name << " + " << displacement;
-                if (line_number.has_value() && file_name.has_value()) {
-                    output << " (" << file_name.value() << ":" << line_number.value() << ")";
-                }
-                output << std::endl;
-            }
-            _in_memory_log.push_back(output.str());
-            std::cout << output.str();
-            output.str("");
-        }
-        _in_memory_log.push_back(output.str());
-        std::cout << output.str();
-        output.str("");
+        flush_output(output);
+        output_stack_trace(output, "Allocation", allocation.second.alloc_stack_hash);
     }
 
     // assert to make sure that a leaking test throws an exception thereby failing the test.

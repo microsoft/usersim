@@ -171,6 +171,9 @@ cxplat_free(_Frees_ptr_opt_ void* pointer)
     {
         return;
     }
+    if (_cxplat_leak_detector_ptr) {
+        _cxplat_leak_detector_ptr->unregister_allocation(reinterpret_cast<uintptr_t>(pointer));
+    }
     cxplat_allocation_header_t* header = _header_from_pointer(pointer);
     if (header->pool_type == CxPlatNonPagedPoolNxCacheAligned)
     {
@@ -181,9 +184,6 @@ cxplat_free(_Frees_ptr_opt_ void* pointer)
     {
         uint8_t* memory_block = _memory_block_from_unaligned_pointer(pointer);
         free(memory_block);
-    }
-    if (_cxplat_leak_detector_ptr) {
-        _cxplat_leak_detector_ptr->unregister_allocation(reinterpret_cast<uintptr_t>(pointer));
     }
 }
 

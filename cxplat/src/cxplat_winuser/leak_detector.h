@@ -3,6 +3,7 @@
 #pragma once
 
 #include <mutex>
+#include <sstream>
 #include <unordered_map>
 #include <vector>
 
@@ -22,6 +23,12 @@ typedef class _cxplat_leak_detector
     dump_leaks();
 
   private:
+    void
+    flush_output(std::ostringstream& output);
+
+    void
+    output_stack_trace(std::ostringstream& output, std::string label, unsigned long stack_hash);
+
     typedef struct _allocation
     {
         uintptr_t address;
