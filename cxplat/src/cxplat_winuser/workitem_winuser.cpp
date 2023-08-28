@@ -46,7 +46,7 @@ cxplat_allocate_preemptible_work_item(
     cxplat_status_t result = CXPLAT_STATUS_SUCCESS;
 
     if (!cxplat_acquire_rundown_protection(&_cxplat_preemptible_work_items_rundown_reference)) {
-        return CXPLAT_STATUS_UNSUCCESSFUL;
+        return CXPLAT_STATUS_INVALID_STATE;
     }
 
     *work_item = (cxplat_preemptible_work_item_t*)cxplat_allocate(sizeof(cxplat_preemptible_work_item_t));
