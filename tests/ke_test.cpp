@@ -9,6 +9,8 @@
 #include "usersim/ke.h"
 #include "usersim/mm.h"
 
+#include <thread>
+
 TEST_CASE("irql", "[ke]")
 {
     REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
@@ -346,4 +348,93 @@ TEST_CASE("KeBugCheckEx", "[ke]")
                 "*** STOP 0x00000011 (0x0000000000000001,0x0000000000000002,0x0000000000000003,0x0000000000000004)") ==
             0);
     }
+}
+
+TEST_CASE("event", "[ke]")
+{
+    KEVENT event;
+    LARGE_INTEGER timeout = {0};
+
+    // Create an event that is initially not signaled.
+    KeInitializeEvent(&event, NotificationEvent, FALSE);
+
+    // Verify that it is not signaled.
+    REQUIRE(KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout) == STATUS_TIMEOUT);
+
+    // Verify that it is still not signaled after calling KeWaitForSingleObject.
+    REQUIRE(KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout) == STATUS_TIMEOUT);
+
+    // Verify we can set it to signaled.
+    REQUIRE(KeSetEvent(&event, 0, FALSE) == 0);
+
+    // Verify signaling it again does not change the state.
+    REQUIRE(KeSetEvent(&event, 0, FALSE) == 1);
+
+    // Verify that it is signaled.
+    REQUIRE(KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout) == STATUS_SUCCESS);
+
+    // Verify that it is still signaled after calling KeWaitForSingleObject.
+    REQUIRE(KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout) == STATUS_SUCCESS);
+
+    // Verify we can reset it to not signaled.
+    KeClearEvent(&event);
+
+    // Verify that it is not signaled.
+    REQUIRE(KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout) == STATUS_TIMEOUT);
+
+    // Verify that it is still not signaled after calling KeWaitForSingleObject.
+    REQUIRE(KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout) == STATUS_TIMEOUT);
+
+    NTSTATUS wait_status = STATUS_SUCCESS;
+    // Wait on the event, signal it, and verify that the wait completes.
+    auto thread =
+        std::jthread([&]() { wait_status = KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, nullptr); });
+
+    // Delay to ensure the thread is waiting.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Signal the event.
+    KeSetEvent(&event, 0, FALSE);
+
+    // Wait for thread to join
+    thread.join();
+
+    REQUIRE(wait_status == STATUS_SUCCESS);
+
+    // Create a synchronization event that is initially signaled.
+    KeInitializeEvent(&event, SynchronizationEvent, TRUE);
+
+    // Verify that it is signaled.
+    REQUIRE(KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout) == STATUS_SUCCESS);
+
+    // Verify that it is not signaled after calling KeWaitForSingleObject.
+    REQUIRE(KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout) == STATUS_TIMEOUT);
+
+    // Verify we can reset it to signaled.
+    REQUIRE(KeSetEvent(&event, 0, FALSE) == 0);
+
+    // Verify signaling it again does not change the state.
+    REQUIRE(KeSetEvent(&event, 0, FALSE) == 1);
+
+    // Verify that it is signaled.
+    REQUIRE(KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout) == STATUS_SUCCESS);
+
+    // Verify that it is not signaled after calling KeWaitForSingleObject.
+    REQUIRE(KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout) == STATUS_TIMEOUT);
+
+    // Test event timeout
+    timeout.QuadPart = -1000 * 10ll; // 1ms.
+
+    // Query the current time.
+    uint64_t qpc_time;
+    uint64_t start_time = KeQueryUnbiasedInterruptTimePrecise(&qpc_time);
+
+    // Wait on the event, and verify that the wait times out.
+    wait_status = KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, &timeout);
+
+    // Query the current time.
+    uint64_t end_time = KeQueryUnbiasedInterruptTimePrecise(&qpc_time);
+
+    REQUIRE(wait_status == STATUS_TIMEOUT);
+    REQUIRE(end_time - start_time >= 1000);
 }
