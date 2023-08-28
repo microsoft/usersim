@@ -45,6 +45,12 @@
     <ClInclude Include="..\..\inc\cxplat_size.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\inc\cxplat_rundown.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\cxplat_workitem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="fault_injection.cpp">
@@ -63,6 +69,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="size_winuser.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rundown_winuser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="workitem_winuser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

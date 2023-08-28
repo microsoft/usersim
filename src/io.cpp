@@ -20,8 +20,8 @@ typedef unsigned long PFN_NUMBER;
 
 typedef struct _IO_WORKITEM
 {
-    DEVICE_OBJECT* device;
-    PTP_WORK work_item;
+    DEVICE_OBJECT* device_object;
+    cxplat_preemptible_work_item_t* cxplat_work_item;
     IO_WORKITEM_ROUTINE* routine;
     void* context;
 } IO_WORKITEM;
@@ -58,54 +58,49 @@ IoAllocateMdl(
     return mdl;
 }
 
-void NTAPI
-io_work_item_wrapper(_Inout_ PTP_CALLBACK_INSTANCE instance, _Inout_opt_ void* context, _Inout_ PTP_WORK work)
+void
+io_work_item_wrapper(_Inout_opt_ void* context)
 {
-    UNREFERENCED_PARAMETER(instance);
-    UNREFERENCED_PARAMETER(work);
-    auto work_item = reinterpret_cast<const IO_WORKITEM*>(context);
-    if (work_item) {
-        work_item->routine(work_item->device, work_item->context);
+    auto io_work_item = reinterpret_cast<const IO_WORKITEM*>(context);
+    if (io_work_item) {
+        io_work_item->routine(io_work_item->device_object, io_work_item->context);
     }
 }
 
 PIO_WORKITEM
 IoAllocateWorkItem(_In_ DEVICE_OBJECT* device_object)
 {
-    // Skip Fault Injection as it is already added in usersim_allocate.
-    auto work_item = reinterpret_cast<IO_WORKITEM*>(cxplat_allocate(sizeof(IO_WORKITEM)));
-    if (!work_item) {
+    auto io_work_item = (PIO_WORKITEM)cxplat_allocate(sizeof(IO_WORKITEM));
+    if (!io_work_item) {
         return nullptr;
     }
-    work_item->device = device_object;
-    work_item->work_item = CreateThreadpoolWork(io_work_item_wrapper, work_item, nullptr);
-    if (work_item->work_item == nullptr) {
-        cxplat_free(work_item);
-        work_item = nullptr;
+    io_work_item->device_object = device_object;
+    cxplat_status_t status = cxplat_allocate_preemptible_work_item(nullptr, &io_work_item->cxplat_work_item, io_work_item_wrapper, device_object);
+    if (!CXPLAT_SUCCEEDED(status)) {
+        cxplat_free(io_work_item);
+        return nullptr;
     }
-    return work_item;
+    return io_work_item;
 }
 
 void
 IoQueueWorkItem(
-    _Inout_ __drv_aliasesMem IO_WORKITEM* io_workitem,
+    _Inout_ __drv_aliasesMem IO_WORKITEM* io_work_item,
     _In_ IO_WORKITEM_ROUTINE* worker_routine,
     _In_ WORK_QUEUE_TYPE queue_type,
     _In_opt_ __drv_aliasesMem void* context)
 {
     UNREFERENCED_PARAMETER(queue_type);
-    io_workitem->routine = worker_routine;
-    io_workitem->context = context;
-    SubmitThreadpoolWork(io_workitem->work_item);
+    io_work_item->routine = worker_routine;
+    io_work_item->context = context;
+    cxplat_queue_preemptible_work_item(io_work_item->cxplat_work_item);
 }
 
 void
-IoFreeWorkItem(_In_ __drv_freesMem(Mem) PIO_WORKITEM io_workitem)
+IoFreeWorkItem(_In_ __drv_freesMem(Mem) PIO_WORKITEM io_work_item)
 {
-    if (io_workitem) {
-        CloseThreadpoolWork(io_workitem->work_item);
-        cxplat_free(io_workitem);
-    }
+    cxplat_free_preemptible_work_item(io_work_item->cxplat_work_item);
+    cxplat_free(io_work_item);
 }
 
 void

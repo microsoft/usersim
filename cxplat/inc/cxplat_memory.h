@@ -93,9 +93,9 @@ __drv_allocatesMem(Mem) _Must_inspect_result_
 
 /**
  * @brief Allocate memory that has a starting address that is cache aligned with tag.
- * @param[in] size Size of memory to allocate
+ * @param[in] size Size of memory to allocate.
  * @param[in] tag Pool tag to use.
- * @returns Pointer to memory block allocated, or null on failure.
+ * @returns Pointer to zero-initialized memory block allocated, or null on failure.
  */
 __drv_allocatesMem(Mem) _Must_inspect_result_
     _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned_with_tag(size_t size, uint32_t tag);

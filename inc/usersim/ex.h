@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "cxplat.h"
 #include "..\src\platform.h"
 #include "ke.h"
 
@@ -35,10 +36,7 @@ typedef struct _EX_SPIN_LOCK
 {
     SRWLOCK lock;
 } EX_SPIN_LOCK;
-typedef struct _EX_RUNDOWN_REF
-{
-    void* reserved;
-} EX_RUNDOWN_REF;
+typedef cxplat_rundown_reference_t EX_RUNDOWN_REF;
 
 //
 // Pool Allocation routines (in pool.c)

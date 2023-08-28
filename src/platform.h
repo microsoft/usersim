@@ -38,7 +38,6 @@ typedef enum _usersim_code_integrity_state
 } usersim_code_integrity_state_t;
 
 typedef struct _usersim_non_preemptible_work_item usersim_non_preemptible_work_item_t;
-typedef struct _usersim_preemptible_work_item usersim_preemptible_work_item_t;
 
 typedef struct _usersim_trampoline_table usersim_trampoline_table_t;
 
@@ -225,42 +224,6 @@ usersim_is_preemptible();
  */
 uint64_t
 usersim_get_current_thread_id();
-
-/**
- * @brief Create a preemptible work item.
- *
- * @param[out] work_item Pointer to memory that will contain the pointer to
- *  the preemptible work item on success.
- * @param[in] work_item_routine Routine to execute as a work item.
- * @param[in, out] work_item_context Context to pass to the routine.
- * @retval USERSIM_SUCCESS The operation was successful.
- * @retval USERSIM_NO_MEMORY Unable to allocate resources for this
- *  work item.
- */
-USERSIM_API
-_Must_inspect_result_ usersim_result_t
-usersim_allocate_preemptible_work_item(
-    _Outptr_ usersim_preemptible_work_item_t** work_item,
-    _In_ void (*work_item_routine)(_Inout_opt_ void* work_item_context),
-    _Inout_opt_ void* work_item_context);
-
-/**
- * @brief Free a preemptible work item.
- *
- * @param[in] work_item Pointer to the work item to free.
- */
-USERSIM_API
-void
-usersim_free_preemptible_work_item(_Frees_ptr_opt_ usersim_preemptible_work_item_t* work_item);
-
-/**
- * @brief Schedule a preemptible work item to run.
- *
- * @param[in, out] work_item Work item to schedule.
- */
-USERSIM_API
-void
-usersim_queue_preemptible_work_item(_Inout_ usersim_preemptible_work_item_t* work_item);
 
 /**
  * @brief Atomically increase the value of addend by 1 and return the new
