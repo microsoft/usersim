@@ -132,6 +132,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cxplat_initialization_test.cpp" />
     <ClCompile Include="cxplat_memory_test.cpp" />
     <ClCompile Include="cxplat_rundown_test.cpp" />
     <ClCompile Include="cxplat_size_test.cpp" />
