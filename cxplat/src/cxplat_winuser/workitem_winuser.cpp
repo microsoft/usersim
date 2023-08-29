@@ -25,29 +25,22 @@ _cxplat_preemptible_routine(_Inout_ PTP_CALLBACK_INSTANCE instance, _In_opt_ voi
     UNREFERENCED_PARAMETER(instance);
     UNREFERENCED_PARAMETER(work);
 
-    if (parameter == nullptr) {
-        return;
+    if (parameter != nullptr) {
+        cxplat_preemptible_work_item_t* work_item = (cxplat_preemptible_work_item_t*)parameter;
+        work_item->work_item_routine(work_item->work_item_context);
     }
-
-    cxplat_preemptible_work_item_t* work_item = (cxplat_preemptible_work_item_t*)parameter;
-    work_item->work_item_routine(work_item->work_item_context);
-
-    cxplat_free_preemptible_work_item(work_item);
+    cxplat_release_rundown_protection(&_cxplat_preemptible_work_items_rundown_reference);
 }
 
 _Must_inspect_result_ cxplat_status_t
 cxplat_allocate_preemptible_work_item(
     _In_opt_ void* caller_context,
     _Outptr_ cxplat_preemptible_work_item_t** work_item,
-    _In_ void (*work_item_routine)(_Inout_opt_ void* work_item_context),
-    _Inout_opt_ void* work_item_context)
+    _In_ void (*work_item_routine)(_In_opt_ void* work_item_context),
+    _In_opt_ void* work_item_context)
 {
     UNREFERENCED_PARAMETER(caller_context);
     cxplat_status_t result = CXPLAT_STATUS_SUCCESS;
-
-    if (!cxplat_acquire_rundown_protection(&_cxplat_preemptible_work_items_rundown_reference)) {
-        return CXPLAT_STATUS_INVALID_STATE;
-    }
 
     *work_item = (cxplat_preemptible_work_item_t*)cxplat_allocate(sizeof(cxplat_preemptible_work_item_t));
     if (*work_item == nullptr) {
@@ -67,7 +60,6 @@ cxplat_allocate_preemptible_work_item(
 
 Done:
     if (result != CXPLAT_STATUS_SUCCESS) {
-        cxplat_release_rundown_protection(&_cxplat_preemptible_work_items_rundown_reference);
         cxplat_free(*work_item);
         *work_item = nullptr;
     }
@@ -77,6 +69,9 @@ Done:
 void
 cxplat_queue_preemptible_work_item(_Inout_ cxplat_preemptible_work_item_t* io_work_item)
 {
+    if (!cxplat_acquire_rundown_protection(&_cxplat_preemptible_work_items_rundown_reference)) {
+        CXPLAT_RUNTIME_ASSERT(FALSE);
+    }
     SubmitThreadpoolWork(io_work_item->work);
 }
 
@@ -89,8 +84,6 @@ cxplat_free_preemptible_work_item(_Frees_ptr_opt_ cxplat_preemptible_work_item_t
 
     CloseThreadpoolWork(work_item->work);
     cxplat_free(work_item);
-
-    cxplat_release_rundown_protection(&_cxplat_preemptible_work_items_rundown_reference);
 }
 
 cxplat_status_t

@@ -23,8 +23,8 @@ _Must_inspect_result_ cxplat_status_t
 cxplat_allocate_preemptible_work_item(
     _In_opt_ void* caller_context,
     _Outptr_ cxplat_preemptible_work_item_t** work_item,
-    _In_ void (*work_item_routine)(_Inout_opt_ void* work_item_context),
-    _Inout_opt_ void* work_item_context);
+    _In_ void (*work_item_routine)(_In_opt_ void* work_item_context),
+    _In_opt_ void* work_item_context);
 
 /**
  * @brief Queue a preemptible work item for execution.  After execution,
