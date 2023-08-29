@@ -9,9 +9,6 @@ static ULONG _cxplat_initialization_count = 0;
 cxplat_status_t
 cxplat_initialize()
 {
-    if (_cxplat_initialization_count > 0) {
-        return CXPLAT_STATUS_INVALID_STATE;
-    }
     _cxplat_initialization_count++;
     return CXPLAT_STATUS_SUCCESS;
 }

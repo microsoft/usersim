@@ -11,6 +11,7 @@
 TEST_CASE("initialize", "[initialization]")
 {
     REQUIRE(cxplat_initialize() == CXPLAT_STATUS_SUCCESS);
-    REQUIRE(cxplat_initialize() == CXPLAT_STATUS_INVALID_STATE);
+    REQUIRE(cxplat_initialize() == CXPLAT_STATUS_SUCCESS);
+    cxplat_cleanup();
     cxplat_cleanup();
 }

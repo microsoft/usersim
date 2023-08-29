@@ -94,7 +94,9 @@ cxplat_initialize()
 {
     std::unique_lock lock(cxplat_initialization_mutex);
     if (_cxplat_initialization_count > 0) {
-        return CXPLAT_STATUS_INVALID_STATE;
+        // Already initialized.
+        _cxplat_initialization_count++;
+        return CXPLAT_STATUS_SUCCESS;
     }
 
     try {
@@ -135,8 +137,12 @@ void
 cxplat_cleanup()
 {
     std::unique_lock lock(cxplat_initialization_mutex);
-    CXPLAT_DEBUG_ASSERT(_cxplat_initialization_count == 1);
+    CXPLAT_RUNTIME_ASSERT(_cxplat_initialization_count > 0);
     _cxplat_initialization_count--;
+    if (_cxplat_initialization_count > 0) {
+        // Don't clean up until the count hits 0.
+        return;
+    }
 
     cxplat_winuser_clean_up_thread_pool();
 
