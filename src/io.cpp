@@ -75,7 +75,8 @@ IoAllocateWorkItem(_In_ DEVICE_OBJECT* device_object)
         return nullptr;
     }
     io_work_item->device_object = device_object;
-    cxplat_status_t status = cxplat_allocate_preemptible_work_item(nullptr, &io_work_item->cxplat_work_item, io_work_item_wrapper, device_object);
+    cxplat_status_t status = cxplat_allocate_preemptible_work_item(
+        nullptr, &io_work_item->cxplat_work_item, io_work_item_wrapper, io_work_item);
     if (!CXPLAT_SUCCEEDED(status)) {
         cxplat_free(io_work_item);
         return nullptr;

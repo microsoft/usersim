@@ -22,16 +22,14 @@ _cxplat_preemptible_routine(_In_ PDEVICE_OBJECT device_object, _In_opt_ void* co
     }
     cxplat_preemptible_work_item_t* work_item = (cxplat_preemptible_work_item_t*)context;
     work_item->work_item_routine(work_item->work_item_context);
-
-    cxplat_free_preemptible_work_item(work_item);
 }
 
 _Must_inspect_result_ cxplat_status_t
 cxplat_allocate_preemptible_work_item(
     _In_opt_ void* caller_context,
     _Outptr_ cxplat_preemptible_work_item_t** work_item,
-    _In_ void (*work_item_routine)(_Inout_opt_ void* work_item_context),
-    _Inout_opt_ void* work_item_context)
+    _In_ void (*work_item_routine)(_In_opt_ void* work_item_context),
+    _In_opt_ void* work_item_context)
 {
     cxplat_status_t result = CXPLAT_STATUS_SUCCESS;
 
