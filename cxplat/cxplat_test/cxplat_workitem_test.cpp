@@ -9,27 +9,59 @@
 #include "cxplat.h"
 #include <windows.h>
 
-static void
-_test_work_item_routine(_Inout_opt_ void* work_item_context)
+typedef struct _work_item_context
 {
-    int* context = (int*)work_item_context;
-    REQUIRE(*context == 1);
-    (*context)++;
+    cxplat_preemptible_work_item_t* work_item;
+    int value;
+    bool free_work_item;
+} work_item_context_t;
+
+static void
+_test_work_item_routine(_Inout_opt_ void* context)
+{
+    if (context == nullptr) {
+        return;
+    }
+    work_item_context_t* work_item_context = (work_item_context_t*)context;
+    REQUIRE(work_item_context->value == 1);
+    work_item_context->value++;
+    if (work_item_context->free_work_item) {
+        cxplat_free_preemptible_work_item(work_item_context->work_item);
+    }
 }
 
-TEST_CASE("queue_preemptible_work_item", "[workitem]")
+TEST_CASE("queue_preemptible_work_item and free afterwards", "[workitem]")
 {
     REQUIRE(cxplat_initialize() == CXPLAT_STATUS_SUCCESS);
 
     cxplat_preemptible_work_item_t* work_item = nullptr;
-    int context = 1;
+    work_item_context_t context{.value = 1, .free_work_item = false};
     REQUIRE(
         cxplat_allocate_preemptible_work_item(nullptr, &work_item, _test_work_item_routine, &context) ==
         CXPLAT_STATUS_SUCCESS);
+    context.work_item = work_item;
+    cxplat_queue_preemptible_work_item(work_item);
+    cxplat_wait_for_preemptible_work_items_complete();
+    REQUIRE(context.value == 2);
+    cxplat_free_preemptible_work_item(work_item);
+
+    cxplat_cleanup();
+}
+
+TEST_CASE("queue_preemptible_work_item and free inside", "[workitem]")
+{
+    REQUIRE(cxplat_initialize() == CXPLAT_STATUS_SUCCESS);
+
+    cxplat_preemptible_work_item_t* work_item = nullptr;
+    work_item_context_t context{.value = 1, .free_work_item = true};
+    REQUIRE(
+        cxplat_allocate_preemptible_work_item(nullptr, &work_item, _test_work_item_routine, &context) ==
+        CXPLAT_STATUS_SUCCESS);
+    context.work_item = work_item;
 
     cxplat_queue_preemptible_work_item(work_item);
     cxplat_wait_for_preemptible_work_items_complete();
-    REQUIRE(context == 2);
+    REQUIRE(context.value == 2);
 
     cxplat_cleanup();
 }
@@ -39,12 +71,12 @@ TEST_CASE("free_preemptible_work_item", "[workitem]")
     REQUIRE(cxplat_initialize() == CXPLAT_STATUS_SUCCESS);
 
     cxplat_preemptible_work_item_t* work_item = nullptr;
-    int context = 1;
+    work_item_context_t context{.work_item = work_item, .value = 1, .free_work_item = false};
     REQUIRE(
         cxplat_allocate_preemptible_work_item(nullptr, &work_item, _test_work_item_routine, &context) ==
         CXPLAT_STATUS_SUCCESS);
     cxplat_free_preemptible_work_item(work_item);
-    REQUIRE(context == 1);
+    REQUIRE(context.value == 1);
 
     cxplat_cleanup();
 }
