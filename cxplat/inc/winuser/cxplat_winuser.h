@@ -1,7 +1,15 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 #pragma once
+#include <assert.h>
 #include <winerror.h>
+
+#define CXPLAT_RUNTIME_ASSERT(x) assert(x)
+#ifdef NDEBUG
+#define CXPLAT_DEBUG_ASSERT(x) (void)(x)
+#else
+#define CXPLAT_DEBUG_ASSERT(x) assert(x)
+#endif //! NDEBUG
 
 // Map specific cxplat_status_t values to HRESULT values.
 #define CXPLAT_PLATFORM_STATUS_SUCCESS S_OK
