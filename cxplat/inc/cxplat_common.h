@@ -5,15 +5,6 @@
 // Include platform-specific definitions of common defines.
 #include "cxplat_platform.h"
 
-#include <assert.h>
-
-#define CXPLAT_RUNTIME_ASSERT(x) assert(x)
-#ifdef NDEBUG
-#define CXPLAT_DEBUG_ASSERT(x) (void)(x)
-#else
-#define CXPLAT_DEBUG_ASSERT(x) assert(x)
-#endif //! NDEBUG
-
 #ifdef __cplusplus
 #define CXPLAT_NOEXCEPT noexcept
 #define CXPLAT_EXTERN_C extern "C"

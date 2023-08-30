@@ -3,6 +3,7 @@
 
 // This file contains initialization/cleanup routines for the Windows kernel-mode cxplat library.
 #include "cxplat.h"
+#include <wdm.h>
 
 static ULONG _cxplat_initialization_count = 0;
 

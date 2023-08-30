@@ -7,6 +7,13 @@
 #include <ntdef.h> // for NTSTATUS
 #include <ntstatus.h>
 
+#define CXPLAT_RUNTIME_ASSERT(x) NT_ASSERT(x)
+#ifdef NDEBUG
+#define CXPLAT_DEBUG_ASSERT(x) (void)(x)
+#else
+#define CXPLAT_DEBUG_ASSERT(x) NT_ASSERT(x)
+#endif //! NDEBUG
+
 // Map specific cxplat_status_t values to HRESULT values.
 #define CXPLAT_PLATFORM_STATUS_SUCCESS STATUS_SUCCESS
 #define CXPLAT_PLATFORM_STATUS_NO_MEMORY STATUS_NO_MEMORY
