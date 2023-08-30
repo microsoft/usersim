@@ -23,7 +23,6 @@ _test_work_item_routine(_Inout_opt_ void* context)
         return;
     }
     work_item_context_t* work_item_context = (work_item_context_t*)context;
-    REQUIRE(work_item_context->value == 1);
     work_item_context->value++;
     if (work_item_context->free_work_item) {
         cxplat_free_preemptible_work_item(work_item_context->work_item);
@@ -40,11 +39,18 @@ TEST_CASE("queue_preemptible_work_item and free afterwards", "[workitem]")
         cxplat_allocate_preemptible_work_item(nullptr, &work_item, _test_work_item_routine, &context) ==
         CXPLAT_STATUS_SUCCESS);
     context.work_item = work_item;
+
+    cxplat_queue_preemptible_work_item(work_item);
+    Sleep(500);
+    REQUIRE(context.value == 2);
+
+    // Verify we can re-queue the same work item after it's completed the first time,
+    // as long as we haven't yet called cxplat_wait_for_preemptible_work_items_complete().
     cxplat_queue_preemptible_work_item(work_item);
     cxplat_wait_for_preemptible_work_items_complete();
-    REQUIRE(context.value == 2);
-    cxplat_free_preemptible_work_item(work_item);
+    REQUIRE(context.value == 3);
 
+    cxplat_free_preemptible_work_item(work_item);
     cxplat_cleanup();
 }
 
