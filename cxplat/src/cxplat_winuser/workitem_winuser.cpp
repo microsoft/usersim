@@ -13,7 +13,7 @@ static PTP_CLEANUP_GROUP _cleanup_group = nullptr;
 typedef struct _cxplat_preemptible_work_item
 {
     PTP_WORK work;
-    void (*work_item_routine)(_Inout_opt_ void* work_item_context);
+    cxplat_work_item_routine_t work_item_routine;
     void* work_item_context;
 } cxplat_preemptible_work_item_t;
 
@@ -27,7 +27,7 @@ _cxplat_preemptible_routine(_Inout_ PTP_CALLBACK_INSTANCE instance, _In_opt_ voi
 
     if (parameter != nullptr) {
         cxplat_preemptible_work_item_t* work_item = (cxplat_preemptible_work_item_t*)parameter;
-        work_item->work_item_routine(work_item->work_item_context);
+        work_item->work_item_routine(work_item, work_item->work_item_context);
     }
     cxplat_release_rundown_protection(&_cxplat_preemptible_work_items_rundown_reference);
 }
@@ -36,7 +36,7 @@ _Must_inspect_result_ cxplat_status_t
 cxplat_allocate_preemptible_work_item(
     _In_opt_ void* caller_context,
     _Outptr_ cxplat_preemptible_work_item_t** work_item,
-    _In_ void (*work_item_routine)(_In_opt_ void* work_item_context),
+    _In_ cxplat_work_item_routine_t work_item_routine,
     _In_opt_ void* work_item_context)
 {
     UNREFERENCED_PARAMETER(caller_context);

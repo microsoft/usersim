@@ -59,8 +59,9 @@ IoAllocateMdl(
 }
 
 void
-io_work_item_wrapper(_Inout_opt_ void* context)
+io_work_item_wrapper(_In_ cxplat_preemptible_work_item_t* work_item, _Inout_opt_ void* context)
 {
+    UNREFERENCED_PARAMETER(work_item);
     auto io_work_item = reinterpret_cast<const IO_WORKITEM*>(context);
     if (io_work_item) {
         io_work_item->routine(io_work_item->device_object, io_work_item->context);

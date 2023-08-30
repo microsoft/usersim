@@ -6,6 +6,9 @@ CXPLAT_EXTERN_C_BEGIN
 
 typedef struct _cxplat_preemptible_work_item cxplat_preemptible_work_item_t;
 
+typedef void(*cxplat_work_item_routine_t)(
+    _In_ cxplat_preemptible_work_item_t* work_item, _In_opt_ void* work_item_context);
+
 /**
  * @brief Create a preemptible work item.
  *
@@ -23,7 +26,7 @@ _Must_inspect_result_ cxplat_status_t
 cxplat_allocate_preemptible_work_item(
     _In_opt_ void* caller_context,
     _Outptr_ cxplat_preemptible_work_item_t** work_item,
-    _In_ void (*work_item_routine)(_In_opt_ void* work_item_context),
+    _In_ cxplat_work_item_routine_t work_item_routine,
     _In_opt_ void* work_item_context);
 
 /**
