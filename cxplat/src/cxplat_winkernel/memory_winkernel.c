@@ -7,12 +7,11 @@
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate_with_tag(
     _In_ cxplat_pool_type_t pool_type, size_t size, uint32_t tag, bool initialize)
 {
-    if (initialize) {
-#pragma warning(suppress : 4996)
-        return ExAllocatePoolWithTag(pool_type, size, tag);
-    } else {
-        return ExAllocatePoolUninitialized(pool_type, size, tag);
+    void* memory = ExAllocatePoolUninitialized(pool_type, size, tag);
+    if (memory && initialize) {
+        RtlZeroMemory(memory, size);
     }
+    return memory;
 }
 
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate_with_tag(
