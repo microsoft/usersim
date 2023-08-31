@@ -8,7 +8,7 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
     _In_ cxplat_pool_type_t pool_type, size_t size, uint32_t tag, bool initialize)
 {
     void* memory = ExAllocatePoolUninitialized(pool_type, size, tag);
-    if (initialize) {
+    if (memory && initialize) {
         RtlZeroMemory(memory, size);
     }
     return memory;
