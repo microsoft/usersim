@@ -33,6 +33,12 @@ static DRIVER_OBJECT _driver_object = {0};
         return DriverEntry(&_driver_object, &registry_path);
     }
 
+    __declspec(dllexport) HANDLE usersim_dll_get_device_handle()
+    {
+        DRIVER_OBJECT* driver = (DRIVER_OBJECT*)WdfDriverGlobals->Driver;
+        return driver->device;
+    }
+
     void
     UsersimStopDriver()
     {

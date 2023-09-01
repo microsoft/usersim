@@ -21,8 +21,10 @@ static WdfDeviceInitSetFileObjectConfig_t _WdfDeviceInitSetFileObjectConfig;
 static WdfDeviceInitAssignWdmIrpPreprocessCallback_t _WdfDeviceInitAssignWdmIrpPreprocessCallback;
 static WdfDeviceCreateSymbolicLink_t _WdfDeviceCreateSymbolicLink;
 static WdfIoQueueCreate_t _WdfIoQueueCreate;
+static WdfIoQueueGetDevice_t _WdfIoQueueGetDevice;
 static WdfDeviceWdmGetDeviceObject_t _WdfDeviceWdmGetDeviceObject;
 static WdfObjectDelete_t _WdfObjectDelete;
+static WdfRequestCompleteWithInformation_t _WdfRequestCompleteWithInformation;
 
 static NTSTATUS
 _WdfDriverCreate(
@@ -47,6 +49,15 @@ _WdfDriverCreate(
     driver_object->device = nullptr;
     if (driver != nullptr) {
         *driver = driver_object;
+    }
+    if (driver_object->config.EvtDriverDeviceAdd) {
+        // The driver has registered for the device addition event,
+        // so go ahead and signal it immediately.
+        driver_object->device_init = _WdfControlDeviceInitAllocate(driver_globals, driver_globals->Driver, nullptr);
+        if (!driver_object->device_init) {
+            return STATUS_NO_MEMORY;
+        }
+        return driver_object->config.EvtDriverDeviceAdd(driver_globals->Driver, driver_object->device_init);
     }
     return STATUS_SUCCESS;
 }
@@ -85,6 +96,7 @@ typedef struct _WDFDEVICE_INIT
     PFN_WDFDEVICE_WDM_IRP_PREPROCESS evt_device_wdm_irp_preprocess;
     PUCHAR minor_functions[IRP_MJ_MAXIMUM_FUNCTION];
     ULONG num_minor_functions[IRP_MJ_MAXIMUM_FUNCTION];
+    WDF_IO_QUEUE_CONFIG io_queue_config;
 } WDFDEVICE_INIT;
 
 static _Must_inspect_result_ _IRQL_requires_max_(PASSIVE_LEVEL) PWDFDEVICE_INIT _WdfControlDeviceInitAllocate(
@@ -202,9 +214,10 @@ static _Must_inspect_result_ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS _WdfIo
     _In_opt_ PWDF_OBJECT_ATTRIBUTES queue_attributes,
     _Out_opt_ WDFQUEUE* queue)
 {
-    UNREFERENCED_PARAMETER(device);
-    UNREFERENCED_PARAMETER(config);
     UNREFERENCED_PARAMETER(queue_attributes);
+
+    PWDFDEVICE_INIT device_object = (PWDFDEVICE_INIT)device;
+    device_object->io_queue_config = *config;
 
     if (driver_globals != &g_UsersimWdfDriverGlobals) {
         return STATUS_INVALID_PARAMETER;
@@ -213,13 +226,20 @@ static _Must_inspect_result_ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS _WdfIo
         return STATUS_INSUFFICIENT_RESOURCES;
     }
     if (queue != nullptr) {
-        memset(queue, 0, sizeof(*queue));
+        *queue = device;
     }
     return STATUS_SUCCESS;
 }
 
-_IRQL_requires_max_(DISPATCH_LEVEL) VOID
-    _WdfControlFinishInitializing(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device)
+static
+_IRQL_requires_max_(DISPATCH_LEVEL)
+WDFDEVICE _WdfIoQueueGetDevice(_In_ WDFQUEUE queue)
+{
+    return (WDFDEVICE)queue;
+}
+
+static _IRQL_requires_max_(DISPATCH_LEVEL) VOID
+_WdfControlFinishInitializing(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device)
 {
     UNREFERENCED_PARAMETER(driver_globals);
     UNREFERENCED_PARAMETER(device);
@@ -232,12 +252,69 @@ _IRQL_requires_max_(DISPATCH_LEVEL) PDEVICE_OBJECT
     return (PDEVICE_OBJECT)device;
 }
 
+static
 _IRQL_requires_max_(DISPATCH_LEVEL) VOID
     _WdfObjectDelete(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFOBJECT object)
 {
     UNREFERENCED_PARAMETER(driver_globals);
 
     cxplat_free_any_tag(object);
+}
+
+typedef struct _wdfrequest
+{
+    NTSTATUS status;
+    ULONG_PTR information;
+    size_t buffer_size;
+    _Field_size_(buffer_size) char buffer[0];
+} wdfrequest_t;
+
+static _IRQL_requires_max_(DISPATCH_LEVEL) VOID _WdfRequestCompleteWithInformation(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFREQUEST request, _In_ NTSTATUS status, _In_ ULONG_PTR information)
+{
+    UNREFERENCED_PARAMETER(driver_globals);
+
+    wdfrequest_t* internal_request = (wdfrequest_t*)request;
+    internal_request->status = status;
+    internal_request->information = information;
+}
+
+static _Must_inspect_result_ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS
+_WdfRequestRetrieveInputBuffer(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals,
+    _In_ WDFREQUEST request,
+    _In_ size_t minimum_required_length,
+    _Outptr_result_bytebuffer_(*length) PVOID* buffer,
+    _Out_opt_ size_t* length)
+{
+    UNREFERENCED_PARAMETER(driver_globals);
+
+    wdfrequest_t* internal_request = (wdfrequest_t*)request;
+    *buffer = internal_request->buffer;
+    if (length != NULL) {
+        *length = internal_request->buffer_size;
+    }
+    return (*length < minimum_required_length) ? STATUS_BUFFER_TOO_SMALL : STATUS_SUCCESS;
+}
+
+static _Must_inspect_result_
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+_WdfRequestRetrieveOutputBuffer(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals,
+    _In_ WDFREQUEST request,
+    _In_ size_t minimum_required_size,
+    _Outptr_result_bytebuffer_(*length) PVOID* buffer,
+    _Out_opt_ size_t* length)
+{
+    UNREFERENCED_PARAMETER(driver_globals);
+
+    wdfrequest_t* internal_request = (wdfrequest_t*)request;
+    *buffer = internal_request->buffer;
+    if (length != NULL) {
+        *length = internal_request->buffer_size;
+    }
+    return (*length < minimum_required_size) ? STATUS_BUFFER_TOO_SMALL : STATUS_SUCCESS;
 }
 
 WDFFUNC g_UsersimWdfFunctions[WdfFunctionTableNumEntries];
@@ -259,7 +336,11 @@ usersim_initialize_wdf()
     g_UsersimWdfFunctions[WdfDeviceCreateSymbolicLinkTableIndex] = (WDFFUNC)_WdfDeviceCreateSymbolicLink;
     g_UsersimWdfFunctions[WdfDriverCreateTableIndex] = (WDFFUNC)_WdfDriverCreate;
     g_UsersimWdfFunctions[WdfIoQueueCreateTableIndex] = (WDFFUNC)_WdfIoQueueCreate;
+    g_UsersimWdfFunctions[WdfIoQueueGetDeviceTableIndex] = (WDFFUNC)_WdfIoQueueGetDevice;
     g_UsersimWdfFunctions[WdfObjectDeleteTableIndex] = (WDFFUNC)_WdfObjectDelete;
+    g_UsersimWdfFunctions[WdfRequestCompleteWithInformationTableIndex] = (WDFFUNC)_WdfRequestCompleteWithInformation;
+    g_UsersimWdfFunctions[WdfRequestRetrieveInputBufferTableIndex] = (WDFFUNC)_WdfRequestRetrieveInputBuffer;
+    g_UsersimWdfFunctions[WdfRequestRetrieveOutputBufferTableIndex] = (WDFFUNC)_WdfRequestRetrieveOutputBuffer;
 }
 
 extern "C"
@@ -277,4 +358,49 @@ void
 WDF_DRIVER_CONFIG_INIT(_Out_ PWDF_DRIVER_CONFIG config, _In_opt_ PFN_WDF_DRIVER_DEVICE_ADD evt_driver_device_add)
 {
     *config = {.EvtDriverDeviceAdd = evt_driver_device_add};
+}
+
+HANDLE
+usersim_get_device_handle(HMODULE module)
+{
+    usersim_dll_get_device_handle_t usersim_dll_get_device_handle =
+        (usersim_dll_get_device_handle_t)GetProcAddress(module, "usersim_dll_get_device_handle");
+    return usersim_dll_get_device_handle();
+}
+
+BOOL
+usersim_device_io_control(
+    HANDLE device_handle,
+    DWORD io_control_code,
+    _In_reads_opt_(in_buffer_size) void* in_buffer,
+    DWORD in_buffer_size,
+    _Out_writes_to_opt_(out_buffer_size, *bytes_returned) void* out_buffer,
+    DWORD out_buffer_size,
+    _Out_opt_ DWORD* bytes_returned,
+    _Inout_opt_ OVERLAPPED* overlapped)
+{
+    UNREFERENCED_PARAMETER(overlapped);
+
+    PWDFDEVICE_INIT device_object = (PWDFDEVICE_INIT)device_handle;
+    if (!device_object->io_queue_config.EvtIoDeviceControl) {
+        return FALSE;
+    }
+
+    size_t buffer_size = max(max(in_buffer_size, out_buffer_size), 1);
+    wdfrequest_t* request = (wdfrequest_t*)cxplat_allocate(
+        CxPlatNonPagedPoolNx, FIELD_OFFSET(wdfrequest_t, buffer[buffer_size]), USERSIM_TAG_WDF_REQUEST, true);
+    if (!request) {
+        return FALSE;
+    }
+    request->buffer_size = in_buffer_size;
+    memcpy(&request->buffer, in_buffer, in_buffer_size);
+
+    WDFQUEUE queue = (WDFQUEUE)device_object;
+    device_object->io_queue_config.EvtIoDeviceControl(queue, (WDFREQUEST)request, out_buffer_size, in_buffer_size, io_control_code);
+
+    *bytes_returned = (DWORD)request->information;
+    memcpy(out_buffer, &request->buffer, *bytes_returned);
+    BOOL result = NT_SUCCESS(request->status);
+    cxplat_free(request, USERSIM_TAG_WDF_REQUEST);
+    return result;
 }
