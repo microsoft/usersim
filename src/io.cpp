@@ -45,7 +45,7 @@ IoAllocateMdl(
     UNREFERENCED_PARAMETER(charge_quota);
     UNREFERENCED_PARAMETER(irp);
 
-    mdl = reinterpret_cast<MDL*>(cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, sizeof(MDL), USERSIM_TAG_MDL, true));
+    mdl = reinterpret_cast<MDL*>(cxplat_allocate(CxPlatNonPagedPoolNx, sizeof(MDL), USERSIM_TAG_MDL, true));
     if (mdl == NULL) {
         return mdl;
     }
@@ -70,8 +70,8 @@ io_work_item_wrapper(_In_ cxplat_preemptible_work_item_t* work_item, _Inout_opt_
 PIO_WORKITEM
 IoAllocateWorkItem(_In_ DEVICE_OBJECT* device_object)
 {
-    auto io_work_item = (PIO_WORKITEM)cxplat_allocate_with_tag(
-        CxPlatNonPagedPoolNx, sizeof(IO_WORKITEM), USERSIM_TAG_IO_WORK_ITEM, true);
+    auto io_work_item =
+        (PIO_WORKITEM)cxplat_allocate(CxPlatNonPagedPoolNx, sizeof(IO_WORKITEM), USERSIM_TAG_IO_WORK_ITEM, true);
     if (!io_work_item) {
         return nullptr;
     }
@@ -79,7 +79,7 @@ IoAllocateWorkItem(_In_ DEVICE_OBJECT* device_object)
     cxplat_status_t status = cxplat_allocate_preemptible_work_item(
         nullptr, &io_work_item->cxplat_work_item, io_work_item_wrapper, io_work_item);
     if (!CXPLAT_SUCCEEDED(status)) {
-        cxplat_free(io_work_item);
+        cxplat_free(io_work_item, USERSIM_TAG_IO_WORK_ITEM);
         return nullptr;
     }
     return io_work_item;
@@ -102,13 +102,13 @@ void
 IoFreeWorkItem(_In_ __drv_freesMem(Mem) PIO_WORKITEM io_work_item)
 {
     cxplat_free_preemptible_work_item(io_work_item->cxplat_work_item);
-    cxplat_free(io_work_item);
+    cxplat_free(io_work_item, USERSIM_TAG_IO_WORK_ITEM);
 }
 
 void
 IoFreeMdl(MDL* mdl)
 {
-    cxplat_free(mdl);
+    cxplat_free(mdl, USERSIM_TAG_MDL);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI PEPROCESS IoGetCurrentProcess(VOID)

@@ -164,7 +164,7 @@ usersim_allocate_ring_buffer_memory(size_t length)
         return nullptr;
     }
 
-    usersim_ring_descriptor_t* descriptor = (usersim_ring_descriptor_t*)cxplat_allocate_with_tag(
+    usersim_ring_descriptor_t* descriptor = (usersim_ring_descriptor_t*)cxplat_allocate(
         CxPlatNonPagedPoolNx, sizeof(usersim_ring_descriptor_t), USERSIM_TAG_RING_DESCRIPTOR, true);
     if (!descriptor) {
         goto Exit;
@@ -247,7 +247,7 @@ usersim_allocate_ring_buffer_memory(size_t length)
     view2 = nullptr;
 Exit:
     if (!result) {
-        cxplat_free(descriptor);
+        cxplat_free(descriptor, USERSIM_TAG_RING_DESCRIPTOR);
         descriptor = nullptr;
     }
 
@@ -281,7 +281,7 @@ usersim_free_ring_buffer_memory(_Frees_ptr_opt_ usersim_ring_descriptor_t* ring)
     if (ring) {
         UnmapViewOfFile(ring->primary_view);
         UnmapViewOfFile(ring->secondary_view);
-        cxplat_free(ring);
+        cxplat_free(ring, USERSIM_TAG_RING_DESCRIPTOR);
     }
     USERSIM_RETURN_VOID();
 }
@@ -530,7 +530,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSTATUS
         return win32_error_to_usersim_error(GetLastError());
     }
 
-    privileges = (TOKEN_GROUPS_AND_PRIVILEGES*)cxplat_allocate_with_tag(
+    privileges = (TOKEN_GROUPS_AND_PRIVILEGES*)cxplat_allocate(
         CxPlatNonPagedPoolNx, size, USERSIM_TAG_TOKEN_GROUPS_AND_PRIVILEGES, true);
     if (privileges == nullptr) {
         return STATUS_NO_MEMORY;
@@ -547,7 +547,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSTATUS
     *authentication_id = *(uint64_t*)&privileges->AuthenticationId;
 
 Exit:
-    cxplat_free(privileges);
+    cxplat_free(privileges, USERSIM_TAG_TOKEN_GROUPS_AND_PRIVILEGES);
     return return_value;
 }
 
@@ -579,8 +579,8 @@ usersim_utf8_string_to_unicode(_In_ const cxplat_utf8_string_t* input, _Outptr_ 
 
     result++;
 
-    unicode_string = (wchar_t*)cxplat_allocate_with_tag(
-        CxPlatNonPagedPoolNx, result * sizeof(wchar_t), USERSIM_TAG_UNICODE_STRING, true);
+    unicode_string =
+        (wchar_t*)cxplat_allocate(CxPlatNonPagedPoolNx, result * sizeof(wchar_t), USERSIM_TAG_UNICODE_STRING, true);
     if (unicode_string == NULL) {
         retval = STATUS_NO_MEMORY;
         goto Done;
@@ -598,7 +598,7 @@ usersim_utf8_string_to_unicode(_In_ const cxplat_utf8_string_t* input, _Outptr_ 
     retval = STATUS_SUCCESS;
 
 Done:
-    cxplat_free(unicode_string);
+    cxplat_free(unicode_string, USERSIM_TAG_UNICODE_STRING);
     return retval;
 }
 

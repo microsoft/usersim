@@ -94,8 +94,8 @@ static _Must_inspect_result_ _IRQL_requires_max_(PASSIVE_LEVEL) PWDFDEVICE_INIT 
     UNREFERENCED_PARAMETER(driver);
     UNREFERENCED_PARAMETER(sddl_string);
 
-    PWDFDEVICE_INIT device_init = (PWDFDEVICE_INIT)cxplat_allocate_with_tag(
-        CxPlatNonPagedPoolNx, sizeof(*device_init), USERSIM_TAG_WDF_DEVICE_INIT, true);
+    PWDFDEVICE_INIT device_init =
+        (PWDFDEVICE_INIT)cxplat_allocate(CxPlatNonPagedPoolNx, sizeof(*device_init), USERSIM_TAG_WDF_DEVICE_INIT, true);
     return device_init;
 }
 
@@ -103,7 +103,7 @@ static _IRQL_requires_max_(DISPATCH_LEVEL) VOID
     _WdfDeviceInitFree(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ PWDFDEVICE_INIT device_init)
 {
     UNREFERENCED_PARAMETER(driver_globals);
-    cxplat_free(device_init);
+    cxplat_free(device_init, USERSIM_TAG_WDF_DEVICE_INIT);
 }
 
 static _IRQL_requires_max_(DISPATCH_LEVEL) VOID _WdfDeviceInitSetDeviceType(
@@ -237,7 +237,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) VOID
 {
     UNREFERENCED_PARAMETER(driver_globals);
 
-    cxplat_free(object);
+    cxplat_free(object, CXPLAT_TAG_ANY);
 }
 
 WDFFUNC g_UsersimWdfFunctions[WdfFunctionTableNumEntries];
