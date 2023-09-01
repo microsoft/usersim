@@ -38,7 +38,7 @@ typedef struct _cxplat_utf8_string
     }
 
 /**
- * @brief Allocate memory.
+ * @brief Allocate memory. cxplat_allocate_with_tag() should normally be used instead of this API.
  * @param[in] size Size of memory to allocate.
  * @returns Pointer to memory block allocated, or null on failure.
  */

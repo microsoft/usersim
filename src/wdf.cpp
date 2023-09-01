@@ -87,45 +87,34 @@ typedef struct _WDFDEVICE_INIT
     ULONG num_minor_functions[IRP_MJ_MAXIMUM_FUNCTION];
 } WDFDEVICE_INIT;
 
-static
-_Must_inspect_result_
-_IRQL_requires_max_(PASSIVE_LEVEL)
-PWDFDEVICE_INIT
-_WdfControlDeviceInitAllocate(
-    _In_ PWDF_DRIVER_GLOBALS driver_globals,
-    _In_ WDFDRIVER driver,
-    _In_ CONST UNICODE_STRING* sddl_string)
+static _Must_inspect_result_ _IRQL_requires_max_(PASSIVE_LEVEL) PWDFDEVICE_INIT _WdfControlDeviceInitAllocate(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDRIVER driver, _In_ CONST UNICODE_STRING* sddl_string)
 {
     UNREFERENCED_PARAMETER(driver_globals);
     UNREFERENCED_PARAMETER(driver);
     UNREFERENCED_PARAMETER(sddl_string);
 
-    PWDFDEVICE_INIT device_init = (PWDFDEVICE_INIT)cxplat_allocate(sizeof(*device_init));
+    PWDFDEVICE_INIT device_init = (PWDFDEVICE_INIT)cxplat_allocate_with_tag(
+        CxPlatNonPagedPoolNx, sizeof(*device_init), USERSIM_WDF_DEVICE_INIT_TAG, true);
     return device_init;
 }
 
 static _IRQL_requires_max_(DISPATCH_LEVEL) VOID
-_WdfDeviceInitFree(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ PWDFDEVICE_INIT device_init)
+    _WdfDeviceInitFree(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ PWDFDEVICE_INIT device_init)
 {
     UNREFERENCED_PARAMETER(driver_globals);
     cxplat_free(device_init);
 }
 
-static
-_IRQL_requires_max_(DISPATCH_LEVEL) VOID
-_WdfDeviceInitSetDeviceType(
-    _In_ PWDF_DRIVER_GLOBALS driver_globals, 
-    _In_ PWDFDEVICE_INIT device_init,
-    DEVICE_TYPE device_type)
+static _IRQL_requires_max_(DISPATCH_LEVEL) VOID _WdfDeviceInitSetDeviceType(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ PWDFDEVICE_INIT device_init, DEVICE_TYPE device_type)
 {
     UNREFERENCED_PARAMETER(driver_globals);
     device_init->device_type = device_type;
 }
 
-static
-_IRQL_requires_max_(DISPATCH_LEVEL) VOID
-_WdfDeviceInitSetCharacteristics(
-    _In_ PWDF_DRIVER_GLOBALS driver_globals, 
+static _IRQL_requires_max_(DISPATCH_LEVEL) VOID _WdfDeviceInitSetCharacteristics(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals,
     _In_ PWDFDEVICE_INIT device_init,
     ULONG device_characteristics,
     BOOLEAN or_in_values)
@@ -137,13 +126,8 @@ _WdfDeviceInitSetCharacteristics(
     device_init->device_characteristics |= device_characteristics;
 }
 
-static _Must_inspect_result_
-_IRQL_requires_max_(PASSIVE_LEVEL)
-NTSTATUS
-_WdfDeviceInitAssignName(
-    _In_ PWDF_DRIVER_GLOBALS driver_globals,
-    _In_ PWDFDEVICE_INIT device_init,
-    _In_opt_ PCUNICODE_STRING device_name)
+static _Must_inspect_result_ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS _WdfDeviceInitAssignName(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ PWDFDEVICE_INIT device_init, _In_opt_ PCUNICODE_STRING device_name)
 {
     if (driver_globals != &g_UsersimWdfDriverGlobals) {
         return STATUS_INVALID_PARAMETER;
@@ -157,9 +141,7 @@ _WdfDeviceInitAssignName(
     return STATUS_SUCCESS;
 }
 
-static
-_IRQL_requires_max_(DISPATCH_LEVEL) VOID
-_WdfDeviceInitSetFileObjectConfig(
+static _IRQL_requires_max_(DISPATCH_LEVEL) VOID _WdfDeviceInitSetFileObjectConfig(
     _In_ PWDF_DRIVER_GLOBALS driver_globals,
     _In_ PWDFDEVICE_INIT device_init,
     _In_ PWDF_FILEOBJECT_CONFIG file_object_config,
@@ -170,10 +152,7 @@ _WdfDeviceInitSetFileObjectConfig(
     device_init->file_object_attributes = file_object_attributes;
 }
 
-static _Must_inspect_result_
-_IRQL_requires_max_(DISPATCH_LEVEL)
-NTSTATUS
-_WdfDeviceInitAssignWdmIrpPreprocessCallback(
+static _Must_inspect_result_ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS _WdfDeviceInitAssignWdmIrpPreprocessCallback(
     _In_ PWDF_DRIVER_GLOBALS driver_globals,
     _In_ PWDFDEVICE_INIT device_init,
     _In_ PFN_WDFDEVICE_WDM_IRP_PREPROCESS evt_device_wdm_irp_preprocess,
@@ -201,13 +180,8 @@ _WdfDeviceInitAssignWdmIrpPreprocessCallback(
     return STATUS_SUCCESS;
 }
 
-static _Must_inspect_result_
-_IRQL_requires_max_(PASSIVE_LEVEL)
-NTSTATUS
-_WdfDeviceCreateSymbolicLink(
-    _In_ PWDF_DRIVER_GLOBALS driver_globals,
-    _In_ WDFDEVICE device,
-    _In_ PCUNICODE_STRING symbolic_link_name)
+static _Must_inspect_result_ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS _WdfDeviceCreateSymbolicLink(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device, _In_ PCUNICODE_STRING symbolic_link_name)
 {
     UNREFERENCED_PARAMETER(device);
     UNREFERENCED_PARAMETER(symbolic_link_name);
@@ -221,11 +195,7 @@ _WdfDeviceCreateSymbolicLink(
     return STATUS_SUCCESS;
 }
 
-static
-_Must_inspect_result_
-_IRQL_requires_max_(DISPATCH_LEVEL)
-NTSTATUS
-_WdfIoQueueCreate(
+static _Must_inspect_result_ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS _WdfIoQueueCreate(
     _In_ PWDF_DRIVER_GLOBALS driver_globals,
     _In_ WDFDEVICE device,
     _In_ PWDF_IO_QUEUE_CONFIG config,
@@ -249,21 +219,21 @@ _WdfIoQueueCreate(
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) VOID
-_WdfControlFinishInitializing(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device)
+    _WdfControlFinishInitializing(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device)
 {
     UNREFERENCED_PARAMETER(driver_globals);
     UNREFERENCED_PARAMETER(device);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) PDEVICE_OBJECT
-_WdfDeviceWdmGetDeviceObject(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device)
+    _WdfDeviceWdmGetDeviceObject(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device)
 {
     UNREFERENCED_PARAMETER(driver_globals);
     return (PDEVICE_OBJECT)device;
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) VOID
-_WdfObjectDelete(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFOBJECT object)
+    _WdfObjectDelete(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFOBJECT object)
 {
     UNREFERENCED_PARAMETER(driver_globals);
 

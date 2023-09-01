@@ -204,6 +204,7 @@
     <ClInclude Include="..\..\inc\cxplat_workitem.h" />
     <ClInclude Include="..\..\inc\winuser\cxplat_platform.h" />
     <ClInclude Include="..\..\inc\winuser\cxplat_winuser.h" />
+    <ClInclude Include="..\tags.h" />
     <ClInclude Include="leak_detector.h" />
     <ClInclude Include="symbol_decoder.h" />
     <ClInclude Include="winuser_internal.h" />

@@ -3,7 +3,7 @@
 
 #include "cxplat_fault_injection.h"
 #include "fwp_um.h"
-#define htonl(x) _byteswap_ulong(x) /* TODO: replace with RtlUlongByteSwap */
+#define htonl(x) _byteswap_ulong(x)  /* TODO: replace with RtlUlongByteSwap */
 #define htons(x) _byteswap_ushort(x) /* TODO: replace with RtlUShortByteSwap */
 #define ntohl(x) _byteswap_ulong(x)
 #define ntohs(x) _byteswap_ushort(x)
@@ -43,7 +43,8 @@ void static _allocate_and_initialize_connection_request(
     ADDRESS_FAMILY family, _In_ const fwp_classify_parameters_t* parameters)
 {
     CXPLAT_DEBUG_ASSERT(_fwp_um_connect_request == nullptr);
-    _fwp_um_connect_request = (FWPS_CONNECT_REQUEST0*)cxplat_allocate(sizeof(FWPS_CONNECT_REQUEST0));
+    _fwp_um_connect_request = (FWPS_CONNECT_REQUEST0*)cxplat_allocate_with_tag(
+        CxPlatNonPagedPoolNx, sizeof(FWPS_CONNECT_REQUEST0), USERSIM_FWPS_CONNECT_REQUEST0_TAG, true);
     if (_fwp_um_connect_request == nullptr) {
         // Most likely we are under fault injection simulation. Return.
         return;
@@ -860,8 +861,8 @@ _IRQL_requires_(PASSIVE_LEVEL) NTSTATUS NTAPI
     UNREFERENCED_PARAMETER(providerGuid);
     UNREFERENCED_PARAMETER(flags);
 
-    // Fault injection is implicitly introduced by usersim_allocate().
-    *redirectHandle = (HANDLE)cxplat_allocate(1);
+    // Fault injection is implicitly introduced by cxplat_allocate_with_tag().
+    *redirectHandle = (HANDLE)cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, 1, USERSIM_HANDLE_TAG, true);
     if (*redirectHandle == nullptr) {
         return STATUS_NO_MEMORY;
     }
@@ -902,7 +903,8 @@ usersim_fwp_classify_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_index)
     return _fwp_engine::get()->classify_test_packet(layer_guid, if_index);
 }
 
-FWP_ACTION_TYPE usersim_fwp_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
+FWP_ACTION_TYPE
+usersim_fwp_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
 {
     return _fwp_engine::get()->test_bind_ipv4(parameters);
 }
@@ -931,17 +933,20 @@ usersim_fwp_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameters)
     return _fwp_engine::get()->test_cgroup_inet6_connect(parameters);
 }
 
-FWP_ACTION_TYPE usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters)
+FWP_ACTION_TYPE
+usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters)
 {
     return _fwp_engine::get()->test_sock_ops_v4(parameters);
 }
 
-FWP_ACTION_TYPE usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
+FWP_ACTION_TYPE
+usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
 {
     return _fwp_engine::get()->test_sock_ops_v6(parameters);
 }
 
-void usersim_fwp_set_sublayer_guids(
+void
+usersim_fwp_set_sublayer_guids(
     _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer)
 {
     fwp_engine::get()->set_sublayer_guids(default_sublayer, connect_v4_sublayer, connect_v6_sublayer);

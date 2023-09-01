@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 #include "platform.h"
-#include "kernel_um.h"
 #include "usersim/ex.h"
 #include "usersim/io.h"
 
@@ -46,7 +45,7 @@ IoAllocateMdl(
     UNREFERENCED_PARAMETER(charge_quota);
     UNREFERENCED_PARAMETER(irp);
 
-    mdl = reinterpret_cast<MDL*>(cxplat_allocate(sizeof(MDL)));
+    mdl = reinterpret_cast<MDL*>(cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, sizeof(MDL), USERSIM_MDL_TAG, true));
     if (mdl == NULL) {
         return mdl;
     }
@@ -71,7 +70,8 @@ io_work_item_wrapper(_In_ cxplat_preemptible_work_item_t* work_item, _Inout_opt_
 PIO_WORKITEM
 IoAllocateWorkItem(_In_ DEVICE_OBJECT* device_object)
 {
-    auto io_work_item = (PIO_WORKITEM)cxplat_allocate(sizeof(IO_WORKITEM));
+    auto io_work_item = (PIO_WORKITEM)cxplat_allocate_with_tag(
+        CxPlatNonPagedPoolNx, sizeof(IO_WORKITEM), USERSIM_IO_WORK_ITEM_TAG, true);
     if (!io_work_item) {
         return nullptr;
     }
@@ -116,8 +116,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI PEPROCESS IoGetCurrentProcess(VO
     return (PEPROCESS)GetCurrentProcess();
 }
 
-_IRQL_requires_max_(DISPATCH_LEVEL) VOID
-IofCompleteRequest(_In_ PIRP irp, _In_ CCHAR priority_boost)
+_IRQL_requires_max_(DISPATCH_LEVEL) VOID IofCompleteRequest(_In_ PIRP irp, _In_ CCHAR priority_boost)
 {
     UNREFERENCED_PARAMETER(irp);
     UNREFERENCED_PARAMETER(priority_boost);

@@ -237,6 +237,7 @@
     <ClInclude Include="..\inc\usersim\rtl.h" />
     <ClInclude Include="..\inc\usersim\se.h" />
     <ClInclude Include="platform.h" />
+    <ClInclude Include="tags.h" />
     <ClInclude Include="tracelog.h" />
   </ItemGroup>
   <ItemGroup>

@@ -164,8 +164,8 @@ usersim_allocate_ring_buffer_memory(size_t length)
         return nullptr;
     }
 
-    usersim_ring_descriptor_t* descriptor =
-        (usersim_ring_descriptor_t*)cxplat_allocate(sizeof(usersim_ring_descriptor_t));
+    usersim_ring_descriptor_t* descriptor = (usersim_ring_descriptor_t*)cxplat_allocate_with_tag(
+        CxPlatNonPagedPoolNx, sizeof(usersim_ring_descriptor_t), USERSIM_RING_DESCRIPTOR_TAG, true);
     if (!descriptor) {
         goto Exit;
     }
@@ -530,7 +530,8 @@ _IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSTATUS
         return win32_error_to_usersim_error(GetLastError());
     }
 
-    privileges = (TOKEN_GROUPS_AND_PRIVILEGES*)cxplat_allocate(size);
+    privileges = (TOKEN_GROUPS_AND_PRIVILEGES*)cxplat_allocate_with_tag(
+        CxPlatNonPagedPoolNx, size, USERSIM_TOKEN_GROUPS_AND_PRIVILEGES_TAG, true);
     if (privileges == nullptr) {
         return STATUS_NO_MEMORY;
     }
@@ -578,7 +579,8 @@ usersim_utf8_string_to_unicode(_In_ const cxplat_utf8_string_t* input, _Outptr_ 
 
     result++;
 
-    unicode_string = (wchar_t*)cxplat_allocate(result * sizeof(wchar_t));
+    unicode_string = (wchar_t*)cxplat_allocate_with_tag(
+        CxPlatNonPagedPoolNx, result * sizeof(wchar_t), USERSIM_UNICODE_STRING_TAG, true);
     if (unicode_string == NULL) {
         retval = STATUS_NO_MEMORY;
         goto Done;

@@ -4,6 +4,7 @@
 
 #include "framework.h"
 #include "kernel_um.h"
+#include "tags.h"
 #include "usersim/common.h"
 
 typedef NTSTATUS usersim_result_t;
