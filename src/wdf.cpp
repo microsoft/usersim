@@ -237,7 +237,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) VOID
 {
     UNREFERENCED_PARAMETER(driver_globals);
 
-    cxplat_free(object, CXPLAT_TAG_ANY);
+    cxplat_free_any_tag(object);
 }
 
 WDFFUNC g_UsersimWdfFunctions[WdfFunctionTableNumEntries];

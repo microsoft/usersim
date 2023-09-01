@@ -35,7 +35,7 @@ TEST_CASE("allocate", "[memory]")
     *buffer = 42;
 
     // Try a free with an unknown tag.
-    cxplat_free(buffer, CXPLAT_TAG_ANY);
+    cxplat_free_any_tag(buffer);
 }
 
 TEST_CASE("reallocate unaligned", "[memory]")

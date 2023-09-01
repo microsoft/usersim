@@ -155,7 +155,7 @@ ExFreePoolCPP(_Frees_ptr_ void* p)
     if (p == nullptr) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x46, 0, 0, 0);
     }
-    cxplat_free(p, CXPLAT_TAG_ANY);
+    cxplat_free_any_tag(p);
 }
 
 void

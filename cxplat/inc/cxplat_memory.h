@@ -59,18 +59,21 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
     _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size, uint32_t tag);
 
-// Pseudo-tag used with free API if the caller does not know the pool tag.
-// This is used for example by the usersim library to implement APIs such as
-// WdfObjectDelete() and ExFreePool().
-#define CXPLAT_TAG_ANY 0
-
 /**
  * @brief Free memory.
  * @param[in] memory Allocation to be freed.
- * @param[in] tag Pool tag to use, or CXPLAT_TAG_ANY if unknown.
+ * @param[in] tag Pool tag to use.
  */
 void
 cxplat_free(_Frees_ptr_opt_ void* memory, uint32_t tag);
+
+/**
+ * @brief Free memory.  This API should only be used when the caller does not
+ * know the correct pool tag.
+ * @param[in] memory Allocation to be freed.
+ */
+void
+cxplat_free_any_tag(_Frees_ptr_opt_ void* memory);
 
 /**
  * @brief Allocate memory that has a starting address that is cache aligned.

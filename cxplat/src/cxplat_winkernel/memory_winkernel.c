@@ -31,11 +31,15 @@ void
 cxplat_free(_Frees_ptr_opt_ void* pointer, uint32_t tag)
 {
     if (pointer != NULL) {
-        if (tag == CXPLAT_TAG_ANY) {
-            ExFreePool(pointer);
-        } else {
-            ExFreePoolWithTag(pointer, tag);
-        }
+        ExFreePoolWithTag(pointer, tag);
+    }
+}
+
+void
+cxplat_free_any_tag(_Frees_ptr_opt_ void* pointer)
+{
+    if (pointer != NULL) {
+        ExFreePool(pointer);
     }
 }
 
