@@ -19,7 +19,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS EtwRegister(
     _Out_ PREGHANDLE reg_handle)
 {
     usersim_etw_provider_t* provider = (usersim_etw_provider_t*)cxplat_allocate_with_tag(
-        CxPlatNonPagedPoolNx, sizeof(*provider), USERSIM_ETW_PROVIDER_TAG, true);
+        CxPlatNonPagedPoolNx, sizeof(*provider), USERSIM_TAG_ETW_PROVIDER, true);
     if (provider == nullptr) {
         return STATUS_NO_MEMORY;
     }

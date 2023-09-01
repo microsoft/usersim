@@ -11,7 +11,7 @@ _Must_inspect_result_ _Ret_maybenull_z_ char*
 cxplat_duplicate_string(_In_z_ const char* source)
 {
     size_t size = strlen(source) + 1;
-    char* destination = (char*)cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, size, CXPLAT_STRING_TAG, true);
+    char* destination = (char*)cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, size, CXPLAT_TAG_STRING, true);
     if (destination) {
         memcpy(destination, source, size);
     }
@@ -27,7 +27,7 @@ cxplat_duplicate_utf8_string(_Out_ cxplat_utf8_string_t* destination, _In_ const
         return CXPLAT_STATUS_SUCCESS;
     } else {
         destination->value =
-            (uint8_t*)cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, source->length, CXPLAT_UTF8_STRING_TAG, true);
+            (uint8_t*)cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, source->length, CXPLAT_TAG_UTF8_STRING, true);
         if (!destination->value) {
             return CXPLAT_STATUS_NO_MEMORY;
         }

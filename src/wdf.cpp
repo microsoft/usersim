@@ -95,7 +95,7 @@ static _Must_inspect_result_ _IRQL_requires_max_(PASSIVE_LEVEL) PWDFDEVICE_INIT 
     UNREFERENCED_PARAMETER(sddl_string);
 
     PWDFDEVICE_INIT device_init = (PWDFDEVICE_INIT)cxplat_allocate_with_tag(
-        CxPlatNonPagedPoolNx, sizeof(*device_init), USERSIM_WDF_DEVICE_INIT_TAG, true);
+        CxPlatNonPagedPoolNx, sizeof(*device_init), USERSIM_TAG_WDF_DEVICE_INIT, true);
     return device_init;
 }
 

@@ -45,7 +45,7 @@ IoAllocateMdl(
     UNREFERENCED_PARAMETER(charge_quota);
     UNREFERENCED_PARAMETER(irp);
 
-    mdl = reinterpret_cast<MDL*>(cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, sizeof(MDL), USERSIM_MDL_TAG, true));
+    mdl = reinterpret_cast<MDL*>(cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, sizeof(MDL), USERSIM_TAG_MDL, true));
     if (mdl == NULL) {
         return mdl;
     }
@@ -71,7 +71,7 @@ PIO_WORKITEM
 IoAllocateWorkItem(_In_ DEVICE_OBJECT* device_object)
 {
     auto io_work_item = (PIO_WORKITEM)cxplat_allocate_with_tag(
-        CxPlatNonPagedPoolNx, sizeof(IO_WORKITEM), USERSIM_IO_WORK_ITEM_TAG, true);
+        CxPlatNonPagedPoolNx, sizeof(IO_WORKITEM), USERSIM_TAG_IO_WORK_ITEM, true);
     if (!io_work_item) {
         return nullptr;
     }

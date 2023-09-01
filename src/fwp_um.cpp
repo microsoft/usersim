@@ -44,7 +44,7 @@ void static _allocate_and_initialize_connection_request(
 {
     CXPLAT_DEBUG_ASSERT(_fwp_um_connect_request == nullptr);
     _fwp_um_connect_request = (FWPS_CONNECT_REQUEST0*)cxplat_allocate_with_tag(
-        CxPlatNonPagedPoolNx, sizeof(FWPS_CONNECT_REQUEST0), USERSIM_FWPS_CONNECT_REQUEST0_TAG, true);
+        CxPlatNonPagedPoolNx, sizeof(FWPS_CONNECT_REQUEST0), USERSIM_TAG_FWPS_CONNECT_REQUEST0, true);
     if (_fwp_um_connect_request == nullptr) {
         // Most likely we are under fault injection simulation. Return.
         return;
@@ -862,7 +862,7 @@ _IRQL_requires_(PASSIVE_LEVEL) NTSTATUS NTAPI
     UNREFERENCED_PARAMETER(flags);
 
     // Fault injection is implicitly introduced by cxplat_allocate_with_tag().
-    *redirectHandle = (HANDLE)cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, 1, USERSIM_HANDLE_TAG, true);
+    *redirectHandle = (HANDLE)cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, 1, USERSIM_TAG_HANDLE, true);
     if (*redirectHandle == nullptr) {
         return STATUS_NO_MEMORY;
     }

@@ -36,7 +36,7 @@ cxplat_allocate_preemptible_work_item(
     cxplat_status_t result = CXPLAT_STATUS_SUCCESS;
 
     *work_item = cxplat_allocate_with_tag(
-        CxPlatNonPagedPoolNx, sizeof(cxplat_preemptible_work_item_t), CXPLAT_PREEMPTIBLE_WORK_ITEM_TAG, true);
+        CxPlatNonPagedPoolNx, sizeof(cxplat_preemptible_work_item_t), CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM, true);
     if (*work_item == NULL) {
         result = CXPLAT_STATUS_NO_MEMORY;
         goto Done;
