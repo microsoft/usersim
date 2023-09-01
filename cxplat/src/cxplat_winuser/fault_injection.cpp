@@ -5,12 +5,14 @@
 #include "symbol_decoder.h"
 
 #include <DbgHelp.h>
-#include <Psapi.h>
 #include <cstddef>
 #include <fstream>
 #include <mutex>
+#include <psapi.h>
+#include <set>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <unordered_set>
 #include <vector>
 
@@ -26,10 +28,8 @@ typedef class _cxplat_fault_injection
     /**
      * @brief Construct a new fault injection object.
      * @param[in] stack_depth The number of stack frames to compare when tracking faults.
-     * @param[in] module_base_address The base address of the module being tested.
-     * @param[in] module_size The size of the module being tested.
      */
-    _cxplat_fault_injection(size_t stack_depth, uintptr_t module_base_address, size_t module_size);
+    _cxplat_fault_injection(size_t stack_depth);
 
     /**
      * @brief Destroy the fault injection object.
@@ -44,6 +44,23 @@ typedef class _cxplat_fault_injection
      */
     void
     reset();
+
+    void
+    add_module_under_test(uintptr_t module_base_address, size_t module_size)
+    {
+        std::unique_lock lock(_mutex);
+        auto new_module = std::make_pair(module_base_address, module_base_address + module_size);
+        if (!_modules_under_test.contains(new_module)) {
+            _modules_under_test.insert(std::make_pair(module_base_address, module_base_address + module_size));
+        }
+    }
+
+    void
+    remove_module_under_test(uintptr_t module_base_address, size_t module_size)
+    {
+        std::unique_lock lock(_mutex);
+        _modules_under_test.erase(std::make_pair(module_base_address, module_base_address + module_size));
+    }
 
   private:
     /**
@@ -83,14 +100,18 @@ typedef class _cxplat_fault_injection
     load_fault_log();
 
     /**
-     * @brief The base address of the module being tested.
+     * @brief Find the base address of the module containing the given address or 0 if not found.
+     *
+     * @param[in] address Address to find the base address for.
+     * @return Base address of the module containing the given address or 0 if not found.
      */
-    uintptr_t _base_address = 0;
+    uintptr_t
+    find_base_address(uintptr_t address);
 
     /**
-     * @brief The size of the module being tested.
+     * @brief Base address and size of the modules being tested.
      */
-    size_t _module_size;
+    std::set<std::pair<uintptr_t, uintptr_t>> _modules_under_test;
 
     /**
      * @brief The iteration number of the current test pass.
@@ -159,12 +180,13 @@ class cxplat_fault_injection_recursion_guard
     }
 };
 
-_cxplat_fault_injection::_cxplat_fault_injection(size_t stack_depth, uintptr_t module_base_address, size_t module_size)
-    : _stack_depth(stack_depth), _base_address(module_base_address), _module_size(module_size)
+_cxplat_fault_injection::_cxplat_fault_injection(size_t stack_depth)
+    : _stack_depth(stack_depth)
 {
     if (_stack_depth == 0) {
         _stack_depth = CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH;
     }
+
     // Get the path to the executable being run.
     char process_name[MAX_PATH];
     GetModuleFileNameA(nullptr, process_name, MAX_PATH);
@@ -219,9 +241,10 @@ _cxplat_fault_injection::is_new_stack()
         // Form the canonical stack.
         for (size_t i = 0; i < _stack_depth; i++) {
             uintptr_t frame = stack[i];
-            // Only consider frames in the module being tested.
-            if (frame >= _base_address && frame < (_base_address + _module_size)) {
-                canonical_stack.push_back(stack[i] - _base_address);
+            uintptr_t base_address = find_base_address(frame);
+            // Only consider frames in the modules being tested.
+            if (base_address) {
+                canonical_stack.push_back(stack[i] - base_address);
             }
         }
 
@@ -319,22 +342,42 @@ _cxplat_fault_injection::load_fault_log()
     _log_file << "# Iteration: " << ++_iteration << std::endl;
 }
 
+uintptr_t
+_cxplat_fault_injection::find_base_address(uintptr_t address)
+{
+
+    // Determine which module this offset is in.
+    // The _modules_under_test set is sorted by start and end offset of the module.
+    // The lower_bound function returns the first entry where the (start, end) offset is >=
+    // (offset, 0). Because this range has an invalid end offset, it will never be an exact match
+    // and will always return the first module that starts after the offset.
+
+    auto iter = _modules_under_test.lower_bound(std::make_pair(address, 0));
+
+    // Boundary conditions are:
+    // 1. The offset is before the first module -> iter == _modules_under_test.begin()
+    // 2. The offset is after the last module -> iter == _modules_under_test.end()
+
+    // _modules_under_test cannot be empty because there is at least one module.
+
+    if (iter == _modules_under_test.begin()) {
+        // The offset is before the first module.
+        return 0;
+    }
+
+    // Select the previous module.
+    iter--;
+
+    // Check if the offset is in the module.
+    return (address >= iter->first && address < iter->first + iter->second) ? iter->first : 0;
+}
+
+
 cxplat_status_t
-cxplat_fault_injection_initialize(size_t stack_depth, void* module_under_test) noexcept
+cxplat_fault_injection_initialize(size_t stack_depth) noexcept
 {
     try {
-        MODULEINFO module_info = {0};
-        if (module_under_test == nullptr) {
-            // If the module under test is not specified, use the current process.
-            module_under_test = GetModuleHandle(nullptr);
-        }
-        if (!GetModuleInformation(
-                GetCurrentProcess(), reinterpret_cast<HMODULE>(module_under_test), &module_info, sizeof(module_info))) {
-            throw std::runtime_error("GetModuleInformation failed");
-        }
-
-        _cxplat_fault_injection_singleton = std::make_unique<_cxplat_fault_injection>(
-            stack_depth, reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
+        _cxplat_fault_injection_singleton = std::make_unique<_cxplat_fault_injection>(stack_depth);
     } catch (...) {
         return CXPLAT_STATUS_NO_MEMORY;
     }
@@ -371,5 +414,57 @@ cxplat_fault_injection_reset() noexcept
 {
     if (_cxplat_fault_injection_singleton) {
         _cxplat_fault_injection_singleton->reset();
+    }
+}
+
+cxplat_status_t
+cxplat_fault_injection_add_module(void* module_under_test) noexcept
+{
+    try {
+        if (_cxplat_fault_injection_singleton) {
+            MODULEINFO module_info = {0};
+            if (module_under_test == nullptr) {
+                // If the module under test is not specified, use the current process.
+                module_under_test = GetModuleHandle(nullptr);
+            }
+            if (!GetModuleInformation(
+                    GetCurrentProcess(),
+                    reinterpret_cast<HMODULE>(module_under_test),
+                    &module_info,
+                    sizeof(module_info))) {
+                throw std::runtime_error("GetModuleInformation failed");
+            }
+            _cxplat_fault_injection_singleton->add_module_under_test(
+                reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
+        }
+        return CXPLAT_STATUS_SUCCESS;
+    } catch (...) {
+        return CXPLAT_STATUS_NO_MEMORY;
+    }
+}
+
+cxplat_status_t
+cxplat_fault_injection_remove_module(void* module_under_test) noexcept
+{
+    try {
+        if (_cxplat_fault_injection_singleton) {
+            MODULEINFO module_info = {0};
+            if (module_under_test == nullptr) {
+                // If the module under test is not specified, use the current process.
+                module_under_test = GetModuleHandle(nullptr);
+            }
+            if (!GetModuleInformation(
+                    GetCurrentProcess(),
+                    reinterpret_cast<HMODULE>(module_under_test),
+                    &module_info,
+                    sizeof(module_info))) {
+                throw std::runtime_error("GetModuleInformation failed");
+            }
+            _cxplat_fault_injection_singleton->remove_module_under_test(
+                reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
+        }
+        return CXPLAT_STATUS_SUCCESS;
+    } catch (...) {
+        return CXPLAT_STATUS_NO_MEMORY;
     }
 }

@@ -30,7 +30,7 @@
     <ClCompile Include="cxplat_initialization_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cxplat_fault_injection.cpp">
+    <ClCompile Include="cxplat_fault_injection_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
