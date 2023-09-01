@@ -5,6 +5,7 @@
 #include "symbol_decoder.h"
 
 #include <DbgHelp.h>
+#include <Psapi.h>
 #include <cstddef>
 #include <fstream>
 #include <mutex>
@@ -25,8 +26,10 @@ typedef class _cxplat_fault_injection
     /**
      * @brief Construct a new fault injection object.
      * @param[in] stack_depth The number of stack frames to compare when tracking faults.
+     * @param[in] module_base_address The base address of the module being tested.
+     * @param[in] module_size The size of the module being tested.
      */
-    _cxplat_fault_injection(size_t stack_depth);
+    _cxplat_fault_injection(size_t stack_depth, uintptr_t module_base_address, size_t module_size);
 
     /**
      * @brief Destroy the fault injection object.
@@ -35,6 +38,12 @@ typedef class _cxplat_fault_injection
 
     bool
     inject_fault();
+
+    /**
+     * @brief Reset the fault injection state, both in memory and on disk.
+     */
+    void
+    reset();
 
   private:
     /**
@@ -74,9 +83,14 @@ typedef class _cxplat_fault_injection
     load_fault_log();
 
     /**
-     * @brief The base address of the current process.
+     * @brief The base address of the module being tested.
      */
     uintptr_t _base_address = 0;
+
+    /**
+     * @brief The size of the module being tested.
+     */
+    size_t _module_size;
 
     /**
      * @brief The iteration number of the current test pass.
@@ -101,17 +115,14 @@ typedef class _cxplat_fault_injection
     size_t _stack_depth;
     _Guarded_by_(_mutex) std::vector<std::string> _last_fault_stack;
 
+    std::string _log_file_name;
+
 } cxplat_fault_injection_t;
 
 static std::unique_ptr<cxplat_fault_injection_t> _cxplat_fault_injection_singleton;
 
 // Link with DbgHelp.lib
 #pragma comment(lib, "dbghelp.lib")
-
-/**
- * @brief Approximate size in bytes of the image being tested.
- */
-#define CXPLAT_MODULE_SIZE_IN_BYTES (10 * 1024 * 1024)
 
 /**
  * @brief The number of stack frames to write to the human readable log.
@@ -122,10 +133,6 @@ static std::unique_ptr<cxplat_fault_injection_t> _cxplat_fault_injection_singlet
  * @brief The number of stack frames to capture to uniquely identify an fault path.
  */
 #define CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH 4
-
-#define CXPLAT_MODULE_SIZE_IN_BYTES (10 * 1024 * 1024)
-
-#define CXPLAT_FAULT_STACK_CAPTURE_FRAMES_TO_SKIP 3
 
 /**
  * @brief Thread local storage to track recursing from the fault injection callback.
@@ -152,10 +159,17 @@ class cxplat_fault_injection_recursion_guard
     }
 };
 
-_cxplat_fault_injection::_cxplat_fault_injection(size_t stack_depth = CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH)
-    : _stack_depth(stack_depth)
+_cxplat_fault_injection::_cxplat_fault_injection(size_t stack_depth, uintptr_t module_base_address, size_t module_size)
+    : _stack_depth(stack_depth), _base_address(module_base_address), _module_size(module_size)
 {
-    _base_address = (uintptr_t)(GetModuleHandle(nullptr));
+    if (_stack_depth == 0) {
+        _stack_depth = CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH;
+    }
+    // Get the path to the executable being run.
+    char process_name[MAX_PATH];
+    GetModuleFileNameA(nullptr, process_name, MAX_PATH);
+
+    _log_file_name = process_name + std::string(".fault.log");
     load_fault_log();
 }
 
@@ -171,6 +185,20 @@ _cxplat_fault_injection::inject_fault()
     return is_new_stack();
 }
 
+void
+_cxplat_fault_injection::reset()
+{
+    std::unique_lock lock(_mutex);
+    _fault_hash.clear();
+
+    // Reset the iteration number.
+    _iteration = 0;
+
+    // Close and reopen the log file to clear it.
+    _log_file.close();
+    _log_file.open(_log_file_name, std::ios::out | std::ios::trunc);
+}
+
 bool
 _cxplat_fault_injection::is_new_stack()
 {
@@ -182,26 +210,19 @@ _cxplat_fault_injection::is_new_stack()
     bool new_stack = false;
 
     std::vector<uintptr_t> stack(CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT);
-    std::vector<uintptr_t> canonical_stack(_stack_depth);
+    std::vector<uintptr_t> canonical_stack;
 
     unsigned long hash;
     // Capture CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH frames of the current stack trace.
-    // The first CXPLAT_FAULT_STACK_CAPTURE_FRAMES_TO_SKIP frames are skipped to avoid
-    // capturing the fault injection code.
     if (CaptureStackBackTrace(
-            CXPLAT_FAULT_STACK_CAPTURE_FRAMES_TO_SKIP,
-            static_cast<unsigned int>(stack.size()),
-            reinterpret_cast<void**>(stack.data()),
-            &hash) > 0) {
+            0, static_cast<unsigned int>(stack.size()), reinterpret_cast<void**>(stack.data()), &hash) > 0) {
         // Form the canonical stack.
         for (size_t i = 0; i < _stack_depth; i++) {
             uintptr_t frame = stack[i];
-            if (frame < _base_address || frame > (_base_address + CXPLAT_MODULE_SIZE_IN_BYTES)) {
-                frame = 0;
-            } else {
-                frame -= _base_address;
+            // Only consider frames in the module being tested.
+            if (frame >= _base_address && frame < (_base_address + _module_size)) {
+                canonical_stack.push_back(stack[i] - _base_address);
             }
-            canonical_stack[i] = frame;
         }
 
         std::unique_lock lock(_mutex);
@@ -266,15 +287,8 @@ _cxplat_fault_injection::log_stack_trace(
 void
 _cxplat_fault_injection::load_fault_log()
 {
-    // Get the path to the executable being run.
-    char process_name[MAX_PATH];
-    GetModuleFileNameA(nullptr, process_name, MAX_PATH);
-
-    // Read back the list of faults that have been failed in the previous runs.
-    std::string fault_log_file = process_name;
-    fault_log_file += ".fault.log";
     {
-        std::ifstream fault_log(fault_log_file);
+        std::ifstream fault_log(_log_file_name);
         std::string line;
         std::string frame;
         while (std::getline(fault_log, line)) {
@@ -299,17 +313,28 @@ _cxplat_fault_injection::load_fault_log()
     }
 
     // Re-open the log file in append mode to record the faults that are failed in this run.
-    _log_file.open(fault_log_file, std::ios_base::app);
+    _log_file.open(_log_file_name, std::ios_base::app);
 
     // Add the current iteration number to the log file.
     _log_file << "# Iteration: " << ++_iteration << std::endl;
 }
 
 cxplat_status_t
-cxplat_fault_injection_initialize(size_t stack_depth) noexcept
+cxplat_fault_injection_initialize(size_t stack_depth, void* module_under_test) noexcept
 {
     try {
-        _cxplat_fault_injection_singleton = std::make_unique<_cxplat_fault_injection>(stack_depth);
+        MODULEINFO module_info = {0};
+        if (module_under_test == nullptr) {
+            // If the module under test is not specified, use the current process.
+            module_under_test = GetModuleHandle(nullptr);
+        }
+        if (!GetModuleInformation(
+                GetCurrentProcess(), reinterpret_cast<HMODULE>(module_under_test), &module_info, sizeof(module_info))) {
+            throw std::runtime_error("GetModuleInformation failed");
+        }
+
+        _cxplat_fault_injection_singleton = std::make_unique<_cxplat_fault_injection>(
+            stack_depth, reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
     } catch (...) {
         return CXPLAT_STATUS_NO_MEMORY;
     }
@@ -339,4 +364,12 @@ bool
 cxplat_fault_injection_is_enabled() noexcept
 {
     return _cxplat_fault_injection_singleton != nullptr;
+}
+
+void
+cxplat_fault_injection_reset() noexcept
+{
+    if (_cxplat_fault_injection_singleton) {
+        _cxplat_fault_injection_singleton->reset();
+    }
 }

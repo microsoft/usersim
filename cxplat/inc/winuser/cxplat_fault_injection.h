@@ -14,11 +14,13 @@ CXPLAT_EXTERN_C_BEGIN
  *
  * @param[in] stack_depth Number of stack frames to capture when a fault is
  * injected.
+ * @param[in] module_under_test Base address of the module under test.
+ * @param[in] module_under_test_size Size of the module under test.
  * @retval CXPLAT_STATUS_SUCCESS The operation was successful.
  * @retval CXPLAT_STATUS_OUT_OF_MEMORY Operation failed due to memory allocation failure.
  */
 cxplat_status_t
-cxplat_fault_injection_initialize(size_t stack_depth) CXPLAT_NOEXCEPT;
+cxplat_fault_injection_initialize(size_t stack_depth, void* module_handle) CXPLAT_NOEXCEPT;
 
 /**
  * @brief Uninitialize fault injection. This must be called after all other
@@ -44,5 +46,11 @@ cxplat_fault_injection_inject_fault() CXPLAT_NOEXCEPT;
  */
 bool
 cxplat_fault_injection_is_enabled() CXPLAT_NOEXCEPT;
+
+/**
+ * @brief Reset fault injection. This function is thread safe.
+ */
+void
+cxplat_fault_injection_reset() CXPLAT_NOEXCEPT;
 
 CXPLAT_EXTERN_C_END

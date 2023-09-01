@@ -6,6 +6,7 @@
 #include "leak_detector.h"
 #include "symbol_decoder.h"
 
+#include <Psapi.h>
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -111,7 +112,20 @@ cxplat_initialize()
             }
         }
         if (fault_injection_stack_depth && !cxplat_fault_injection_is_enabled()) {
-            if (cxplat_fault_injection_initialize(fault_injection_stack_depth) != 0) {
+            uintptr_t caller_address;
+            unsigned long caller_address_hash;
+            HMODULE module_handle;
+            if (CaptureStackBackTrace(1, 1, (void**)&caller_address, &caller_address_hash) == 0) {
+                return CXPLAT_STATUS_NO_MEMORY;
+            }
+            if (!GetModuleHandleEx(
+                    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                    reinterpret_cast<LPCTSTR>(caller_address),
+                    &module_handle)) {
+                return CXPLAT_STATUS_NO_MEMORY;
+            }
+
+            if (cxplat_fault_injection_initialize(fault_injection_stack_depth, module_handle) != 0) {
                 return CXPLAT_STATUS_NO_MEMORY;
             }
             // Set flag to remove some asserts that fire from incorrect client behavior.
