@@ -38,13 +38,6 @@ typedef struct _cxplat_utf8_string
     }
 
 /**
- * @brief Allocate memory. cxplat_allocate_with_tag() should normally be used instead of this API.
- * @param[in] size Size of memory to allocate.
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate(size_t size);
-
-/**
  * @brief Allocate memory.
  * @param[in] pool_type Type of pool to use.
  * @param[in] size Size of memory to allocate.
@@ -54,16 +47,6 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
  */
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate_with_tag(
     _In_ cxplat_pool_type_t pool_type, size_t size, uint32_t tag, bool initialize);
-
-/**
- * @brief Reallocate memory.
- * @param[in] memory Allocation to be reallocated.
- * @param[in] old_size Old size of memory to reallocate.
- * @param[in] new_size New size of memory to reallocate.
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size);
 
 /**
  * @brief Reallocate memory with tag.
@@ -82,14 +65,6 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) v
  */
 void
 cxplat_free(_Frees_ptr_opt_ void* memory);
-
-/**
- * @brief Allocate memory that has a starting address that is cache aligned.
- * @param[in] size Size of memory to allocate
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned(size_t size);
 
 /**
  * @brief Allocate memory that has a starting address that is cache aligned with tag.
