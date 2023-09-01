@@ -48,6 +48,7 @@
     <ClInclude Include="..\..\inc\cxplat_workitem.h" />
     <ClInclude Include="..\..\inc\winkernel\cxplat_platform.h" />
     <ClInclude Include="..\..\inc\winkernel\cxplat_winkernel.h" />
+    <ClInclude Include="..\tags.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1ebe3966-7dc4-49b4-b840-3d33d63415ec}</ProjectGuid>

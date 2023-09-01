@@ -39,20 +39,13 @@ typedef struct _cxplat_utf8_string
 
 /**
  * @brief Allocate memory.
- * @param[in] size Size of memory to allocate.
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate(size_t size);
-
-/**
- * @brief Allocate memory.
  * @param[in] pool_type Type of pool to use.
  * @param[in] size Size of memory to allocate.
  * @param[in] tag Pool tag to use.
  * @param[in] initialize False to return "uninitialized" memory.
  * @returns Pointer to memory block allocated, or null on failure.
  */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate_with_tag(
+__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate(
     _In_ cxplat_pool_type_t pool_type, size_t size, uint32_t tag, bool initialize);
 
 /**
@@ -60,52 +53,44 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
  * @param[in] memory Allocation to be reallocated.
  * @param[in] old_size Old size of memory to reallocate.
  * @param[in] new_size New size of memory to reallocate.
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size);
-
-/**
- * @brief Reallocate memory with tag.
- * @param[in] memory Allocation to be reallocated.
- * @param[in] old_size Old size of memory to reallocate.
- * @param[in] new_size New size of memory to reallocate.
  * @param[in] tag Pool tag to use.
  * @returns Pointer to memory block allocated, or null on failure.
  */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate_with_tag(
+__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
     _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size, uint32_t tag);
 
 /**
  * @brief Free memory.
  * @param[in] memory Allocation to be freed.
+ * @param[in] tag Pool tag to use.
  */
 void
-cxplat_free(_Frees_ptr_opt_ void* memory);
+cxplat_free(_Frees_ptr_opt_ void* memory, uint32_t tag);
+
+/**
+ * @brief Free memory.  This API should only be used when the caller does not
+ * know the correct pool tag.
+ * @param[in] memory Allocation to be freed.
+ */
+void
+cxplat_free_any_tag(_Frees_ptr_opt_ void* memory);
 
 /**
  * @brief Allocate memory that has a starting address that is cache aligned.
- * @param[in] size Size of memory to allocate
- * @returns Pointer to memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned(size_t size);
-
-/**
- * @brief Allocate memory that has a starting address that is cache aligned with tag.
  * @param[in] size Size of memory to allocate.
  * @param[in] tag Pool tag to use.
  * @returns Pointer to zero-initialized memory block allocated, or null on failure.
  */
 __drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned_with_tag(size_t size, uint32_t tag);
+    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned(size_t size, uint32_t tag);
 
 /**
  * @brief Free memory that has a starting address that is cache aligned.
  * @param[in] memory Allocation to be freed.
+ * @param[in] tag Pool tag to use.
  */
 void
-cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory);
+cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory, uint32_t tag);
 
 /**
  * @brief Allocate and copy a UTF-8 string.
@@ -126,7 +111,7 @@ cxplat_duplicate_utf8_string(_Out_ cxplat_utf8_string_t* destination, _In_ const
  * @param[in,out] string The string to free.
  */
 void
-cxplat_utf8_string_free(_Inout_ cxplat_utf8_string_t* string);
+cxplat_free_utf8_string(_Inout_ cxplat_utf8_string_t* string);
 
 /**
  * @brief Duplicate a null-terminated string.
@@ -136,5 +121,13 @@ cxplat_utf8_string_free(_Inout_ cxplat_utf8_string_t* string);
  */
 _Must_inspect_result_ _Ret_maybenull_z_ char*
 cxplat_duplicate_string(_In_z_ const char* source);
+
+/**
+ * @brief Free a null-terminated string allocated by cxplat_duplicate_string.
+ *
+ * @param[in,out] string The string to free.
+ */
+void
+cxplat_free_string(_Frees_ptr_opt_ _In_z_ const char* string);
 
 CXPLAT_EXTERN_C_END

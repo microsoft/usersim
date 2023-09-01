@@ -3,6 +3,7 @@
 
 #include "cxplat.h"
 #include "winuser_internal.h"
+
 #include <windows.h>
 
 // Thread pool related globals.
@@ -42,7 +43,8 @@ cxplat_allocate_preemptible_work_item(
     UNREFERENCED_PARAMETER(caller_context);
     cxplat_status_t result = CXPLAT_STATUS_SUCCESS;
 
-    *work_item = (cxplat_preemptible_work_item_t*)cxplat_allocate(sizeof(cxplat_preemptible_work_item_t));
+    *work_item = (cxplat_preemptible_work_item_t*)cxplat_allocate(
+        CxPlatNonPagedPoolNx, sizeof(cxplat_preemptible_work_item_t), CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM, true);
     if (*work_item == nullptr) {
         result = CXPLAT_STATUS_NO_MEMORY;
         goto Done;
@@ -60,7 +62,7 @@ cxplat_allocate_preemptible_work_item(
 
 Done:
     if (result != CXPLAT_STATUS_SUCCESS) {
-        cxplat_free(*work_item);
+        cxplat_free(*work_item, CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM);
         *work_item = nullptr;
     }
     return result;
@@ -83,7 +85,7 @@ cxplat_free_preemptible_work_item(_Frees_ptr_opt_ cxplat_preemptible_work_item_t
     }
 
     CloseThreadpoolWork(work_item->work);
-    cxplat_free(work_item);
+    cxplat_free(work_item, CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM);
 }
 
 cxplat_status_t

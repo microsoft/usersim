@@ -143,7 +143,8 @@ _IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN SeAccessCheck(
     }
 
     // Allocate buffer.
-    token_access_information = (TOKEN_ACCESS_INFORMATION*)cxplat_allocate(length);
+    token_access_information = (TOKEN_ACCESS_INFORMATION*)cxplat_allocate(
+        CxPlatNonPagedPoolNx, length, USERSIM_TAG_TOKEN_ACCESS_INFORMATION, true);
     if (token_access_information == nullptr) {
         *access_status = STATUS_NO_MEMORY;
         goto Done;
@@ -162,7 +163,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN SeAccessCheck(
         access_status);
 
 Done:
-    cxplat_free(token_access_information);
+    cxplat_free(token_access_information, USERSIM_TAG_TOKEN_ACCESS_INFORMATION);
     if (!subject_context_locked) {
         SeUnlockSubjectContext(subject_security_context);
     }

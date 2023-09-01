@@ -146,6 +146,9 @@
     <ClInclude Include="..\inc\usersim\zw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="tags.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Source.def">

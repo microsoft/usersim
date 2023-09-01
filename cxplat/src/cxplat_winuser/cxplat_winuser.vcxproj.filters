@@ -51,6 +51,9 @@
     <ClInclude Include="..\..\inc\cxplat_workitem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\tags.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="fault_injection.cpp">

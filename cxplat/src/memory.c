@@ -2,37 +2,26 @@
 // SPDX-License-Identifier: MIT
 
 #include "cxplat.h"
+#include "tags.h"
+
 #include <memory.h>
 #include <string.h>
-
-#define CXPLAT_DEFAULT_TAG 'lpxc'
-
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate(size_t size)
-{
-    return cxplat_allocate_with_tag(CxPlatNonPagedPoolNx, size, CXPLAT_DEFAULT_TAG, true);
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size)
-{
-    return cxplat_reallocate_with_tag(memory, old_size, new_size, CXPLAT_DEFAULT_TAG);
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned(size_t size)
-{
-    return cxplat_allocate_cache_aligned_with_tag(size, CXPLAT_DEFAULT_TAG);
-}
 
 _Must_inspect_result_ _Ret_maybenull_z_ char*
 cxplat_duplicate_string(_In_z_ const char* source)
 {
     size_t size = strlen(source) + 1;
-    char* destination = (char*)cxplat_allocate(size);
+    char* destination = (char*)cxplat_allocate(CxPlatNonPagedPoolNx, size, CXPLAT_TAG_STRING, true);
     if (destination) {
         memcpy(destination, source, size);
     }
     return destination;
+}
+
+void
+cxplat_free_string(_Frees_ptr_opt_ _In_z_ const char* source)
+{
+    cxplat_free((void*)source, CXPLAT_TAG_STRING);
 }
 
 _Must_inspect_result_ cxplat_status_t
@@ -43,7 +32,8 @@ cxplat_duplicate_utf8_string(_Out_ cxplat_utf8_string_t* destination, _In_ const
         destination->length = 0;
         return CXPLAT_STATUS_SUCCESS;
     } else {
-        destination->value = (uint8_t*)cxplat_allocate(source->length);
+        destination->value =
+            (uint8_t*)cxplat_allocate(CxPlatNonPagedPoolNx, source->length, CXPLAT_TAG_UTF8_STRING, true);
         if (!destination->value) {
             return CXPLAT_STATUS_NO_MEMORY;
         }
@@ -54,9 +44,9 @@ cxplat_duplicate_utf8_string(_Out_ cxplat_utf8_string_t* destination, _In_ const
 }
 
 void
-cxplat_utf8_string_free(_Inout_ cxplat_utf8_string_t* string)
+cxplat_free_utf8_string(_Inout_ cxplat_utf8_string_t* string)
 {
-    cxplat_free(string->value);
+    cxplat_free(string->value, CXPLAT_TAG_UTF8_STRING);
     string->value = NULL;
     string->length = 0;
 }

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "cxplat.h"
 #include "..\src\platform.h"
+#include "cxplat.h"
 #include "ke.h"
 
 #include <synchapi.h>
@@ -204,24 +204,5 @@ void
 usersim_initialize_ex(bool leak_detector);
 void
 usersim_clean_up_ex();
-
-#ifdef __cplusplus
-#include <memory>
-namespace usersim_helper {
-
-struct _usersim_free_functor
-{
-    void
-    operator()(void* memory)
-    {
-        cxplat_free(memory);
-    }
-};
-
-typedef std::unique_ptr<void, _usersim_free_functor> usersim_memory_ptr;
-
-} // namespace usersim_helper
-
-#endif
 
 #endif

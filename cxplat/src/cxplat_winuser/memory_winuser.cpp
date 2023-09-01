@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
+#include "../tags.h"
 #include "cxplat.h"
 #include "leak_detector.h"
 #if !defined(UNREFERENCED_PARAMETER)
@@ -24,7 +25,11 @@ extern "C" size_t cxplat_fuzzing_memory_limit = MAXSIZE_T;
 typedef struct
 {
     cxplat_pool_type_t pool_type;
-    uint32_t tag;
+    union
+    {
+        uint32_t tag;
+        char tag_string[4];
+    };
     size_t size;
 } cxplat_allocation_header_t;
 
@@ -63,7 +68,7 @@ _unaligned_pointer_from_memory_block(const void* memory)
     return ((uint8_t*)memory) + UNALIGNED_POINTER_OFFSET;
 }
 
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate_with_tag(
+__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate(
     _In_ cxplat_pool_type_t pool_type, size_t size, uint32_t tag, bool initialize)
 {
     CXPLAT_RUNTIME_ASSERT(size > 0);
@@ -120,7 +125,7 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
     return memory;
 }
 
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate_with_tag(
+__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
     _In_ _Post_invalid_ void* pointer, size_t old_size, size_t new_size, uint32_t tag)
 {
     UNREFERENCED_PARAMETER(tag);
@@ -165,31 +170,36 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) v
 }
 
 void
-cxplat_free(_Frees_ptr_opt_ void* pointer)
+cxplat_free_any_tag(_Frees_ptr_opt_ void* pointer)
 {
-    if (pointer == nullptr)
-    {
+    if (pointer == nullptr) {
         return;
     }
     if (_cxplat_leak_detector_ptr) {
         _cxplat_leak_detector_ptr->unregister_allocation(reinterpret_cast<uintptr_t>(pointer));
     }
     cxplat_allocation_header_t* header = _header_from_pointer(pointer);
-    if (header->pool_type == CxPlatNonPagedPoolNxCacheAligned)
-    {
+    if (header->pool_type == CxPlatNonPagedPoolNxCacheAligned) {
         uint8_t* memory_block = _memory_block_from_aligned_pointer(pointer);
         _aligned_free(memory_block);
-    }
-    else
-    {
+    } else {
         uint8_t* memory_block = _memory_block_from_unaligned_pointer(pointer);
         free(memory_block);
     }
 }
 
+void
+cxplat_free(_Frees_ptr_opt_ void* pointer, uint32_t tag)
+{
+    if (pointer != nullptr) {
+        cxplat_allocation_header_t* header = _header_from_pointer(pointer);
+        CXPLAT_DEBUG_ASSERT(header->tag == tag);
+        cxplat_free_any_tag(pointer);
+    }
+}
+
 __drv_allocatesMem(Mem) _Must_inspect_result_
-_Ret_writes_maybenull_(size) void*
-cxplat_allocate_cache_aligned_with_tag(size_t size, uint32_t tag)
+    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned(size_t size, uint32_t tag)
 {
     UNREFERENCED_PARAMETER(tag);
 
@@ -206,10 +216,4 @@ cxplat_allocate_cache_aligned_with_tag(size_t size, uint32_t tag)
         memset(memory, 0, size);
     }
     return memory;
-}
-
-void
-cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory)
-{
-    _aligned_free(memory);
 }

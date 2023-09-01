@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #include "cxplat_fault_injection.h"
-#include "platform.h"
 #include "kernel_um.h"
+#include "platform.h"
 #include "usersim/ex.h"
 #include "usersim/ke.h"
 
@@ -117,16 +117,13 @@ _Releases_shared_lock_(spin_lock->lock) void ExReleaseSpinLockSharedEx(
     ReleaseSRWLockShared(&spin_lock->lock);
 }
 
- _Ret_maybenull_ void*
-ExAllocatePoolUninitializedCPP(
-    _In_ POOL_TYPE pool_type,
-    _In_ size_t number_of_bytes,
-    _In_ unsigned long tag)
+_Ret_maybenull_ void*
+ExAllocatePoolUninitializedCPP(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag)
 {
     if (tag == 0) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_type, number_of_bytes, 0);
     }
-    return cxplat_allocate_with_tag((cxplat_pool_type_t)pool_type, number_of_bytes, tag, false);
+    return cxplat_allocate((cxplat_pool_type_t)pool_type, number_of_bytes, tag, false);
 }
 
 _Ret_maybenull_ void*
@@ -138,14 +135,12 @@ ExAllocatePoolUninitialized(
 
 _Ret_maybenull_ void*
 ExAllocatePoolWithTagCPP(
-    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type,
-    SIZE_T number_of_bytes,
-    ULONG tag)
+    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag)
 {
     if (tag == 0 || number_of_bytes == 0) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_type, number_of_bytes, 0);
     }
-    return cxplat_allocate_with_tag((cxplat_pool_type_t)pool_type, number_of_bytes, tag, true);
+    return cxplat_allocate((cxplat_pool_type_t)pool_type, number_of_bytes, tag, true);
 }
 
 _Ret_maybenull_ void*
@@ -160,7 +155,7 @@ ExFreePoolCPP(_Frees_ptr_ void* p)
     if (p == nullptr) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x46, 0, 0, 0);
     }
-    cxplat_free(p);
+    cxplat_free_any_tag(p);
 }
 
 void
@@ -172,11 +167,10 @@ ExFreePool(_Frees_ptr_ void* p)
 void
 ExFreePoolWithTagCPP(_Frees_ptr_ void* p, ULONG tag)
 {
-    UNREFERENCED_PARAMETER(tag);
     if (p == nullptr) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x46, 0, 0, 0);
     }
-    cxplat_free(p);
+    cxplat_free(p, tag);
 }
 
 void
