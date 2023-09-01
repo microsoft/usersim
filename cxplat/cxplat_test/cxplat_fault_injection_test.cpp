@@ -7,10 +7,9 @@
 #include <catch2/catch.hpp>
 #endif
 
-#include <windows.h>
-
 #include "cxplat_fault_injection.h"
 
+#include <windows.h>
 
 struct _on_exit
 {
@@ -21,11 +20,11 @@ struct _on_exit
 
 enum class _fault_injection_test_state
 {
-    ExpectedFault,               /// < Fault should be injected.
-    DontExpectedFault,            /// < Fault should not be injected.
-    DontExpectedFaultAfterReload, /// < Fault should not be injected after reloading.
-    ExpectedFaultAfterReset,     /// < Fault should be injected after reset.
-    ExpectedFaultDifferentCallsite,   /// < Fault should be injected at a different callsite.
+    ExpectedFault,                  /// < Fault should be injected.
+    DontExpectedFault,              /// < Fault should not be injected.
+    DontExpectedFaultAfterReload,   /// < Fault should not be injected after reloading.
+    ExpectedFaultAfterReset,        /// < Fault should be injected after reset.
+    ExpectedFaultDifferentCallsite, /// < Fault should be injected at a different callsite.
 };
 
 TEST_CASE("fault_injection", "[fault_injection]")
@@ -59,7 +58,7 @@ TEST_CASE("fault_injection", "[fault_injection]")
             fault_expected = true;
             break;
         case _fault_injection_test_state::DontExpectedFault:
-            fault_expected  = false;
+            fault_expected = false;
             break;
         case _fault_injection_test_state::DontExpectedFaultAfterReload:
             cxplat_fault_injection_uninitialize();

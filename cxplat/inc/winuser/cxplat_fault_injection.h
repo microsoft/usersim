@@ -59,9 +59,9 @@ cxplat_fault_injection_reset() CXPLAT_NOEXCEPT;
  * @return cxplat_status_t
  */
 cxplat_status_t
-cxplat_fault_injection_add_module(void* module_handle) CXPLAT_NOEXCEPT;
+cxplat_fault_injection_add_module(_In_ void* module_handle) CXPLAT_NOEXCEPT;
 
 cxplat_status_t
-cxplat_fault_injection_remove_module(void* module_handle) CXPLAT_NOEXCEPT;
+cxplat_fault_injection_remove_module(_In_ void* module_handle) CXPLAT_NOEXCEPT;
 
 CXPLAT_EXTERN_C_END

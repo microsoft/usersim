@@ -90,9 +90,8 @@ _get_environment_variable_as_size_t(const std::string& name)
 static std::mutex cxplat_initialization_mutex;
 static ULONG _cxplat_initialization_count = 0;
 
-inline
-static
-HMODULE _cxplat_get_caller_module()
+inline static HMODULE
+_cxplat_get_caller_module()
 {
     // Capture the caller's module handle and address.
     uintptr_t caller_address;

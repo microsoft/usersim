@@ -180,8 +180,7 @@ class cxplat_fault_injection_recursion_guard
     }
 };
 
-_cxplat_fault_injection::_cxplat_fault_injection(size_t stack_depth)
-    : _stack_depth(stack_depth)
+_cxplat_fault_injection::_cxplat_fault_injection(size_t stack_depth) : _stack_depth(stack_depth)
 {
     if (_stack_depth == 0) {
         _stack_depth = CXPLAT_FAULT_STACK_CAPTURE_FRAME_COUNT_FOR_HASH;
@@ -372,7 +371,6 @@ _cxplat_fault_injection::find_base_address(uintptr_t address)
     return (address >= iter->first && address < iter->first + iter->second) ? iter->first : 0;
 }
 
-
 cxplat_status_t
 cxplat_fault_injection_initialize(size_t stack_depth) noexcept
 {
@@ -418,7 +416,7 @@ cxplat_fault_injection_reset() noexcept
 }
 
 cxplat_status_t
-cxplat_fault_injection_add_module(void* module_under_test) noexcept
+cxplat_fault_injection_add_module(_In_ void* module_under_test) noexcept
 {
     try {
         if (_cxplat_fault_injection_singleton) {
@@ -429,7 +427,7 @@ cxplat_fault_injection_add_module(void* module_under_test) noexcept
             }
             if (!GetModuleInformation(
                     GetCurrentProcess(),
-                    reinterpret_cast<HMODULE>(module_under_test),
+                    reinterpret_cast<const HMODULE>(module_under_test),
                     &module_info,
                     sizeof(module_info))) {
                 throw std::runtime_error("GetModuleInformation failed");
