@@ -17,6 +17,7 @@ CXPLAT_EXTERN_C_BEGIN
  *
  * @retval CXPLAT_STATUS_SUCCESS The operation was successful.
  * @retval CXPLAT_STATUS_OUT_OF_MEMORY Operation failed due to memory allocation failure.
+ * @retval CXPLAT_STATUS_INVALID_STATE Operation failed due to invalid state (e.g. already initialized).
  */
 cxplat_status_t
 cxplat_fault_injection_initialize(size_t stack_depth) CXPLAT_NOEXCEPT;
@@ -55,12 +56,22 @@ cxplat_fault_injection_reset() CXPLAT_NOEXCEPT;
 /**
  * @brief Add a module to the fault injection list. This function is thread safe.
  *
- * @param module_handle
- * @return cxplat_status_t
+ * @param[in] module_handle
+ * @retval CXPLAT_STATUS_SUCCESS The operation was successful.
+ * @retval CXPLAT_STATUS_OUT_OF_MEMORY Operation failed due to memory allocation failure.
+ * @retval CXPLAT_STATUS_INVALID_STATE Operation failed due to invalid state (e.g. already added).
  */
 cxplat_status_t
 cxplat_fault_injection_add_module(_In_ void* module_handle) CXPLAT_NOEXCEPT;
 
+/**
+ * @brief Remove a module from the fault injection list. This function is thread safe.
+ *
+ * @param[in] module_handle
+ * @retval CXPLAT_STATUS_SUCCESS The operation was successful.
+ * @retval CXPLAT_STATUS_OUT_OF_MEMORY Operation failed due to memory allocation failure.
+ * @retval CXPLAT_STATUS_INVALID_STATE Operation failed due to invalid state (e.g. already removed).
+ */
 cxplat_status_t
 cxplat_fault_injection_remove_module(_In_ void* module_handle) CXPLAT_NOEXCEPT;
 

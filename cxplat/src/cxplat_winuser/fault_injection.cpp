@@ -45,21 +45,29 @@ typedef class _cxplat_fault_injection
     void
     reset();
 
-    void
+    bool
     add_module_under_test(uintptr_t module_base_address, size_t module_size)
     {
         std::unique_lock lock(_mutex);
         auto new_module = std::make_pair(module_base_address, module_base_address + module_size);
         if (!_modules_under_test.contains(new_module)) {
             _modules_under_test.insert(std::make_pair(module_base_address, module_base_address + module_size));
+            return true;
+        } else {
+            return false;
         }
     }
 
-    void
+    bool
     remove_module_under_test(uintptr_t module_base_address, size_t module_size)
     {
         std::unique_lock lock(_mutex);
-        _modules_under_test.erase(std::make_pair(module_base_address, module_base_address + module_size));
+        if (_modules_under_test.contains(std::make_pair(module_base_address, module_base_address + module_size))) {
+            _modules_under_test.erase(std::make_pair(module_base_address, module_base_address + module_size));
+            return true;
+        } else {
+            return false;
+        }
     }
 
   private:
@@ -374,6 +382,10 @@ _cxplat_fault_injection::find_base_address(uintptr_t address)
 cxplat_status_t
 cxplat_fault_injection_initialize(size_t stack_depth) noexcept
 {
+    if (_cxplat_fault_injection_singleton) {
+        return CXPLAT_STATUS_INVALID_STATE;
+    }
+
     try {
         _cxplat_fault_injection_singleton = std::make_unique<_cxplat_fault_injection>(stack_depth);
     } catch (...) {
@@ -432,8 +444,12 @@ cxplat_fault_injection_add_module(_In_ void* module_under_test) noexcept
                     sizeof(module_info))) {
                 throw std::runtime_error("GetModuleInformation failed");
             }
-            _cxplat_fault_injection_singleton->add_module_under_test(
-                reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
+            if (_cxplat_fault_injection_singleton->add_module_under_test(
+                    reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage)) {
+                return CXPLAT_STATUS_SUCCESS;
+            } else {
+                return CXPLAT_STATUS_INVALID_STATE;
+            }
         }
         return CXPLAT_STATUS_SUCCESS;
     } catch (...) {
@@ -458,8 +474,12 @@ cxplat_fault_injection_remove_module(void* module_under_test) noexcept
                     sizeof(module_info))) {
                 throw std::runtime_error("GetModuleInformation failed");
             }
-            _cxplat_fault_injection_singleton->remove_module_under_test(
-                reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
+            if (_cxplat_fault_injection_singleton->remove_module_under_test(
+                    reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage)) {
+                return CXPLAT_STATUS_SUCCESS;
+            } else {
+                return CXPLAT_STATUS_INVALID_STATE;
+            }
         }
         return CXPLAT_STATUS_SUCCESS;
     } catch (...) {
