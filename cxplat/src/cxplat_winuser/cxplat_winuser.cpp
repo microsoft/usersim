@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <psapi.h>
 #include <string>
 
 extern "C" bool cxplat_fuzzing_enabled = false;
@@ -89,11 +90,37 @@ _get_environment_variable_as_size_t(const std::string& name)
 static std::mutex cxplat_initialization_mutex;
 static ULONG _cxplat_initialization_count = 0;
 
+inline static HMODULE
+_cxplat_get_caller_module()
+{
+    // Capture the caller's module handle and address.
+    uintptr_t caller_address;
+    unsigned long caller_address_hash;
+    HMODULE module_handle;
+    if (CaptureStackBackTrace(1, 1, (void**)&caller_address, &caller_address_hash) == 0) {
+        return NULL;
+    }
+    if (!GetModuleHandleEx(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCTSTR>(caller_address),
+            &module_handle)) {
+        return NULL;
+    }
+    return module_handle;
+}
+
 cxplat_status_t
 cxplat_initialize()
 {
+
     std::unique_lock lock(cxplat_initialization_mutex);
     if (_cxplat_initialization_count > 0) {
+        if (cxplat_fault_injection_is_enabled()) {
+            if (cxplat_fault_injection_add_module(_cxplat_get_caller_module()) != 0) {
+                return CXPLAT_STATUS_NO_MEMORY;
+            }
+        }
+
         // Already initialized.
         _cxplat_initialization_count++;
         return CXPLAT_STATUS_SUCCESS;
@@ -112,6 +139,10 @@ cxplat_initialize()
         }
         if (fault_injection_stack_depth && !cxplat_fault_injection_is_enabled()) {
             if (cxplat_fault_injection_initialize(fault_injection_stack_depth) != 0) {
+                return CXPLAT_STATUS_NO_MEMORY;
+            }
+
+            if (cxplat_fault_injection_add_module(_cxplat_get_caller_module()) != 0) {
                 return CXPLAT_STATUS_NO_MEMORY;
             }
             // Set flag to remove some asserts that fire from incorrect client behavior.
@@ -140,6 +171,7 @@ cxplat_cleanup()
     CXPLAT_RUNTIME_ASSERT(_cxplat_initialization_count > 0);
     _cxplat_initialization_count--;
     if (_cxplat_initialization_count > 0) {
+        cxplat_fault_injection_remove_module(_cxplat_get_caller_module());
         // Don't clean up until the count hits 0.
         return;
     }
