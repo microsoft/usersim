@@ -9,10 +9,42 @@
 #endif
 #include "usersim/wdf.h"
 
+#define IOCTL_KMDF_HELLO_WORLD_CTL_METHOD_BUFFERED 1
+
 TEST_CASE("DriverEntry", "[wdf]")
 {
     HMODULE module = LoadLibraryW(L"sample.dll");
     REQUIRE(module != nullptr);
+
+    HANDLE device_handle = usersim_get_device_handle(module, nullptr);
+    REQUIRE(device_handle != nullptr);
+
+    // Send an unrecognized ioctl.
+    DWORD bytes_returned;
+    BOOL ok = usersim_device_io_control(
+        device_handle, 0, nullptr, 0, nullptr, 0, &bytes_returned, nullptr);
+    REQUIRE(!ok);
+
+    // Send an ioctl with invalid parameters.
+    ok = usersim_device_io_control(
+        device_handle, IOCTL_KMDF_HELLO_WORLD_CTL_METHOD_BUFFERED, nullptr, 0, nullptr, 0, &bytes_returned, nullptr);
+    REQUIRE(!ok);
+
+    // Send an ioctl with valid parameters.
+    uint64_t input = 42;
+    uint64_t output;
+    ok = usersim_device_io_control(
+        device_handle,
+        IOCTL_KMDF_HELLO_WORLD_CTL_METHOD_BUFFERED,
+        &input,
+        sizeof(input),
+        &output,
+        sizeof(output),
+        &bytes_returned,
+        nullptr);
+    REQUIRE(ok);
+    REQUIRE(bytes_returned == sizeof(output));
+    REQUIRE(output == input);
 
     if (module) {
         FreeLibrary(module);

@@ -12,6 +12,8 @@ CXPLAT_EXTERN_C_BEGIN
 
 typedef HANDLE WDFDEVICE;
 typedef HANDLE WDFDRIVER;
+typedef HANDLE WDFQUEUE;
+typedef HANDLE WDFREQUEST;
 
 typedef struct _WDF_OBJECT_ATTRIBUTES
 {
@@ -45,6 +47,7 @@ struct _DRIVER_OBJECT
 {
     WDF_DRIVER_CONFIG config;
     PDEVICE_OBJECT device;
+    PWDFDEVICE_INIT device_init;
 };
 
 #define WDF_DRIVER_GLOBALS_NAME_LEN (32)
@@ -140,11 +143,41 @@ typedef _Must_inspect_result_ _IRQL_requires_max_(DISPATCH_LEVEL)
 typedef _Must_inspect_result_ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS(WdfDeviceCreateSymbolicLink_t)(
     _In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device, _In_ PCUNICODE_STRING symbolic_link_name);
 
+typedef int WDF_IO_QUEUE_DISPATCH_TYPE;
+typedef int WDF_TRI_STATE;
+typedef void* PFN_WDF_IO_QUEUE_IO_DEFAULT;
+typedef void* PFN_WDF_IO_QUEUE_IO_READ;
+typedef void* PFN_WDF_IO_QUEUE_IO_WRITE;
+typedef void (*PFN_WDF_IO_QUEUE_IO_DEVICE_CONTROL)(
+    _In_ WDFQUEUE queue,
+    _In_ WDFREQUEST request,
+    size_t output_buffer_length,
+    size_t input_buffer_length,
+    unsigned long io_control_code);
+
+typedef void* PFN_WDF_IO_QUEUE_IO_INTERNAL_DEVICE_CONTROL;
+typedef void* PFN_WDF_IO_QUEUE_IO_STOP;
+typedef void* PFN_WDF_IO_QUEUE_IO_RESUME;
+typedef void* PFN_WDF_IO_QUEUE_IO_CANCELED_ON_QUEUE;
+
 typedef struct _WDF_IO_QUEUE_CONFIG
 {
-    int unused;
+    ULONG Size;
+    WDF_IO_QUEUE_DISPATCH_TYPE DispatchType;
+    WDF_TRI_STATE PowerManaged;
+    BOOLEAN AllowZeroLengthRequests;
+    BOOLEAN DefaultQueue;
+    PFN_WDF_IO_QUEUE_IO_DEFAULT EvtIoDefault;
+    PFN_WDF_IO_QUEUE_IO_READ EvtIoRead;
+    PFN_WDF_IO_QUEUE_IO_WRITE EvtIoWrite;
+    PFN_WDF_IO_QUEUE_IO_DEVICE_CONTROL EvtIoDeviceControl;
+    PFN_WDF_IO_QUEUE_IO_INTERNAL_DEVICE_CONTROL EvtIoInternalDeviceControl;
+    PFN_WDF_IO_QUEUE_IO_STOP EvtIoStop;
+    PFN_WDF_IO_QUEUE_IO_RESUME EvtIoResume;
+    PFN_WDF_IO_QUEUE_IO_CANCELED_ON_QUEUE EvtIoCanceledOnQueue;
+    ULONG NumberOfPresentedRequests;
+    WDFDRIVER Driver;
 } WDF_IO_QUEUE_CONFIG, *PWDF_IO_QUEUE_CONFIG;
-typedef HANDLE WDFQUEUE;
 
 typedef _Must_inspect_result_ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS(WdfIoQueueCreate_t)(
     _In_ PWDF_DRIVER_GLOBALS driver_globals,
@@ -152,6 +185,8 @@ typedef _Must_inspect_result_ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS(WdfIo
     _In_ PWDF_IO_QUEUE_CONFIG config,
     _In_opt_ PWDF_OBJECT_ATTRIBUTES queue_attributes,
     _Out_opt_ WDFQUEUE* queue);
+
+typedef _IRQL_requires_max_(DISPATCH_LEVEL) WDFDEVICE(WdfIoQueueGetDevice_t)(_In_ WDFQUEUE queue);
 
 typedef _IRQL_requires_max_(DISPATCH_LEVEL)
     VOID(WdfControlFinishInitializing_t)(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDEVICE device);
@@ -163,6 +198,23 @@ typedef HANDLE WDFOBJECT;
 
 typedef _IRQL_requires_max_(DISPATCH_LEVEL)
     VOID(WdfObjectDelete_t)(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFOBJECT object);
+
+typedef _IRQL_requires_max_(DISPATCH_LEVEL) VOID (WdfRequestCompleteWithInformation_t)(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFREQUEST request, _In_ NTSTATUS status, _In_ ULONG_PTR information);
+
+typedef _Must_inspect_result_ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS(WdfRequestRetrieveInputBuffer_t)(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals,
+    _In_ WDFREQUEST request,
+    _In_ size_t minimum_required_length,
+    _Outptr_result_bytebuffer_(*length) PVOID* buffer,
+    _Out_opt_ size_t* length);
+
+typedef _Must_inspect_result_ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS(WdfRequestRetrieveOutputBuffer_t)(
+    _In_ PWDF_DRIVER_GLOBALS driver_globals,
+    _In_ WDFREQUEST request,
+    _In_ size_t minimum_required_size,
+    _Outptr_result_bytebuffer_(*length) PVOID* buffer,
+    _Out_opt_ size_t* length);
 
 typedef enum _WDFFUNCENUM
 {
@@ -179,11 +231,32 @@ typedef enum _WDFFUNCENUM
     WdfDeviceCreateSymbolicLinkTableIndex = 80,
     WdfDriverCreateTableIndex = 116,
     WdfIoQueueCreateTableIndex = 152,
+    WdfIoQueueGetDeviceTableIndex = 157,
     WdfObjectDeleteTableIndex = 208,
+    WdfRequestCompleteWithInformationTableIndex = 265,
+    WdfRequestRetrieveInputBufferTableIndex = 269,
+    WdfRequestRetrieveOutputBufferTableIndex = 270,
     WdfFunctionTableNumEntries = 444,
 } WDFFUNCENUM;
 
 void
 usersim_initialize_wdf();
+
+USERSIM_API
+HANDLE usersim_get_device_handle(HMODULE module, _In_opt_z_ const WCHAR* device_name);
+
+typedef HANDLE (*usersim_dll_get_device_handle_t)(_In_opt_z_ const WCHAR* device_name);
+
+USERSIM_API
+BOOL
+usersim_device_io_control(
+    HANDLE device_handle,
+    DWORD io_control_code,
+    _In_reads_opt_(in_buffer_size) void* in_buffer,
+    DWORD in_buffer_size,
+    _Out_writes_to_opt_(out_buffer_size, *bytes_returned) void* out_buffer,
+    DWORD out_buffer_size,
+    _Out_opt_ DWORD* bytes_returned,
+    _Inout_opt_ OVERLAPPED* overlapped);
 
 CXPLAT_EXTERN_C_END
