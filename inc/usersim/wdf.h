@@ -243,9 +243,9 @@ void
 usersim_initialize_wdf();
 
 USERSIM_API
-HANDLE usersim_get_device_handle(HMODULE module);
+HANDLE usersim_get_device_handle(HMODULE module, _In_opt_z_ const WCHAR* device_name);
 
-typedef HANDLE (*usersim_dll_get_device_handle_t)();
+typedef HANDLE (*usersim_dll_get_device_handle_t)(_In_opt_z_ const WCHAR* device_name);
 
 USERSIM_API
 BOOL

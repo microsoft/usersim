@@ -33,8 +33,10 @@ static DRIVER_OBJECT _driver_object = {0};
         return DriverEntry(&_driver_object, &registry_path);
     }
 
-    __declspec(dllexport) HANDLE usersim_dll_get_device_handle()
+    __declspec(dllexport) HANDLE usersim_dll_get_device_handle(_In_opt_z_ const WCHAR* device_name)
     {
+        // TODO(issue #114): support multiple devices per driver.
+        UNREFERENCED_PARAMETER(device_name);
         DRIVER_OBJECT* driver = (DRIVER_OBJECT*)WdfDriverGlobals->Driver;
         return driver->device;
     }

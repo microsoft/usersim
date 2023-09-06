@@ -290,11 +290,14 @@ _WdfRequestRetrieveInputBuffer(
     UNREFERENCED_PARAMETER(driver_globals);
 
     wdfrequest_t* internal_request = (wdfrequest_t*)request;
+    if (internal_request->buffer_size < minimum_required_length) {
+        return STATUS_BUFFER_TOO_SMALL;
+    }
     *buffer = internal_request->buffer;
     if (length != NULL) {
         *length = internal_request->buffer_size;
     }
-    return (*length < minimum_required_length) ? STATUS_BUFFER_TOO_SMALL : STATUS_SUCCESS;
+    return STATUS_SUCCESS;
 }
 
 static _Must_inspect_result_
@@ -361,11 +364,11 @@ WDF_DRIVER_CONFIG_INIT(_Out_ PWDF_DRIVER_CONFIG config, _In_opt_ PFN_WDF_DRIVER_
 }
 
 HANDLE
-usersim_get_device_handle(HMODULE module)
+usersim_get_device_handle(HMODULE module, _In_opt_z_ const WCHAR* device_name)
 {
     usersim_dll_get_device_handle_t usersim_dll_get_device_handle =
         (usersim_dll_get_device_handle_t)GetProcAddress(module, "usersim_dll_get_device_handle");
-    return usersim_dll_get_device_handle();
+    return usersim_dll_get_device_handle(device_name);
 }
 
 BOOL

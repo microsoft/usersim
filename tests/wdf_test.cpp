@@ -16,7 +16,7 @@ TEST_CASE("DriverEntry", "[wdf]")
     HMODULE module = LoadLibraryW(L"sample.dll");
     REQUIRE(module != nullptr);
 
-    HANDLE device_handle = usersim_get_device_handle(module);
+    HANDLE device_handle = usersim_get_device_handle(module, nullptr);
     REQUIRE(device_handle != nullptr);
 
     // Send an unrecognized ioctl.
