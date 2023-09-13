@@ -19,7 +19,7 @@ class _passed_test_log : public Catch::EventListenerBase
   public:
     using Catch::EventListenerBase::EventListenerBase;
 
-    // Log failed tests.
+    // Log passing tests.
     void
     testCaseEnded(Catch::TestCaseStats const& testCaseStats) override
     {

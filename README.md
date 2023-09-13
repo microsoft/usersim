@@ -61,7 +61,7 @@ can be built and tested as follows.
 1. As a one-time step, from a Visual Studio Developer Command Prompt, do:
    `cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF`
 2. Build usersim.sln from the Visual Studio UI or using msbuild.
-3. `cxplat_test.exe` and `usersim_tests.exe` can then be executed to run the standard tests.
+3. `cxplat_test.exe -d yes` and `usersim_tests.exe -d yes` can then be executed to run the standard tests.
 
 ## Trademarks
 
