@@ -35,6 +35,9 @@ To use fault injection, define the environment variable CXPLAT_FAULT_INJECTION_S
 where the value (4 in this example) is the number of stack frames to use to determine whether a call stack is unique.
 Fault injection will cause one call into the UserSim library to fail, for every unique call stack.
 
+The failed call stacks are dumped into a file with the name `<exe name>.fault.log` where `<exe name>` is the
+name of the original executable.
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
@@ -48,6 +51,17 @@ provided by the bot. You will only need to do this once across all repos using o
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+### Building this repository
+
+The steps above will build the UserSim project components needed by a dependent project, but not
+the tests for UserSim itself.  For contributors wanting to contribute to the UserSim project, it
+can be built and tested as follows.
+
+1. As a one-time step, from a Visual Studio Developer Command Prompt, do:
+   `cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF`
+2. Build usersim.sln from the Visual Studio UI or using msbuild.
+3. `cxplat_test.exe` and `usersim_tests.exe` can then be executed to run the standard tests.
 
 ## Trademarks
 

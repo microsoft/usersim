@@ -15,7 +15,6 @@ param ($OutputFolder, $Timeout, $TestProgram, $StackDepth)
 $tests = & $TestProgram "--list-tests" "--verbosity=quiet"
 
 $env:CXPLAT_FAULT_INJECTION_SIMULATION = $StackDepth
-$env:EBPF_ENABLE_WER_REPORT = "yes"
 
 Set-Content -Path ($TestProgram + ".passed.log") ""
 Set-Content -Path ($TestProgram + ".fault.log") ""

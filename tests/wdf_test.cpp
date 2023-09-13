@@ -9,6 +9,10 @@
 #endif
 #include "usersim/wdf.h"
 
+// The following must be included _after_ wdf.h.
+#include "cxplat_passed_test_log.h"
+CATCH_REGISTER_LISTENER(_passed_test_log)
+
 #define IOCTL_KMDF_HELLO_WORLD_CTL_METHOD_BUFFERED 1
 
 TEST_CASE("DriverEntry", "[wdf]")
