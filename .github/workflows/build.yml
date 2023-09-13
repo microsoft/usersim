@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build-vs:
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     strategy:
       matrix:
@@ -56,10 +56,18 @@ jobs:
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
+        .\cxplat_test -d yes
         .\usersim_tests -d yes
 
+    - name: Run tests with fault injection
+      working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
+      shell: cmd
+      run: |
+        powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test" 16
+        powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests" 16
+
   build-cmake:
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     strategy:
       matrix:
@@ -110,5 +118,5 @@ jobs:
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
-        powershell ..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test" 16
-        powershell ..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests" 16
+        powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test" 16
+        powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests" 16
