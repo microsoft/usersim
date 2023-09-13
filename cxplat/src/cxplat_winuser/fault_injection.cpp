@@ -7,9 +7,9 @@
 #include <DbgHelp.h>
 #include <cstddef>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <psapi.h>
-#include <set>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -45,28 +45,25 @@ typedef class _cxplat_fault_injection
     void
     reset();
 
-    bool
+    void
     add_module_under_test(uintptr_t module_base_address, size_t module_size)
     {
         std::unique_lock lock(_mutex);
         auto new_module = std::make_pair(module_base_address, module_base_address + module_size);
-        if (!_modules_under_test.contains(new_module)) {
-            _modules_under_test.insert(std::make_pair(module_base_address, module_base_address + module_size));
-            return true;
-        } else {
-            return false;
-        }
+        // On first insertion, the count will be 0.
+        _modules_under_test[new_module]++;
     }
 
-    bool
+    void
     remove_module_under_test(uintptr_t module_base_address, size_t module_size)
     {
         std::unique_lock lock(_mutex);
-        if (_modules_under_test.contains(std::make_pair(module_base_address, module_base_address + module_size))) {
-            _modules_under_test.erase(std::make_pair(module_base_address, module_base_address + module_size));
-            return true;
-        } else {
-            return false;
+        auto module_key = std::make_pair(module_base_address, module_base_address + module_size);
+        if (_modules_under_test.contains(module_key)) {
+            _modules_under_test[module_key]--;
+            if (_modules_under_test[module_key] == 0) {
+                _modules_under_test.erase(module_key);
+            }
         }
     }
 
@@ -119,7 +116,7 @@ typedef class _cxplat_fault_injection
     /**
      * @brief Base address and size of the modules being tested.
      */
-    std::set<std::pair<uintptr_t, uintptr_t>> _modules_under_test;
+    std::map<std::pair<uintptr_t, uintptr_t>, size_t> _modules_under_test;
 
     /**
      * @brief The iteration number of the current test pass.
@@ -375,8 +372,10 @@ _cxplat_fault_injection::find_base_address(uintptr_t address)
     // Select the previous module.
     iter--;
 
+    auto& module = iter->first;
+
     // Check if the offset is in the module.
-    return (address >= iter->first && address < iter->first + iter->second) ? iter->first : 0;
+    return (address >= module.first && address < module.first + module.second) ? module.first : 0;
 }
 
 cxplat_status_t
@@ -444,12 +443,8 @@ cxplat_fault_injection_add_module(_In_ void* module_under_test) noexcept
                     sizeof(module_info))) {
                 throw std::runtime_error("GetModuleInformation failed");
             }
-            if (_cxplat_fault_injection_singleton->add_module_under_test(
-                    reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage)) {
-                return CXPLAT_STATUS_SUCCESS;
-            } else {
-                return CXPLAT_STATUS_INVALID_STATE;
-            }
+            _cxplat_fault_injection_singleton->add_module_under_test(
+                reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
         }
         return CXPLAT_STATUS_SUCCESS;
     } catch (...) {
@@ -474,12 +469,8 @@ cxplat_fault_injection_remove_module(void* module_under_test) noexcept
                     sizeof(module_info))) {
                 throw std::runtime_error("GetModuleInformation failed");
             }
-            if (_cxplat_fault_injection_singleton->remove_module_under_test(
-                    reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage)) {
-                return CXPLAT_STATUS_SUCCESS;
-            } else {
-                return CXPLAT_STATUS_INVALID_STATE;
-            }
+            _cxplat_fault_injection_singleton->remove_module_under_test(
+                reinterpret_cast<uintptr_t>(module_info.lpBaseOfDll), module_info.SizeOfImage);
         }
         return CXPLAT_STATUS_SUCCESS;
     } catch (...) {

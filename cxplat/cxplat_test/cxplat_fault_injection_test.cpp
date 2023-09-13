@@ -60,8 +60,8 @@ TEST_CASE("fault_injection", "[fault_injection]")
     // Verify that adding a module succeeds.
     REQUIRE(cxplat_fault_injection_add_module(GetModuleHandle(nullptr)) == CXPLAT_STATUS_SUCCESS);
 
-    // Verify that adding a module again fails.
-    REQUIRE(cxplat_fault_injection_add_module(GetModuleHandle(nullptr)) == CXPLAT_STATUS_INVALID_STATE);
+    // Verify that adding a module again succeeds.
+    REQUIRE(cxplat_fault_injection_add_module(GetModuleHandle(nullptr)) == CXPLAT_STATUS_SUCCESS);
 
     _on_exit _([&]() {
         if (fault_injection_enabled) {
@@ -107,6 +107,6 @@ TEST_CASE("fault_injection", "[fault_injection]")
     // Verify that removing a module succeeds.
     REQUIRE(cxplat_fault_injection_remove_module(GetModuleHandle(nullptr)) == CXPLAT_STATUS_SUCCESS);
 
-    // Verify that removing a module again fails.
-    REQUIRE(cxplat_fault_injection_remove_module(GetModuleHandle(nullptr)) == CXPLAT_STATUS_INVALID_STATE);
+    // Verify that removing a module again succeeds.
+    REQUIRE(cxplat_fault_injection_remove_module(GetModuleHandle(nullptr)) == CXPLAT_STATUS_SUCCESS);
 }
