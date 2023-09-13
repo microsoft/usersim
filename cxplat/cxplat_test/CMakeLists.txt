@@ -12,6 +12,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(cxplat_test
+  cxplat_fault_injection_test.cpp
+  cxplat_initialization_test.cpp
   cxplat_memory_test.cpp
   cxplat_rundown_test.cpp
   cxplat_workitem_test.cpp
