@@ -54,7 +54,7 @@ TEST_CASE("fault_injection", "[fault_injection]")
 
     REQUIRE(cxplat_fault_injection_is_enabled() == true);
 
-    // Verify that calling initialize again succeeds.
+    // Verify that calling initialize again fails.
     REQUIRE(cxplat_fault_injection_initialize(0) == CXPLAT_STATUS_INVALID_STATE);
 
     // Verify that adding a module succeeds.
@@ -107,6 +107,6 @@ TEST_CASE("fault_injection", "[fault_injection]")
     // Verify that removing a module succeeds.
     REQUIRE(cxplat_fault_injection_remove_module(GetModuleHandle(nullptr)) == CXPLAT_STATUS_SUCCESS);
 
-    // Verify that removing a module again fails.
+    // Verify that removing a module again succeeds.
     REQUIRE(cxplat_fault_injection_remove_module(GetModuleHandle(nullptr)) == CXPLAT_STATUS_SUCCESS);
 }
