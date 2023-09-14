@@ -29,6 +29,8 @@ jobs:
 
       BUILD_PLATFORM: x64
       CXPLAT_MEMORY_LEAK_DETECTION: true
+      DUMP_PATH: c:/dumps/x64/${{matrix.configurations}}
+      TEST_TIMEOUT: 3600 # 1 hour timeout for tests.
 
     steps:
     - uses: actions/checkout@v4
@@ -68,13 +70,13 @@ jobs:
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
-        powershell ..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test" 16
+        powershell ..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test.exe" 16
 
     - name: Run usersim tests with fault injection
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
-        powershell ..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests" 16
+        powershell ..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests.exe" 16
 
   build-cmake:
     timeout-minutes: 30
@@ -133,10 +135,10 @@ jobs:
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
-        powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test" 16
+        powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test.exe" 16
 
     - name: Run usersim tests with fault injection
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
-        powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests" 16
+        powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests.exe" 16

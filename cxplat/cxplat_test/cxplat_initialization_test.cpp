@@ -8,7 +8,7 @@
 #endif
 #include "cxplat.h"
 #include "cxplat_passed_test_log.h"
-CATCH_REGISTER_LISTENER(_passed_test_log)
+CATCH_REGISTER_LISTENER(cxplat_passed_test_log)
 
 TEST_CASE("initialize", "[initialization]")
 {

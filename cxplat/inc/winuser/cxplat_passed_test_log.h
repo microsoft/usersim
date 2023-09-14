@@ -14,7 +14,7 @@
  * file that can be used to filter the set of tests that are run in the next
  * run. This is consumed by the Test-FaultInjection.ps1 script.
  */
-class _passed_test_log : public Catch::EventListenerBase
+class cxplat_passed_test_log : public Catch::EventListenerBase
 {
   public:
     using Catch::EventListenerBase::EventListenerBase;
@@ -40,4 +40,4 @@ class _passed_test_log : public Catch::EventListenerBase
     static std::unique_ptr<std::ofstream> passed_tests;
 };
 
-std::unique_ptr<std::ofstream> _passed_test_log::passed_tests;
+std::unique_ptr<std::ofstream> cxplat_passed_test_log::passed_tests;
