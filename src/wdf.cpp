@@ -53,34 +53,26 @@ _WdfDriverCreate(
     if (driver_object->config.EvtDriverDeviceAdd) {
         // The driver has registered for the device addition event,
         // so go ahead and signal it immediately.
-        driver_object->device_init = _WdfControlDeviceInitAllocate(driver_globals, driver_globals->Driver, nullptr);
-        if (!driver_object->device_init) {
+        PWDFDEVICE_INIT device_init = _WdfControlDeviceInitAllocate(driver_globals, driver_globals->Driver, nullptr);
+        if (!device_init) {
             return STATUS_NO_MEMORY;
         }
-        return driver_object->config.EvtDriverDeviceAdd(driver_globals->Driver, driver_object->device_init);
+        NTSTATUS status = driver_object->config.EvtDriverDeviceAdd(driver_globals->Driver, device_init);
+        if (!NT_SUCCESS(status)) {
+            // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdfdriver/nc-wdfdriver-evt_wdf_driver_device_add
+            // explains: "If a driver's EvtDriverDeviceAdd callback function creates a device object
+            // but does not return STATUS_SUCCESS, the framework deletes the device object and its
+            // child devices.
+            if (driver_object->device) {
+                _WdfObjectDelete(driver_globals, driver_object->device);
+                driver_object->device = nullptr;
+            } else {
+                // We never got far enough to create a device, so free the initialization object.
+                _WdfDeviceInitFree(driver_globals, device_init);
+            }
+        }
+        return status;
     }
-    return STATUS_SUCCESS;
-}
-
-static NTSTATUS
-_WdfDeviceCreate(
-    _In_ WDF_DRIVER_GLOBALS* driver_globals,
-    _Inout_ PWDFDEVICE_INIT* device_init,
-    _In_opt_ PWDF_OBJECT_ATTRIBUTES device_attributes,
-    _Out_ WDFDEVICE* device)
-{
-    UNREFERENCED_PARAMETER(device_attributes);
-
-    if (driver_globals != &g_UsersimWdfDriverGlobals) {
-        return STATUS_INVALID_PARAMETER;
-    }
-    if (cxplat_fault_injection_inject_fault()) {
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    DRIVER_OBJECT* driver_object = (DRIVER_OBJECT*)driver_globals->Driver;
-    driver_object->device = (PDEVICE_OBJECT)*device_init;
-    *device = *device_init;
     return STATUS_SUCCESS;
 }
 
@@ -98,6 +90,57 @@ typedef struct _WDFDEVICE_INIT
     ULONG num_minor_functions[IRP_MJ_MAXIMUM_FUNCTION];
     WDF_IO_QUEUE_CONFIG io_queue_config;
 } WDFDEVICE_INIT;
+
+struct _DEVICE_OBJECT
+{
+    WDFDEVICE_INIT init;
+};
+
+static NTSTATUS
+_WdfDeviceCreate(
+    _In_ WDF_DRIVER_GLOBALS* driver_globals,
+    _Inout_ PWDFDEVICE_INIT* device_init,
+    _In_opt_ PWDF_OBJECT_ATTRIBUTES device_attributes,
+    _Out_ WDFDEVICE* device)
+{
+    UNREFERENCED_PARAMETER(device_attributes);
+
+    if (driver_globals != &g_UsersimWdfDriverGlobals) {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    DEVICE_OBJECT* device_object = (DEVICE_OBJECT*)cxplat_allocate(
+        CxPlatNonPagedPoolNx, sizeof(*device_object), USERSIM_TAG_WDF_DEVICE_OBJECT, true);
+    if (!device_object) {
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    DRIVER_OBJECT* driver_object = (DRIVER_OBJECT*)driver_globals->Driver;
+    driver_object->device = device_object;
+
+    *device = device_object;
+
+    // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdfdevice/nf-wdfdevice-wdfdevicecreate
+    // explains: "After the driver calls WdfDeviceCreate, it can no longer access the WDFDEVICE_INIT structure."
+    // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdfdevice/nf-wdfdevice-wdfdeviceinitfree
+    // explains: "Your driver must not call WdfDeviceInitFree after it calls WdfDeviceCreate successfully."
+    // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdfdevice/nf-wdfdevice-wdfdeviceinitfree
+    // also explains: "If your driver receives a WDFDEVICE_INIT structure from a call to WdfPdoInitAllocate or
+    // WdfControlDeviceInitAllocate, and if the driver subsequently encounters an error when it calls a
+    // device object initialization method or WdfDeviceCreate, the driver must call WdfDeviceInitFree."
+    //
+    // Thus, on success, WdfDeviceCreate causes WdfDeviceInitFree to be called by the framework
+    // (whether immediately, or when the device is eventually deleted).
+    // If we return an error, the caller has to call WdfDeviceInitFree() itself.
+    device_object->init = **device_init;
+    _WdfDeviceInitFree(driver_globals, *device_init);
+
+    // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdfdevice/nf-wdfdevice-wdfdevicecreate
+    // explains: "If WdfDeviceCreate encounters no errors, it sets the pointer to NULL."
+    *device_init = nullptr;
+
+    return STATUS_SUCCESS;
+}
 
 static _Must_inspect_result_ _IRQL_requires_max_(PASSIVE_LEVEL) PWDFDEVICE_INIT _WdfControlDeviceInitAllocate(
     _In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFDRIVER driver, _In_ CONST UNICODE_STRING* sddl_string)

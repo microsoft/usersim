@@ -59,8 +59,7 @@ KmdfHelloWorldEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT Device
     WDF_IO_QUEUE_CONFIG io_queue_configuration;
     WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&io_queue_configuration, WdfIoQueueDispatchParallel);
     io_queue_configuration.EvtIoDeviceControl = KmdfHelloWorldIoDeviceControl;
-    status = WdfIoQueueCreate(hDevice, &io_queue_configuration, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
-    return status;
+    return WdfIoQueueCreate(hDevice, &io_queue_configuration, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
 }
 
 #define IOCTL_KMDF_HELLO_WORLD_CTL_METHOD_BUFFERED 1

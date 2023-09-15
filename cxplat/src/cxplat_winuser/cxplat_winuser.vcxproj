@@ -202,6 +202,7 @@
     <ClInclude Include="..\..\inc\cxplat_rundown.h" />
     <ClInclude Include="..\..\inc\cxplat_size.h" />
     <ClInclude Include="..\..\inc\cxplat_workitem.h" />
+    <ClInclude Include="..\..\inc\winuser\cxplat_passed_test_log.h" />
     <ClInclude Include="..\..\inc\winuser\cxplat_platform.h" />
     <ClInclude Include="..\..\inc\winuser\cxplat_winuser.h" />
     <ClInclude Include="..\tags.h" />
