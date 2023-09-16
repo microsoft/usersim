@@ -32,6 +32,12 @@ TEST_CASE("allocate", "[memory]")
     *buffer = 0;
     cxplat_free(buffer, TEST_TAG);
 
+    buffer = (uint64_t*)cxplat_allocate_cache_aligned(8, TEST_TAG, true);
+    REQUIRE(buffer != nullptr);
+    REQUIRE(*buffer == 0);
+    REQUIRE((((uintptr_t)buffer) % 64) == 0);
+    cxplat_free_cache_aligned(buffer, TEST_TAG);
+
     // Try an allocation that must be initialized.
     buffer = (uint64_t*)cxplat_allocate(CxPlatNonPagedPoolNx, 8, TEST_TAG, true);
     REQUIRE(buffer != nullptr);

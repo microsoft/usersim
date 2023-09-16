@@ -79,10 +79,19 @@ cxplat_free_any_tag(_Frees_ptr_opt_ void* memory);
  * @brief Allocate memory that has a starting address that is cache aligned.
  * @param[in] size Size of memory to allocate.
  * @param[in] tag Pool tag to use.
+ * @param[in] initialize False to return "uninitialized" memory.
  * @returns Pointer to zero-initialized memory block allocated, or null on failure.
  */
 __drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned(size_t size, uint32_t tag);
+    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned(size_t size, uint32_t tag, bool initialize);
+
+/**
+ * @brief Free memory that has a starting address that is cache aligned.
+ * @param[in] memory Allocation to be freed.
+ * @param[in] tag Pool tag to use.
+ */
+void
+cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory, uint32_t tag);
 
 /**
  * @brief Allocate and copy a UTF-8 string.
