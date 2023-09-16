@@ -27,16 +27,40 @@ To use this repository from another project:
 
 ### Leak Detection
 
-To detect memory leaks on exit, define the environment variable CXPLAT_MEMORY_LEAK_DETECTION=true
+To detect memory leaks on exit, define the environment variable `CXPLAT_MEMORY_LEAK_DETECTION=true`
 
 ### Fault Injection
 
-To use fault injection, define the environment variable CXPLAT_FAULT_INJECTION_SIMULATION=4
+To use fault injection, define the environment variable `CXPLAT_FAULT_INJECTION_SIMULATION=4`
 where the value (4 in this example) is the number of stack frames to use to determine whether a call stack is unique.
 Fault injection will cause one call into the UserSim library to fail, for every unique call stack.
 
-The failed call stacks are dumped into a file with the name `<exe name>.fault.log` where `<exe name>` is the
-name of the original executable.
+The failed call stacks are dumped into a file in the current directory with the name `<exe name>.fault.log`
+where `<exe name>` is the name of the original executable.  To reset fault injection for a test executable,
+simply delete all `<exe name>.*.log` files from the current directory.
+
+The `.\scripts\Test-FaultInjection.ps1` powershell script can be used to test fault injection for a Catch2-based
+test executable by making successive runs that fail each successive path, until the test executable
+ends with all tests passing, indicating that no more code paths were found to fail.  This can be done
+as follows.
+
+First, navigate into the directory containing the test executable. Then do:
+
+```
+powershell <path to script>\Test-FaultInjection.ps1 <dump path> <test timeout> ".\<test exe name>.exe" <depth>
+```
+where:
+
+* `<path to script>` is the path to the `Test-FaultInjection.ps1` file.
+* `<dump path>` is the directory to put any crash dumps in.
+* `<test timeout>` is the maximum number of seconds per test iteration.
+* `<test exe name>` is the filename of the test executable.
+* `<depth>` is the value to use for `CXPLAT_FAULT_INJECTION_SIMULATION`.
+
+Each iteration will result in more stacks being added to the same `<exe name>.fault.log`
+file, after a line `# Iteration: <number>` where `<number>` is the iteration number.
+If a crash occurs, it can then be reproduced and diagnosed by deleting the last iteration's
+content from the file, and then running the test executable under a debugger.
 
 ## Contributing
 
