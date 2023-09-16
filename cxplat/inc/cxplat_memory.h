@@ -85,14 +85,6 @@ __drv_allocatesMem(Mem) _Must_inspect_result_
     _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned(size_t size, uint32_t tag);
 
 /**
- * @brief Free memory that has a starting address that is cache aligned.
- * @param[in] memory Allocation to be freed.
- * @param[in] tag Pool tag to use.
- */
-void
-cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory, uint32_t tag);
-
-/**
  * @brief Allocate and copy a UTF-8 string.
  *
  * @param[out] destination Pointer to memory where the new UTF-8 character

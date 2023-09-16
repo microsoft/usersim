@@ -48,9 +48,3 @@ __drv_allocatesMem(Mem) _Must_inspect_result_
 {
     return cxplat_allocate(CxPlatNonPagedPoolNxCacheAligned, size, tag, true);
 }
-
-void
-cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory, uint32_t tag)
-{
-    cxplat_free(memory, tag);
-}
