@@ -26,7 +26,9 @@ MmGetSystemAddressForMdlSafe(
     _In_ unsigned long page_priority) // MM_PAGE_PRIORITY logically OR'd with MdlMapping*
 {
     if (!(mdl->flags & MDL_FLAG_MAPPED)) {
-        MmMapLockedPagesSpecifyCache(mdl, KernelMode, MmCached, nullptr, TRUE, page_priority);
+        if (MmMapLockedPagesSpecifyCache(mdl, KernelMode, MmCached, nullptr, FALSE, page_priority) == nullptr) {
+            return nullptr;
+        }
     }
 
     return ((void*)((PUCHAR)(mdl)->start_va + (mdl)->byte_offset));
@@ -95,10 +97,8 @@ MmMapLockedPagesSpecifyCache(
     ULONG bug_check_on_failure,
     ULONG priority)
 {
-    UNREFERENCED_PARAMETER(access_mode);
     UNREFERENCED_PARAMETER(cache_type);
     UNREFERENCED_PARAMETER(requested_address);
-    UNREFERENCED_PARAMETER(bug_check_on_failure);
     UNREFERENCED_PARAMETER(priority);
 
     if (memory_descriptor_list->flags & MDL_FLAG_MAPPED) {
@@ -107,6 +107,9 @@ MmMapLockedPagesSpecifyCache(
     }
 
     if (cxplat_fault_injection_inject_fault()) {
+        if (bug_check_on_failure && (access_mode == KernelMode)) {
+            KeBugCheck(0);
+        }
         return nullptr;
     }
 

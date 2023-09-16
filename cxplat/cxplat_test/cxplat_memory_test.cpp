@@ -16,14 +16,18 @@ TEST_CASE("allocate", "[memory]")
     // Try an allocation that need not be cache aligned.
     uint64_t* buffer = (uint64_t*)cxplat_allocate(CxPlatNonPagedPoolNx, 8, TEST_TAG, false);
     REQUIRE(buffer != nullptr);
+#ifndef NDEBUG
     REQUIRE(*buffer != 0);
+#endif
     *buffer = 0;
     cxplat_free(buffer, TEST_TAG);
 
     // Try an allocation that must be cache aligned.
     buffer = (uint64_t*)cxplat_allocate(CxPlatNonPagedPoolNxCacheAligned, 8, TEST_TAG, false);
     REQUIRE(buffer != nullptr);
+#ifndef NDEBUG
     REQUIRE(*buffer != 0);
+#endif
     REQUIRE((((uintptr_t)buffer) % 64) == 0);
     *buffer = 0;
     cxplat_free(buffer, TEST_TAG);

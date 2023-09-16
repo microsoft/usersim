@@ -10,46 +10,69 @@
 #include "usersim/io.h"
 #include "usersim/mm.h"
 
+struct _mm_mdl_free_functor
+{
+    void
+    operator()(void* mdl)
+    {
+        MmFreePagesFromMdl((MDL*)mdl);
+        ExFreePool(mdl);
+    }
+};
+
 TEST_CASE("MmAllocatePagesForMdlEx", "[mm]")
 {
     PHYSICAL_ADDRESS start_address{.QuadPart = 0};
     PHYSICAL_ADDRESS end_address{.QuadPart = -1};
     PHYSICAL_ADDRESS page_size{.QuadPart = PAGE_SIZE};
     const size_t byte_count = 256;
-    MDL* mdl = MmAllocatePagesForMdlEx(
-        start_address, end_address, page_size, byte_count, MmCached, MM_ALLOCATE_FULLY_REQUIRED);
+    std::unique_ptr<MDL, _mm_mdl_free_functor> mdl(MmAllocatePagesForMdlEx(
+        start_address, end_address, page_size, byte_count, MmCached, MM_ALLOCATE_FULLY_REQUIRED));
     REQUIRE(mdl != nullptr);
 
-    void* base_address = MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority);
+    void* base_address = MmGetSystemAddressForMdlSafe(mdl.get(), NormalPagePriority);
     REQUIRE(base_address != nullptr);
 
-    REQUIRE(MmGetMdlByteCount(mdl) == byte_count);
-    REQUIRE(MmGetMdlByteOffset(mdl) == 0);
+    REQUIRE(MmGetMdlByteCount(mdl.get()) == byte_count);
+    REQUIRE(MmGetMdlByteOffset(mdl.get()) == 0);
 
-    MmUnmapLockedPages(base_address, mdl);
-    MmFreePagesFromMdl(mdl);
-    ExFreePool(mdl);
+    MmUnmapLockedPages(base_address, mdl.get());
 }
+
+struct _ex_pool_free_functor
+{
+    void
+    operator()(void* buffer)
+    {
+        ExFreePool(buffer);
+    }
+};
+
+struct _io_mdl_free_functor
+{
+    void
+    operator()(void* mdl)
+    {
+        IoFreeMdl((MDL*)mdl);
+    }
+};
 
 TEST_CASE("IoAllocateMdl", "[mm]")
 {
     const size_t byte_count = 256;
     ULONG tag = 'tset';
-    void* buffer = ExAllocatePoolWithTag(NonPagedPool, byte_count, tag);
+    std::unique_ptr<void, _ex_pool_free_functor> buffer(ExAllocatePoolWithTag(NonPagedPool, byte_count, tag));
     REQUIRE(buffer != nullptr);
 
-    MDL* mdl = IoAllocateMdl(buffer, byte_count, FALSE, FALSE, nullptr);
+    std::unique_ptr<MDL, _io_mdl_free_functor> mdl(IoAllocateMdl(buffer.get(), byte_count, FALSE, FALSE, nullptr));
     REQUIRE(mdl != nullptr);
 
-    MmBuildMdlForNonPagedPool(mdl);
+    MmBuildMdlForNonPagedPool(mdl.get());
 
-    void* base_address = MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority);
-    REQUIRE(base_address == buffer);
+    void* base_address = MmGetSystemAddressForMdlSafe(mdl.get(), NormalPagePriority);
+    REQUIRE(base_address == buffer.get());
 
-    REQUIRE(MmGetMdlByteCount(mdl) == byte_count);
-
-    IoFreeMdl(mdl);
-    ExFreePoolWithTag(buffer, tag);
+    REQUIRE(MmGetMdlByteCount(mdl.get()) == byte_count);
 }
 
 ULONG

@@ -200,12 +200,14 @@ void
 _nmr::unbind_complete(_Inout_ binding& binding)
 {
     std::unique_lock l(lock);
-    if (binding.client.characteristics.ClientCleanupBindingContext != nullptr) {
+    if ((binding.client.characteristics.ClientCleanupBindingContext != nullptr) &&
+        (binding.client_binding_context != nullptr)) {
         // Notify the client that that the binding context can be freed if needed.
         binding.client.characteristics.ClientCleanupBindingContext(const_cast<void*>(binding.client_binding_context));
     }
 
-    if (binding.provider.characteristics.ProviderCleanupBindingContext != nullptr) {
+    if ((binding.provider.characteristics.ProviderCleanupBindingContext != nullptr) &&
+        (binding.provider_binding_context != nullptr)) {
         // Notify the provider that that the binding context can be freed if needed.
         binding.provider.characteristics.ProviderCleanupBindingContext(
             const_cast<void*>(binding.provider_binding_context));

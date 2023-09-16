@@ -42,8 +42,37 @@ enum class _fault_injection_expected_outcome
     ExpectFaultDifferentCallsite, /// < Fault should be expected at a different callsite.
 };
 
+static bool
+_is_fault_injection_enabled_in_environment()
+{
+    std::string name("CXPLAT_FAULT_INJECTION_SIMULATION");
+    std::string value;
+    size_t required_size = 0;
+    getenv_s(&required_size, nullptr, 0, name.c_str());
+    if (required_size > 0) {
+        value.resize(required_size);
+        getenv_s(&required_size, &value[0], required_size, name.c_str());
+        value.resize(required_size - 1);
+    }
+    if (value.empty()) {
+        return false;
+    }
+    try {
+        return std::stoull(value) > 0;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
 TEST_CASE("fault_injection", "[fault_injection]")
 {
+    if (_is_fault_injection_enabled_in_environment()) {
+        // Running this test would interfere with a real fault injection pass
+        // since it resets fault injection logs, so do nothing.
+        printf("Skipping fault injection test in fault injection pass\n");
+        return;
+    }
+
     bool fault_injection_enabled = false;
     // Verify it's disabled by default.
     REQUIRE(cxplat_fault_injection_is_enabled() == false);
