@@ -11,7 +11,7 @@
 TEST_CASE("ExAllocatePool", "[ex]")
 {
     // Try an allocation that need not be cache aligned.
-    uint64_t* buffer = (uint64_t*)ExAllocatePoolUninitialized(NonPagedPool, 8, 'tset');
+    uint64_t* buffer = (uint64_t*)ExAllocatePoolUninitialized(NonPagedPoolNx, 8, 'tset');
     REQUIRE(buffer != nullptr);
 #ifndef NDEBUG
     REQUIRE(*buffer != 0);
@@ -29,7 +29,7 @@ TEST_CASE("ExAllocatePool", "[ex]")
     *buffer = 0;
     ExFreePool(buffer);
 
-    buffer = (uint64_t*)ExAllocatePoolWithTag(NonPagedPool, 8, 'tset');
+    buffer = (uint64_t*)ExAllocatePoolWithTag(NonPagedPoolNx, 8, 'tset');
     REQUIRE(buffer != nullptr);
     REQUIRE(*buffer == 0);
     *buffer = 42;

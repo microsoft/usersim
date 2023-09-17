@@ -61,7 +61,7 @@ TEST_CASE("IoAllocateMdl", "[mm]")
 {
     const size_t byte_count = 256;
     ULONG tag = 'tset';
-    std::unique_ptr<void, _ex_pool_free_functor> buffer(ExAllocatePoolWithTag(NonPagedPool, byte_count, tag));
+    std::unique_ptr<void, _ex_pool_free_functor> buffer(ExAllocatePoolWithTag(NonPagedPoolNx, byte_count, tag));
     REQUIRE(buffer != nullptr);
 
     std::unique_ptr<MDL, _io_mdl_free_functor> mdl(IoAllocateMdl(buffer.get(), byte_count, FALSE, FALSE, nullptr));

@@ -10,13 +10,16 @@
 
 CXPLAT_EXTERN_C_BEGIN
 
-// Values in this enum line up with POOL_TYPE in Windows,
+// Values in this enum line up with POOL_FLAGS in Windows,
 // and other values are legal.
 typedef enum
 {
-    CxPlatNonPagedPoolNx = 512,
-    CxPlatNonPagedPoolNxCacheAligned = CxPlatNonPagedPoolNx + 4,
-} cxplat_pool_type_t;
+    CXPLAT_POOL_FLAG_NONE          = 0x00000000,
+    CXPLAT_POOL_FLAG_CACHE_ALIGNED = 0x00000008,
+    CXPLAT_POOL_FLAG_UNINITIALIZED = 0x00000002,
+    CXPLAT_POOL_FLAG_NON_PAGED     = 0x00000040,
+    CXPLAT_POOL_FLAG_PAGED         = 0x00000100,
+} cxplat_pool_flags_t;
 
 /**
  * @brief A UTF-8 encoded string.
@@ -39,59 +42,38 @@ typedef struct _cxplat_utf8_string
 
 /**
  * @brief Allocate memory.
- * @param[in] pool_type Type of pool to use.
+ * @param[in] pool_flags Pool flags to use.
  * @param[in] size Size of memory to allocate.
  * @param[in] tag Pool tag to use.
- * @param[in] initialize False to return "uninitialized" memory.
  * @returns Pointer to memory block allocated, or null on failure.
  */
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate(
-    _In_ cxplat_pool_type_t pool_type, size_t size, uint32_t tag, bool initialize);
+    cxplat_pool_flags_t pool_flags, size_t size, uint32_t tag);
 
 /**
  * @brief Reallocate memory.
  * @param[in] memory Allocation to be reallocated.
+ * @param[in] pool_flags Pool flags to use.
  * @param[in] old_size Old size of memory to reallocate.
  * @param[in] new_size New size of memory to reallocate.
  * @param[in] tag Pool tag to use.
  * @returns Pointer to memory block allocated, or null on failure.
  */
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
-    _In_ _Post_invalid_ void* memory, size_t old_size, size_t new_size, uint32_t tag);
+    _In_ _Post_invalid_ void* memory,
+    cxplat_pool_flags_t pool_flags,
+    size_t old_size,
+    size_t new_size,
+    uint32_t tag);
 
 /**
  * @brief Free memory.
  * @param[in] memory Allocation to be freed.
- * @param[in] tag Pool tag to use.
+ * @param[in] pool_flags Pool flags to use.
+ * @param[in] tag Pool tag to use, or 0 for any.
  */
 void
-cxplat_free(_Frees_ptr_opt_ void* memory, uint32_t tag);
-
-/**
- * @brief Free memory.  This API should only be used when the caller does not
- * know the correct pool tag.
- * @param[in] memory Allocation to be freed.
- */
-void
-cxplat_free_any_tag(_Frees_ptr_opt_ void* memory);
-
-/**
- * @brief Allocate memory that has a starting address that is cache aligned.
- * @param[in] size Size of memory to allocate.
- * @param[in] tag Pool tag to use.
- * @param[in] initialize False to return "uninitialized" memory.
- * @returns Pointer to zero-initialized memory block allocated, or null on failure.
- */
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned(size_t size, uint32_t tag, bool initialize);
-
-/**
- * @brief Free memory that has a starting address that is cache aligned.
- * @param[in] memory Allocation to be freed.
- * @param[in] tag Pool tag to use.
- */
-void
-cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory, uint32_t tag);
+cxplat_free(_Frees_ptr_opt_ void* memory, cxplat_pool_flags_t pool_flags, uint32_t tag);
 
 /**
  * @brief Allocate and copy a UTF-8 string.

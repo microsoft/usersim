@@ -6,51 +6,28 @@
 #include <wdm.h>
 
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate(
-    _In_ cxplat_pool_type_t pool_type, size_t size, uint32_t tag, bool initialize)
+    cxplat_pool_flags_t pool_flags, size_t size, uint32_t tag)
 {
-    void* memory = ExAllocatePoolUninitialized(pool_type, size, tag);
-    if (memory && initialize) {
-        RtlZeroMemory(memory, size);
-    }
-    return memory;
+    return ExAllocatePool2(pool_flags, size, tag);
 }
 
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
-    _In_ _Post_invalid_ void* pointer, size_t old_size, size_t new_size, uint32_t tag)
+    _In_ _Post_invalid_ void* pointer, cxplat_pool_flags_t pool_flags, size_t old_size, size_t new_size, uint32_t tag)
 {
-    void* new_pointer = cxplat_allocate(CxPlatNonPagedPoolNx, new_size, tag, true);
+    void* new_pointer = cxplat_allocate(pool_flags, new_size, tag);
     if (!new_pointer) {
         return NULL;
     }
     memcpy(new_pointer, pointer, min(old_size, new_size));
-    cxplat_free(pointer, tag);
+    cxplat_free(pointer, pool_flags, tag);
     return new_pointer;
 }
 
 void
-cxplat_free(_Frees_ptr_opt_ void* pointer, uint32_t tag)
+cxplat_free(_Frees_ptr_opt_ void* pointer, cxplat_pool_flags_t pool_flags, uint32_t tag)
 {
+    UNREFERENCED_PARAMETER(pool_flags);
     if (pointer != NULL) {
         ExFreePoolWithTag(pointer, tag);
     }
-}
-
-void
-cxplat_free_any_tag(_Frees_ptr_opt_ void* pointer)
-{
-    if (pointer != NULL) {
-        ExFreePool(pointer);
-    }
-}
-
-__drv_allocatesMem(Mem) _Must_inspect_result_
-    _Ret_writes_maybenull_(size) void* cxplat_allocate_cache_aligned(size_t size, uint32_t tag, bool initialize)
-{
-    return cxplat_allocate(CxPlatNonPagedPoolNxCacheAligned, size, tag, initialize);
-}
-
-void
-cxplat_free_cache_aligned(_Frees_ptr_opt_ void* memory, uint32_t tag)
-{
-    cxplat_free(memory, tag);
 }

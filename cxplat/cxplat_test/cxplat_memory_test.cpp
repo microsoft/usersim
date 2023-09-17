@@ -14,68 +14,54 @@
 TEST_CASE("allocate", "[memory]")
 {
     // Try an allocation that need not be cache aligned.
-    uint64_t* buffer = (uint64_t*)cxplat_allocate(CxPlatNonPagedPoolNx, 8, TEST_TAG, false);
+    cxplat_pool_flags_t pool_flags = (cxplat_pool_flags_t)(CXPLAT_POOL_FLAG_NON_PAGED | CXPLAT_POOL_FLAG_UNINITIALIZED);
+    uint64_t* buffer = (uint64_t*)cxplat_allocate(pool_flags, 8, TEST_TAG);
     REQUIRE(buffer != nullptr);
 #ifndef NDEBUG
     REQUIRE(*buffer != 0);
 #endif
     *buffer = 0;
-    cxplat_free(buffer, TEST_TAG);
-
-    // Try an allocation that must be cache aligned.
-    buffer = (uint64_t*)cxplat_allocate(CxPlatNonPagedPoolNxCacheAligned, 8, TEST_TAG, false);
-    REQUIRE(buffer != nullptr);
-#ifndef NDEBUG
-    REQUIRE(*buffer != 0);
-#endif
-    REQUIRE((((uintptr_t)buffer) % 64) == 0);
-    *buffer = 0;
-    cxplat_free(buffer, TEST_TAG);
-
-    buffer = (uint64_t*)cxplat_allocate_cache_aligned(8, TEST_TAG, true);
-    REQUIRE(buffer != nullptr);
-    REQUIRE(*buffer == 0);
-    REQUIRE((((uintptr_t)buffer) % 64) == 0);
-    cxplat_free_cache_aligned(buffer, TEST_TAG);
+    cxplat_free(buffer, pool_flags, TEST_TAG);
 
     // Try an allocation that must be initialized.
-    buffer = (uint64_t*)cxplat_allocate(CxPlatNonPagedPoolNx, 8, TEST_TAG, true);
+    buffer = (uint64_t*)cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, 8, TEST_TAG);
     REQUIRE(buffer != nullptr);
     REQUIRE(*buffer == 0);
     *buffer = 42;
 
     // Try a free with an unknown tag.
-    cxplat_free_any_tag(buffer);
+    cxplat_free(buffer, CXPLAT_POOL_FLAG_NON_PAGED, 0);
 }
 
 TEST_CASE("reallocate unaligned", "[memory]")
 {
     // Try an allocation that need not be cache aligned.
-    uint64_t* original_buffer = (uint64_t*)cxplat_allocate(CxPlatNonPagedPoolNx, 8, TEST_TAG, true);
+    uint64_t* original_buffer = (uint64_t*)cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, 8, TEST_TAG);
     REQUIRE(original_buffer != nullptr);
 
-    uint64_t* new_buffer = (uint64_t*)cxplat_reallocate(original_buffer, 8, 16, TEST_TAG);
+    uint64_t* new_buffer = (uint64_t*)cxplat_reallocate(original_buffer, CXPLAT_POOL_FLAG_NON_PAGED, 8, 16, TEST_TAG);
     REQUIRE(new_buffer != nullptr);
     REQUIRE(new_buffer[1] == 0);
 
-    cxplat_free(new_buffer, TEST_TAG);
+    cxplat_free(new_buffer, CXPLAT_POOL_FLAG_NON_PAGED, TEST_TAG);
 }
 
-TEST_CASE("reallocate aligned", "[memory]")
+TEST_CASE("allocate with aligned pool", "[memory]")
 {
     // Try an allocation that must be cache aligned.
-    uint64_t* original_buffer = (uint64_t*)cxplat_allocate(CxPlatNonPagedPoolNxCacheAligned, 8, TEST_TAG, true);
+    cxplat_pool_flags_t pool_flags = (cxplat_pool_flags_t)(CXPLAT_POOL_FLAG_NON_PAGED | CXPLAT_POOL_FLAG_CACHE_ALIGNED);
+    uint64_t* original_buffer = (uint64_t*)cxplat_allocate(pool_flags, 8, TEST_TAG);
     REQUIRE(original_buffer != nullptr);
 
-    uint64_t* new_buffer = (uint64_t*)cxplat_reallocate(original_buffer, 8, 16, TEST_TAG);
+    uint64_t* new_buffer = (uint64_t*)cxplat_reallocate(original_buffer, pool_flags, 8, 16, TEST_TAG);
     REQUIRE(new_buffer != nullptr);
     REQUIRE((((uintptr_t)new_buffer) % 64) == 0);
     REQUIRE(new_buffer[1] == 0);
 
-    cxplat_free(new_buffer, TEST_TAG);
+    cxplat_free(new_buffer, pool_flags, TEST_TAG);
 }
 
-TEST_CASE("cxplat_free null", "[memory]") { cxplat_free(nullptr, TEST_TAG); }
+TEST_CASE("cxplat_free null", "[memory]") { cxplat_free(nullptr, CXPLAT_POOL_FLAG_NON_PAGED, TEST_TAG); }
 
 TEST_CASE("cxplat_duplicate_string", "[memory]")
 {
