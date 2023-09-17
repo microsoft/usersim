@@ -12,7 +12,7 @@ CXPLAT_EXTERN_C_BEGIN
 
 // Values in this enum line up with POOL_FLAGS in Windows,
 // and other values are legal.
-typedef enum
+typedef _Enum_is_bitflag_ enum
 {
     CXPLAT_POOL_FLAG_NONE          = 0x00000000,
     CXPLAT_POOL_FLAG_CACHE_ALIGNED = 0x00000008,
