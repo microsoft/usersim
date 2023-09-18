@@ -685,8 +685,8 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS FwpsAllocateNetBufferAndNetBufferLi
     UNREFERENCED_PARAMETER(context_backfill);
     UNREFERENCED_PARAMETER(data_offset);
 
-    new_net_buffer_list =
-        (NET_BUFFER_LIST*)(ExAllocatePoolUninitialized(NonPagedPool, sizeof(NET_BUFFER_LIST), '1PWF'));
+    new_net_buffer_list = (NET_BUFFER_LIST*)(ExAllocatePoolUninitialized(
+        NonPagedPoolNx, sizeof(NET_BUFFER_LIST), USERSIM_TAG_NET_BUFFER_LIST));
     if (!new_net_buffer_list) {
         status = STATUS_INSUFFICIENT_RESOURCES;
         goto Done;
@@ -695,7 +695,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS FwpsAllocateNetBufferAndNetBufferLi
     RtlZeroMemory(new_net_buffer_list, sizeof(NET_BUFFER_LIST));
 
     new_net_buffer_list->FirstNetBuffer =
-        (NET_BUFFER*)(ExAllocatePoolUninitialized(NonPagedPool, sizeof(NET_BUFFER), '2PWF'));
+        (NET_BUFFER*)(ExAllocatePoolUninitialized(NonPagedPoolNx, sizeof(NET_BUFFER), USERSIM_TAG_NET_BUFFER));
     if (!new_net_buffer_list->FirstNetBuffer) {
         status = STATUS_INSUFFICIENT_RESOURCES;
         goto Done;
@@ -724,10 +724,10 @@ _IRQL_requires_max_(DISPATCH_LEVEL) void FwpsFreeNetBufferList0(_In_ NET_BUFFER_
     }
 
     if (net_buffer_list->FirstNetBuffer) {
-        ExFreePool(net_buffer_list->FirstNetBuffer);
+        ExFreePoolWithTag(net_buffer_list->FirstNetBuffer, USERSIM_TAG_NET_BUFFER);
     }
 
-    ExFreePool(net_buffer_list);
+    ExFreePoolWithTag(net_buffer_list, USERSIM_TAG_NET_BUFFER_LIST);
 }
 
 _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(DISPATCH_LEVEL) _Must_inspect_result_ NTSTATUS
