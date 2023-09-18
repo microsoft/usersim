@@ -299,7 +299,10 @@ static
 _IRQL_requires_max_(DISPATCH_LEVEL) VOID
     _WdfObjectDelete(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFOBJECT object)
 {
-    UNREFERENCED_PARAMETER(driver_globals);
+    DRIVER_OBJECT* driver_object = (DRIVER_OBJECT*)driver_globals->Driver;
+    if (driver_object && (driver_object->device == object)) {
+        driver_object->device = nullptr;
+    }
 
     cxplat_free(object, CXPLAT_POOL_FLAG_NON_PAGED, 0);
 }
