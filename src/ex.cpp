@@ -161,7 +161,7 @@ ExAllocatePoolUninitializedCPP(_In_ POOL_TYPE pool_type, _In_ size_t number_of_b
     if (header) {
         header->pool_flags = (cxplat_pool_flags_t)pool_flags;
     }
-    return (header + 1);
+    return (header) ? (header + 1) : nullptr;
 }
 
 _Ret_maybenull_ void*
@@ -185,7 +185,7 @@ ExAllocatePool2CPP(__drv_strictTypeMatch(__drv_typeExpr) POOL_FLAGS pool_flags, 
     if (header) {
         header->pool_flags = (cxplat_pool_flags_t)pool_flags;
     }
-    return (header + 1);
+    return (header) ? (header + 1) : nullptr;
 }
 
 _Ret_maybenull_ void*
