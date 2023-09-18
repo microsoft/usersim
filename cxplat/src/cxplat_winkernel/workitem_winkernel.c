@@ -36,7 +36,7 @@ cxplat_allocate_preemptible_work_item(
     cxplat_status_t result = CXPLAT_STATUS_SUCCESS;
 
     *work_item = cxplat_allocate(
-        CxPlatNonPagedPoolNx, sizeof(cxplat_preemptible_work_item_t), CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM, true);
+        CXPLAT_POOL_FLAG_NON_PAGED, sizeof(cxplat_preemptible_work_item_t), CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM);
     if (*work_item == NULL) {
         result = CXPLAT_STATUS_NO_MEMORY;
         goto Done;
@@ -56,7 +56,7 @@ cxplat_allocate_preemptible_work_item(
 
 Done:
     if (result != CXPLAT_STATUS_SUCCESS) {
-        cxplat_free(*work_item, CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM);
+        cxplat_free(*work_item, CXPLAT_POOL_FLAG_NON_PAGED, CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM);
         *work_item = NULL;
     }
     return result;
@@ -73,7 +73,7 @@ cxplat_free_preemptible_work_item(_Frees_ptr_opt_ cxplat_preemptible_work_item_t
 {
     if (work_item) {
         IoFreeWorkItem(work_item->io_work_item);
-        cxplat_free(work_item, CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM);
+        cxplat_free(work_item, CXPLAT_POOL_FLAG_NON_PAGED, CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM);
     }
 }
 

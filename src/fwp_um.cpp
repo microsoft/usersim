@@ -44,7 +44,7 @@ void static _allocate_and_initialize_connection_request(
 {
     CXPLAT_DEBUG_ASSERT(_fwp_um_connect_request == nullptr);
     _fwp_um_connect_request = (FWPS_CONNECT_REQUEST0*)cxplat_allocate(
-        CxPlatNonPagedPoolNx, sizeof(FWPS_CONNECT_REQUEST0), USERSIM_TAG_FWPS_CONNECT_REQUEST0, true);
+        CXPLAT_POOL_FLAG_NON_PAGED, sizeof(FWPS_CONNECT_REQUEST0), USERSIM_TAG_FWPS_CONNECT_REQUEST0);
     if (_fwp_um_connect_request == nullptr) {
         // Most likely we are under fault injection simulation. Return.
         return;
@@ -57,7 +57,7 @@ void static _allocate_and_initialize_connection_request(
 
 void static _free_connection_request()
 {
-    cxplat_free(_fwp_um_connect_request, USERSIM_TAG_FWPS_CONNECT_REQUEST0);
+    cxplat_free(_fwp_um_connect_request, CXPLAT_POOL_FLAG_NON_PAGED, USERSIM_TAG_FWPS_CONNECT_REQUEST0);
     _fwp_um_connect_request = nullptr;
 }
 
@@ -685,8 +685,8 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS FwpsAllocateNetBufferAndNetBufferLi
     UNREFERENCED_PARAMETER(context_backfill);
     UNREFERENCED_PARAMETER(data_offset);
 
-    new_net_buffer_list =
-        (NET_BUFFER_LIST*)(ExAllocatePoolUninitialized(NonPagedPool, sizeof(NET_BUFFER_LIST), '1PWF'));
+    new_net_buffer_list = (NET_BUFFER_LIST*)(ExAllocatePoolUninitialized(
+        NonPagedPoolNx, sizeof(NET_BUFFER_LIST), USERSIM_TAG_NET_BUFFER_LIST));
     if (!new_net_buffer_list) {
         status = STATUS_INSUFFICIENT_RESOURCES;
         goto Done;
@@ -695,7 +695,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS FwpsAllocateNetBufferAndNetBufferLi
     RtlZeroMemory(new_net_buffer_list, sizeof(NET_BUFFER_LIST));
 
     new_net_buffer_list->FirstNetBuffer =
-        (NET_BUFFER*)(ExAllocatePoolUninitialized(NonPagedPool, sizeof(NET_BUFFER), '2PWF'));
+        (NET_BUFFER*)(ExAllocatePoolUninitialized(NonPagedPoolNx, sizeof(NET_BUFFER), USERSIM_TAG_NET_BUFFER));
     if (!new_net_buffer_list->FirstNetBuffer) {
         status = STATUS_INSUFFICIENT_RESOURCES;
         goto Done;
@@ -724,10 +724,10 @@ _IRQL_requires_max_(DISPATCH_LEVEL) void FwpsFreeNetBufferList0(_In_ NET_BUFFER_
     }
 
     if (net_buffer_list->FirstNetBuffer) {
-        ExFreePool(net_buffer_list->FirstNetBuffer);
+        ExFreePoolWithTag(net_buffer_list->FirstNetBuffer, USERSIM_TAG_NET_BUFFER);
     }
 
-    ExFreePool(net_buffer_list);
+    ExFreePoolWithTag(net_buffer_list, USERSIM_TAG_NET_BUFFER_LIST);
 }
 
 _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(DISPATCH_LEVEL) _Must_inspect_result_ NTSTATUS
@@ -862,7 +862,7 @@ _IRQL_requires_(PASSIVE_LEVEL) NTSTATUS NTAPI
     UNREFERENCED_PARAMETER(flags);
 
     // Fault injection is implicitly introduced by cxplat_allocate_with_tag().
-    *redirectHandle = (HANDLE)cxplat_allocate(CxPlatNonPagedPoolNx, 1, USERSIM_TAG_HANDLE, true);
+    *redirectHandle = (HANDLE)cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, 1, USERSIM_TAG_HANDLE);
     if (*redirectHandle == nullptr) {
         return STATUS_NO_MEMORY;
     }
@@ -872,7 +872,7 @@ _IRQL_requires_(PASSIVE_LEVEL) NTSTATUS NTAPI
 
 _IRQL_requires_(PASSIVE_LEVEL) void NTAPI FwpsRedirectHandleDestroy0(_In_ HANDLE redirectHandle)
 {
-    cxplat_free(redirectHandle, USERSIM_TAG_HANDLE);
+    cxplat_free(redirectHandle, CXPLAT_POOL_FLAG_NON_PAGED, USERSIM_TAG_HANDLE);
 }
 
 _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(DISPATCH_LEVEL) FWPS_CONNECTION_REDIRECT_STATE NTAPI

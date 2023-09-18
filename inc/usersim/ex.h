@@ -81,6 +81,9 @@ typedef _Enum_is_bitflag_ enum _POOL_TYPE {
 
 } _Enum_is_bitflag_ POOL_TYPE;
 
+typedef ULONG64 POOL_FLAGS;
+#define POOL_FLAG_NON_PAGED 0x00000040
+
 USERSIM_API
 void
 ExInitializeRundownProtection(_Out_ EX_RUNDOWN_REF* rundown_ref);
@@ -156,6 +159,11 @@ ExAllocatePoolWithTag(
     _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag);
 
 USERSIM_API
+_Ret_maybenull_ void*
+ExAllocatePool2(
+    _In_ POOL_FLAGS pool_flags, SIZE_T number_of_bytes, ULONG tag);
+
+USERSIM_API
 void
 ExFreePool(_Frees_ptr_ void* p);
 
@@ -188,11 +196,13 @@ USERSIM_API void
 ExFreePoolWithTagCPP(_Frees_ptr_ void* p, ULONG tag);
 
 USERSIM_API _Ret_maybenull_ void*
-ExAllocatePoolWithTagCPP(
-    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag);
+ExAllocatePool2CPP(__drv_strictTypeMatch(__drv_typeExpr) POOL_FLAGS pool_flags, size_t number_of_bytes, ULONG tag);
 
 USERSIM_API _Ret_maybenull_ void*
-ExAllocatePoolUninitializedCPP(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag);
+ExAllocatePoolWithTagCPP(__drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, size_t number_of_bytes, ULONG tag);
+
+USERSIM_API _Ret_maybenull_ void*
+ExAllocatePoolUninitializedCPP(POOL_TYPE pool_type, size_t number_of_bytes, unsigned long tag);
 
 USERSIM_API void
 ExRaiseAccessViolationCPP();

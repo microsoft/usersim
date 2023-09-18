@@ -110,7 +110,7 @@ _WdfDeviceCreate(
     }
 
     DEVICE_OBJECT* device_object = (DEVICE_OBJECT*)cxplat_allocate(
-        CxPlatNonPagedPoolNx, sizeof(*device_object), USERSIM_TAG_WDF_DEVICE_OBJECT, true);
+        CXPLAT_POOL_FLAG_NON_PAGED, sizeof(*device_object), USERSIM_TAG_WDF_DEVICE_OBJECT);
     if (!device_object) {
         return STATUS_INSUFFICIENT_RESOURCES;
     }
@@ -149,8 +149,8 @@ static _Must_inspect_result_ _IRQL_requires_max_(PASSIVE_LEVEL) PWDFDEVICE_INIT 
     UNREFERENCED_PARAMETER(driver);
     UNREFERENCED_PARAMETER(sddl_string);
 
-    PWDFDEVICE_INIT device_init =
-        (PWDFDEVICE_INIT)cxplat_allocate(CxPlatNonPagedPoolNx, sizeof(*device_init), USERSIM_TAG_WDF_DEVICE_INIT, true);
+    PWDFDEVICE_INIT device_init = (PWDFDEVICE_INIT)cxplat_allocate(
+        CXPLAT_POOL_FLAG_NON_PAGED, sizeof(*device_init), USERSIM_TAG_WDF_DEVICE_INIT);
     return device_init;
 }
 
@@ -158,7 +158,7 @@ static _IRQL_requires_max_(DISPATCH_LEVEL) VOID
     _WdfDeviceInitFree(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ PWDFDEVICE_INIT device_init)
 {
     UNREFERENCED_PARAMETER(driver_globals);
-    cxplat_free(device_init, USERSIM_TAG_WDF_DEVICE_INIT);
+    cxplat_free(device_init, CXPLAT_POOL_FLAG_NON_PAGED, USERSIM_TAG_WDF_DEVICE_INIT);
 }
 
 static _IRQL_requires_max_(DISPATCH_LEVEL) VOID _WdfDeviceInitSetDeviceType(
@@ -299,9 +299,12 @@ static
 _IRQL_requires_max_(DISPATCH_LEVEL) VOID
     _WdfObjectDelete(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFOBJECT object)
 {
-    UNREFERENCED_PARAMETER(driver_globals);
+    DRIVER_OBJECT* driver_object = (DRIVER_OBJECT*)driver_globals->Driver;
+    if (driver_object && (driver_object->device == object)) {
+        driver_object->device = nullptr;
+    }
 
-    cxplat_free_any_tag(object);
+    cxplat_free(object, CXPLAT_POOL_FLAG_NON_PAGED, 0);
 }
 
 typedef struct _wdfrequest
@@ -434,7 +437,7 @@ usersim_device_io_control(
 
     size_t buffer_size = max(max(in_buffer_size, out_buffer_size), 1);
     wdfrequest_t* request = (wdfrequest_t*)cxplat_allocate(
-        CxPlatNonPagedPoolNx, FIELD_OFFSET(wdfrequest_t, buffer[buffer_size]), USERSIM_TAG_WDF_REQUEST, true);
+        CXPLAT_POOL_FLAG_NON_PAGED, FIELD_OFFSET(wdfrequest_t, buffer[buffer_size]), USERSIM_TAG_WDF_REQUEST);
     if (!request) {
         return FALSE;
     }
@@ -447,6 +450,6 @@ usersim_device_io_control(
     *bytes_returned = (DWORD)request->information;
     memcpy(out_buffer, &request->buffer, *bytes_returned);
     BOOL result = NT_SUCCESS(request->status);
-    cxplat_free(request, USERSIM_TAG_WDF_REQUEST);
+    cxplat_free(request, CXPLAT_POOL_FLAG_NON_PAGED, USERSIM_TAG_WDF_REQUEST);
     return result;
 }

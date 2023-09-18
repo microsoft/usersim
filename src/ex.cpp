@@ -117,13 +117,51 @@ _Releases_shared_lock_(spin_lock->lock) void ExReleaseSpinLockSharedEx(
     ReleaseSRWLockShared(&spin_lock->lock);
 }
 
+#define USERSIM_CACHE_LINE_SIZE 64
+typedef struct
+{
+    union
+    {
+        cxplat_pool_flags_t pool_flags;
+        char align[USERSIM_CACHE_LINE_SIZE];
+    };
+} usersim_allocation_header_t;
+
+static_assert(sizeof(usersim_allocation_header_t) == USERSIM_CACHE_LINE_SIZE);
+
+cxplat_pool_flags_t
+_pool_type_to_flags(POOL_TYPE pool_type, bool initialize)
+{
+    cxplat_pool_flags_t pool_flags = (initialize) ? CXPLAT_POOL_FLAG_NONE : CXPLAT_POOL_FLAG_UNINITIALIZED;
+    switch (pool_type) {
+    case NonPagedPoolNx:
+        return (cxplat_pool_flags_t)(pool_flags | CXPLAT_POOL_FLAG_NON_PAGED);
+    case NonPagedPoolNxCacheAligned:
+        return (cxplat_pool_flags_t)(pool_flags | CXPLAT_POOL_FLAG_NON_PAGED | CXPLAT_POOL_FLAG_CACHE_ALIGNED);
+    case PagedPool:
+        return (cxplat_pool_flags_t)(pool_flags | CXPLAT_POOL_FLAG_PAGED);
+    case PagedPoolCacheAligned:
+        return (cxplat_pool_flags_t)(pool_flags | CXPLAT_POOL_FLAG_PAGED | CXPLAT_POOL_FLAG_CACHE_ALIGNED);
+    default:
+        // Others not yet implemented.
+        KeBugCheckCPP(BAD_POOL_CALLER);
+        return CXPLAT_POOL_FLAG_NONE;
+    }
+}
+
 _Ret_maybenull_ void*
 ExAllocatePoolUninitializedCPP(_In_ POOL_TYPE pool_type, _In_ size_t number_of_bytes, _In_ unsigned long tag)
 {
     if (tag == 0) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_type, number_of_bytes, 0);
     }
-    return cxplat_allocate((cxplat_pool_type_t)pool_type, number_of_bytes, tag, false);
+
+    cxplat_pool_flags_t pool_flags = _pool_type_to_flags(pool_type, false);
+    usersim_allocation_header_t* header = (usersim_allocation_header_t*)cxplat_allocate(pool_flags, sizeof(*header) + number_of_bytes, tag);
+    if (header) {
+        header->pool_flags = (cxplat_pool_flags_t)pool_flags;
+    }
+    return (header) ? (header + 1) : nullptr;
 }
 
 _Ret_maybenull_ void*
@@ -134,13 +172,35 @@ ExAllocatePoolUninitialized(
 }
 
 _Ret_maybenull_ void*
-ExAllocatePoolWithTagCPP(
-    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, SIZE_T number_of_bytes, ULONG tag)
+ExAllocatePool2CPP(__drv_strictTypeMatch(__drv_typeExpr) POOL_FLAGS pool_flags, size_t number_of_bytes, ULONG tag)
 {
     if (tag == 0 || number_of_bytes == 0) {
-        KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_type, number_of_bytes, 0);
+        KeBugCheckExCPP(BAD_POOL_CALLER, 0x9B, pool_flags, number_of_bytes, 0);
     }
-    return cxplat_allocate((cxplat_pool_type_t)pool_type, number_of_bytes, tag, true);
+    if (!(pool_flags & POOL_FLAG_NON_PAGED)) {
+        ASSERT(KeGetCurrentIrql() < DISPATCH_LEVEL);
+    }
+    usersim_allocation_header_t* header =
+        (usersim_allocation_header_t*)cxplat_allocate((cxplat_pool_flags_t)pool_flags, sizeof(*header) + number_of_bytes, tag);
+    if (header) {
+        header->pool_flags = (cxplat_pool_flags_t)pool_flags;
+    }
+    return (header) ? (header + 1) : nullptr;
+}
+
+_Ret_maybenull_ void*
+ExAllocatePoolWithTagCPP(
+    __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, size_t number_of_bytes, ULONG tag)
+{
+    cxplat_pool_flags_t pool_flags = _pool_type_to_flags(pool_type, true);
+    return ExAllocatePool2CPP(pool_flags, number_of_bytes, tag);
+}
+
+USERSIM_API
+_Ret_maybenull_ void*
+ExAllocatePool2(_In_ POOL_FLAGS pool_flags, SIZE_T number_of_bytes, ULONG tag)
+{
+    return ExAllocatePool2CPP(pool_flags, number_of_bytes, tag);
 }
 
 _Ret_maybenull_ void*
@@ -155,7 +215,8 @@ ExFreePoolCPP(_Frees_ptr_ void* p)
     if (p == nullptr) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x46, 0, 0, 0);
     }
-    cxplat_free_any_tag(p);
+    usersim_allocation_header_t* header = ((usersim_allocation_header_t*)p) - 1;
+    cxplat_free(header, header->pool_flags, 0);
 }
 
 void
@@ -170,7 +231,8 @@ ExFreePoolWithTagCPP(_Frees_ptr_ void* p, ULONG tag)
     if (p == nullptr) {
         KeBugCheckExCPP(BAD_POOL_CALLER, 0x46, 0, 0, 0);
     }
-    cxplat_free(p, tag);
+    usersim_allocation_header_t* header = ((usersim_allocation_header_t*)p) - 1;
+    cxplat_free(header, header->pool_flags, tag);
 }
 
 void

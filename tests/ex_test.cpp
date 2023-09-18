@@ -11,7 +11,7 @@
 TEST_CASE("ExAllocatePool", "[ex]")
 {
     // Try an allocation that need not be cache aligned.
-    uint64_t* buffer = (uint64_t*)ExAllocatePoolUninitialized(NonPagedPool, 8, 'tset');
+    uint64_t* buffer = (uint64_t*)ExAllocatePoolUninitialized(NonPagedPoolNx, 8, 'tset');
     REQUIRE(buffer != nullptr);
 #ifndef NDEBUG
     REQUIRE(*buffer != 0);
@@ -29,7 +29,36 @@ TEST_CASE("ExAllocatePool", "[ex]")
     *buffer = 0;
     ExFreePool(buffer);
 
-    buffer = (uint64_t*)ExAllocatePoolWithTag(NonPagedPool, 8, 'tset');
+    buffer = (uint64_t*)ExAllocatePoolWithTag(NonPagedPoolNx, 8, 'tset');
+    REQUIRE(buffer != nullptr);
+    REQUIRE(*buffer == 0);
+    *buffer = 42;
+    ExFreePool(buffer);
+}
+
+TEST_CASE("ExAllocatePool2", "[ex]")
+{
+    // Try an allocation that need not be cache aligned.
+    uint64_t* buffer = (uint64_t*)ExAllocatePool2(CXPLAT_POOL_FLAG_NON_PAGED | CXPLAT_POOL_FLAG_UNINITIALIZED, 8, 'tset');
+    REQUIRE(buffer != nullptr);
+#ifndef NDEBUG
+    REQUIRE(*buffer != 0);
+#endif
+    *buffer = 0;
+    ExFreePool(buffer);
+
+    // Try an allocation that must be cache aligned.
+    buffer = (uint64_t*)ExAllocatePool2(
+        CXPLAT_POOL_FLAG_NON_PAGED | CXPLAT_POOL_FLAG_UNINITIALIZED | CXPLAT_POOL_FLAG_CACHE_ALIGNED, 8, 'tset');
+    REQUIRE(buffer != nullptr);
+#ifndef NDEBUG
+    REQUIRE(*buffer != 0);
+#endif
+    REQUIRE((((uintptr_t)buffer) % 64) == 0);
+    *buffer = 0;
+    ExFreePool(buffer);
+
+    buffer = (uint64_t*)ExAllocatePool2(CXPLAT_POOL_FLAG_NON_PAGED, 8, 'tset');
     REQUIRE(buffer != nullptr);
     REQUIRE(*buffer == 0);
     *buffer = 42;

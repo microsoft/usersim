@@ -59,8 +59,7 @@ MmAllocatePagesForMdlEx(
         return nullptr;
     }
 
-    // Skip fault injection for this VirtualAlloc OS API, as ebpf_allocate already does that.
-    MDL* descriptor = (MDL*)ExAllocatePoolUninitialized(NonPagedPool, sizeof(MDL), 'PAmM');
+    MDL* descriptor = (MDL*)ExAllocatePoolUninitialized(NonPagedPoolNx, sizeof(MDL), USERSIM_TAG_MDL);
     if (!descriptor) {
         return nullptr;
     }
