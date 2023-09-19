@@ -25,11 +25,15 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
     cxplat_pool_flags_t pool_flags, size_t size, uint32_t tag)
 {
     // ExAllocatePool2 would be perfect here, but it doesn't exist prior to Windows 10 version 2004
-    // or Windows Server 2022.  So we need to wrap ExAllocatePoolWithTag instead by converting
+    // or Windows Server 2022.  So we need to wrap ExAllocatePoolUninitialized instead by converting
     // pool flags to pool type.
     POOL_TYPE pool_type = _pool_flags_to_type(pool_flags);
-#pragma warning(suppress: 4996) // ExAllocatePoolWithTag is deprecated, use ExAllocatePool2
-    return ExAllocatePoolWithTag(pool_type, size, tag);
+#pragma warning(suppress: 4996) // ExAllocatePoolUninitialized is deprecated, use ExAllocatePool2
+    void* memory = ExAllocatePoolUninitialized(pool_type, size, tag);
+    if (memory && !(pool_flags & CXPLAT_POOL_FLAG_UNINITIALIZED)) {
+        RtlZeroMemory(memory, size);
+    }
+    return memory;
 }
 
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
