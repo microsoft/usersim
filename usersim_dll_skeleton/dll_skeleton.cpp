@@ -12,14 +12,19 @@
 WDFDRIVER
 WdfGetDriver();
 
+CXPLAT_EXTERN_C
 DRIVER_INITIALIZE DriverEntry;
 
+CXPLAT_EXTERN_C
 __declspec(dllimport)
 PWDF_DRIVER_GLOBALS UsersimWdfDriverGlobals;
 
+CXPLAT_EXTERN_C
 __declspec(dllimport) const WDFFUNC* UsersimWdfFunctions;
 
+CXPLAT_EXTERN_C
 PWDF_DRIVER_GLOBALS WdfDriverGlobals = NULL;
+CXPLAT_EXTERN_C
 const WDFFUNC* WdfFunctions_01015 = NULL;
 static DRIVER_OBJECT _driver_object = {0};
 
@@ -33,12 +38,10 @@ static DRIVER_OBJECT _driver_object = {0};
         return DriverEntry(&_driver_object, &registry_path);
     }
 
-    __declspec(dllexport) HANDLE usersim_dll_get_device_handle(_In_opt_z_ const WCHAR* device_name)
+    CXPLAT_EXTERN_C
+    __declspec(dllexport) WDFDRIVER usersim_dll_get_driver_from_module()
     {
-        // TODO(issue #114): support multiple devices per driver.
-        UNREFERENCED_PARAMETER(device_name);
-        DRIVER_OBJECT* driver = (DRIVER_OBJECT*)WdfDriverGlobals->Driver;
-        return driver->device;
+        return WdfDriverGlobals->Driver;
     }
 
     void
@@ -49,11 +52,12 @@ static DRIVER_OBJECT _driver_object = {0};
             driver->config.EvtDriverUnload(driver);
         }
 
-        if (driver->device) {
+        while (!driver->devices.empty()) {
+            PDEVICE_OBJECT device_object = driver->devices.back();
+
             // Free device, which will free the control device object.
             WdfObjectDelete_t* WdfObjectDelete = (WdfObjectDelete_t*)UsersimWdfFunctions[WdfObjectDeleteTableIndex];
-            WdfObjectDelete(UsersimWdfDriverGlobals, driver->device);
-            driver->device = NULL;
+            WdfObjectDelete(UsersimWdfDriverGlobals, device_object);
         }
 
         WdfDriverGlobals->Driver = NULL;

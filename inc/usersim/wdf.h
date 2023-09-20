@@ -42,14 +42,18 @@ typedef struct _WDF_DRIVER_CONFIG
     ULONG DriverInitFlags;
     ULONG DriverPoolTag;
 } WDF_DRIVER_CONFIG, *PWDF_DRIVER_CONFIG;
+CXPLAT_EXTERN_C_END
 
+#ifdef __cplusplus
+#include <vector>
 struct _DRIVER_OBJECT
 {
     WDF_DRIVER_CONFIG config;
-    PDEVICE_OBJECT device;
-    PWDFDEVICE_INIT device_init;
+    std::vector<PDEVICE_OBJECT> devices;
 };
+#endif
 
+CXPLAT_EXTERN_C_BEGIN
 #define WDF_DRIVER_GLOBALS_NAME_LEN (32)
 
 typedef struct _WDF_DRIVER_GLOBALS
@@ -242,10 +246,20 @@ typedef enum _WDFFUNCENUM
 void
 usersim_initialize_wdf();
 
+/**
+ * @brief Find a WDFDEVICE by device name.
+ * @param[in] driver The driver to look for a device under.
+ * @param[in] device_name The device name to find, or NULL to find any device.
+ * @returns A WDFDEVICE handle, or NULL if not found.
+ */
 USERSIM_API
-HANDLE usersim_get_device_handle(HMODULE module, _In_opt_z_ const WCHAR* device_name);
+WDFDEVICE usersim_get_device_by_name(WDFDRIVER driver, _In_opt_ PCWSTR device_name);
 
-typedef HANDLE (*usersim_dll_get_device_handle_t)(_In_opt_z_ const WCHAR* device_name);
+USERSIM_API
+WDFDRIVER
+usersim_get_driver_from_module(HMODULE module);
+
+typedef WDFDRIVER (*usersim_dll_get_driver_from_module_t)();
 
 USERSIM_API
 BOOL
