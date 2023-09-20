@@ -20,7 +20,13 @@ TEST_CASE("DriverEntry", "[wdf]")
     HMODULE module = LoadLibraryW(L"sample.dll");
     REQUIRE(module != nullptr);
 
-    HANDLE device_handle = usersim_get_device_handle(module, nullptr);
+    WDFDRIVER driver = usersim_get_driver_from_module(module);
+    REQUIRE(driver != nullptr);
+
+    WDFDEVICE device_handle = usersim_get_device_by_name(driver, L"No such device");
+    REQUIRE(device_handle == nullptr);
+
+    device_handle = usersim_get_device_by_name(driver, nullptr);
     REQUIRE(device_handle != nullptr);
 
     // Send an unrecognized ioctl.
@@ -156,17 +162,19 @@ _test_create_device(WDFDRIVER driver, _In_ PCWSTR device_name, _In_ PCWSTR symbo
     REQUIRE(status == STATUS_SUCCESS);
 
     // Create device.
-    WDFDEVICE device = nullptr;
+    WDFDEVICE temporary_device = nullptr;
     WdfDeviceCreate_t* WdfDeviceCreate = (WdfDeviceCreate_t*)UsersimWdfFunctions[WdfDeviceCreateTableIndex];
     WDFDEVICE_INIT* temporary_init = init.release();
-    status = WdfDeviceCreate(UsersimWdfDriverGlobals, &temporary_init, nullptr, &device);
+    std::unique_ptr<void*, _wdf_control_device_free_functor> device;
+    status = WdfDeviceCreate(UsersimWdfDriverGlobals, &temporary_init, nullptr, &temporary_device);
+    device.reset((void**)temporary_device);
     init.reset(temporary_init);
     REQUIRE(status == STATUS_SUCCESS);
     REQUIRE(device != nullptr);
 
     WdfDeviceWdmGetDeviceObject_t* WdfDeviceWdmGetDeviceObject =
         (WdfDeviceWdmGetDeviceObject_t*)UsersimWdfFunctions[WdfDeviceWdmGetDeviceObjectTableIndex];
-    PDEVICE_OBJECT device_object = WdfDeviceWdmGetDeviceObject(UsersimWdfDriverGlobals, device);
+    PDEVICE_OBJECT device_object = WdfDeviceWdmGetDeviceObject(UsersimWdfDriverGlobals, device.get());
     REQUIRE(device_object != nullptr);
 
     // Create symbolic link for control object for user mode.
@@ -174,7 +182,7 @@ _test_create_device(WDFDRIVER driver, _In_ PCWSTR device_name, _In_ PCWSTR symbo
     RtlInitUnicodeString(&unicode_symbolic_device_name, symbolic_device_name);
     WdfDeviceCreateSymbolicLink_t* WdfDeviceCreateSymbolicLink =
         (WdfDeviceCreateSymbolicLink_t*)UsersimWdfFunctions[WdfDeviceCreateSymbolicLinkTableIndex];
-    status = WdfDeviceCreateSymbolicLink(UsersimWdfDriverGlobals, device, &unicode_symbolic_device_name);
+    status = WdfDeviceCreateSymbolicLink(UsersimWdfDriverGlobals, device.get(), &unicode_symbolic_device_name);
     REQUIRE(status == STATUS_SUCCESS);
 
     // Create an I/O queue.
@@ -182,15 +190,19 @@ _test_create_device(WDFDRIVER driver, _In_ PCWSTR device_name, _In_ PCWSTR symbo
     WdfIoQueueCreate_t* WdfIoQueueCreate = (WdfIoQueueCreate_t*)UsersimWdfFunctions[WdfIoQueueCreateTableIndex];
 #pragma warning(suppress : 28193) // status must be inspected
     status = WdfIoQueueCreate(
-        UsersimWdfDriverGlobals, device, &io_queue_configuration, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
+        UsersimWdfDriverGlobals, device.get(), &io_queue_configuration, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
     REQUIRE(status == STATUS_SUCCESS);
 
     // Finish initializing the control device object.
     WdfControlFinishInitializing_t* WdfControlFinishInitializing =
         (WdfControlFinishInitializing_t*)UsersimWdfFunctions[WdfControlFinishInitializingTableIndex];
-    WdfControlFinishInitializing(UsersimWdfDriverGlobals, device);
+    WdfControlFinishInitializing(UsersimWdfDriverGlobals, device.get());
 
-    return device;
+    // Verify we can look up the device by name.
+    WDFDEVICE device2 = usersim_get_device_by_name(driver, device_name);
+    REQUIRE(device2 == device.get());
+
+    return device.release();
 }
 
 TEST_CASE("WdfDeviceCreate", "[wdf]")
@@ -205,22 +217,34 @@ TEST_CASE("WdfDeviceCreate", "[wdf]")
     NTSTATUS status = WdfDriverCreate(UsersimWdfDriverGlobals, &driver_object, &registry_path, nullptr, &config, &driver);
     REQUIRE(status == STATUS_SUCCESS);
 
-    WDFDEVICE device1 = _test_create_device(driver, L"test device name 1", L"symbolic device name 1");
-    WDFDEVICE device2 = _test_create_device(driver, L"test device name 2", L"symbolic device name 2");
-    WDFDEVICE device3 = _test_create_device(driver, L"test device name 3", L"symbolic device name 3");
+    std::unique_ptr<void*, _wdf_control_device_free_functor> device1;
+    device1.reset((void**)_test_create_device(driver, L"test device name 1", L"symbolic device name 1"));
+    std::unique_ptr<void*, _wdf_control_device_free_functor> device2;
+    device2.reset((void**)_test_create_device(driver, L"test device name 2", L"symbolic device name 2"));
+    std::unique_ptr<void*, _wdf_control_device_free_functor> device3;
+    device3.reset((void**)_test_create_device(driver, L"test device name 3", L"symbolic device name 3"));
 
     // Free device3, which will free the control device object.
     // This tests a driver explicitly freeing a device.
     WdfObjectDelete_t* WdfObjectDelete = (WdfObjectDelete_t*)UsersimWdfFunctions[WdfObjectDeleteTableIndex];
-    WdfObjectDelete(UsersimWdfDriverGlobals, (WDFDEVICE)device3);
+    WdfObjectDelete(UsersimWdfDriverGlobals, (WDFDEVICE)device3.release());
+
+    // Verify that device3 is no longer found.
+    REQUIRE(usersim_get_device_by_name(driver, L"test device name 3") == nullptr);
 
     // Free the other devices remaining in the driver as if the driver were now
     // getting cleaned up.
-    if (driver_object.device) {
+    while (!driver_object.devices.empty()) {
+        PDEVICE_OBJECT device_object = driver_object.devices.back();
         // Free device, which will free the control device object.
         WdfObjectDelete_t* WdfObjectDelete = (WdfObjectDelete_t*)UsersimWdfFunctions[WdfObjectDeleteTableIndex];
-        WdfObjectDelete(UsersimWdfDriverGlobals, driver_object.device);
-        driver_object.device = NULL;
+        WdfObjectDelete(UsersimWdfDriverGlobals, (WDFOBJECT)device_object);
     }
+    device1.release();
+    device2.release();
+
+    // Verify that no devices are found for this driver.
+    REQUIRE(usersim_get_device_by_name(driver, nullptr) == nullptr);
+
     UsersimWdfDriverGlobals->Driver = nullptr;
 }

@@ -46,7 +46,6 @@ _WdfDriverCreate(
     }
     g_UsersimWdfDriverGlobals.Driver = driver_object;
     driver_object->config = *driver_config;
-    driver_object->device = nullptr;
     if (driver != nullptr) {
         *driver = driver_object;
     }
@@ -57,15 +56,18 @@ _WdfDriverCreate(
         if (!device_init) {
             return STATUS_NO_MEMORY;
         }
+        size_t original_device_count = driver_object->devices.size();
         NTSTATUS status = driver_object->config.EvtDriverDeviceAdd(driver_globals->Driver, device_init);
         if (!NT_SUCCESS(status)) {
             // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdfdriver/nc-wdfdriver-evt_wdf_driver_device_add
             // explains: "If a driver's EvtDriverDeviceAdd callback function creates a device object
             // but does not return STATUS_SUCCESS, the framework deletes the device object and its
             // child devices.
-            if (driver_object->device) {
-                _WdfObjectDelete(driver_globals, driver_object->device);
-                driver_object->device = nullptr;
+            if (driver_object->devices.size() > original_device_count) {
+                while (driver_object->devices.size() > original_device_count) {
+                    auto device_object = driver_object->devices.back();
+                    _WdfObjectDelete(driver_globals, device_object);
+                }
             } else {
                 // We never got far enough to create a device, so free the initialization object.
                 _WdfDeviceInitFree(driver_globals, device_init);
@@ -116,8 +118,7 @@ _WdfDeviceCreate(
     }
 
     DRIVER_OBJECT* driver_object = (DRIVER_OBJECT*)driver_globals->Driver;
-    CXPLAT_DEBUG_ASSERT(driver_object->device == nullptr);
-    driver_object->device = device_object;
+    driver_object->devices.push_back(device_object);
 
     *device = device_object;
 
@@ -301,8 +302,13 @@ _IRQL_requires_max_(DISPATCH_LEVEL) VOID
     _WdfObjectDelete(_In_ PWDF_DRIVER_GLOBALS driver_globals, _In_ WDFOBJECT object)
 {
     DRIVER_OBJECT* driver_object = (DRIVER_OBJECT*)driver_globals->Driver;
-    if (driver_object && (driver_object->device == object)) {
-        driver_object->device = nullptr;
+    if (driver_object) {
+        for (auto it = driver_object->devices.begin(); it != driver_object->devices.end(); it++) {
+            if (*it == object) {
+                driver_object->devices.erase(it);
+                break;
+            }
+        }
     }
 
     cxplat_free(object, CXPLAT_POOL_FLAG_NON_PAGED, 0);
@@ -410,12 +416,32 @@ WDF_DRIVER_CONFIG_INIT(_Out_ PWDF_DRIVER_CONFIG config, _In_opt_ PFN_WDF_DRIVER_
     *config = {.EvtDriverDeviceAdd = evt_driver_device_add};
 }
 
-HANDLE
-usersim_get_device_handle(HMODULE module, _In_opt_z_ const WCHAR* device_name)
+WDFDRIVER
+usersim_get_driver_from_module(HMODULE module)
 {
-    usersim_dll_get_device_handle_t usersim_dll_get_device_handle =
-        (usersim_dll_get_device_handle_t)GetProcAddress(module, "usersim_dll_get_device_handle");
-    return usersim_dll_get_device_handle(device_name);
+    usersim_dll_get_driver_from_module_t usersim_dll_get_driver_from_module =
+        (usersim_dll_get_driver_from_module_t)GetProcAddress(module, "usersim_dll_get_driver_from_module");
+    return usersim_dll_get_driver_from_module();
+}
+
+WDFDEVICE
+usersim_get_device_by_name(WDFDRIVER driver, _In_opt_ PCWSTR device_name)
+{
+    PDRIVER_OBJECT driver_object = (PDRIVER_OBJECT)driver;
+    if (!device_name) {
+        return (!driver_object->devices.empty()) ? driver_object->devices.front() : nullptr;
+    }
+    UNICODE_STRING unicode_device_name;
+    RtlInitUnicodeString(&unicode_device_name, device_name);
+    for (PDEVICE_OBJECT device : driver_object->devices) {
+        if (device->init.device_name.Length != unicode_device_name.Length) {
+            continue;
+        }
+        if (memcmp(device->init.device_name.Buffer, unicode_device_name.Buffer, unicode_device_name.Length) == 0) {
+            return (WDFDEVICE)device;
+        }
+    }
+    return nullptr;
 }
 
 BOOL
