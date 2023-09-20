@@ -111,18 +111,9 @@ struct _wdf_control_device_free_functor
     }
 };
 
-TEST_CASE("WdfDeviceCreate", "[wdf]")
+static WDFDEVICE
+_test_create_device(WDFDRIVER driver, _In_ PCWSTR device_name, _In_ PCWSTR symbolic_device_name)
 {
-    // Create driver to hold device.
-    DRIVER_OBJECT driver_object = {0};
-    WDF_DRIVER_CONFIG config;
-    WDF_DRIVER_CONFIG_INIT(&config, nullptr);
-    WdfDriverCreate_t* WdfDriverCreate = (WdfDriverCreate_t*)UsersimWdfFunctions[WdfDriverCreateTableIndex];
-    WDFDRIVER driver = nullptr;
-    DECLARE_CONST_UNICODE_STRING(registry_path, L"");
-    NTSTATUS status = WdfDriverCreate(UsersimWdfDriverGlobals, &driver_object, &registry_path, nullptr, &config, &driver);
-    REQUIRE(status == STATUS_SUCCESS);
-
     // Allocate control device object.  For usage discussion, see
     // https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/using-control-device-objects#creating-a-control-device-object
     WdfControlDeviceInitAllocate_t* WdfControlDeviceInitAllocate =
@@ -143,11 +134,11 @@ TEST_CASE("WdfDeviceCreate", "[wdf]")
     WdfDeviceInitSetCharacteristics(UsersimWdfDriverGlobals, init.get(), FILE_DEVICE_SECURE_OPEN, FALSE);
 
     // Set device name.
-    UNICODE_STRING device_name;
-    RtlInitUnicodeString(&device_name, L"test device name");
+    UNICODE_STRING unicode_device_name;
+    RtlInitUnicodeString(&unicode_device_name, device_name);
     WdfDeviceInitAssignName_t* WdfDeviceInitAssignName =
         (WdfDeviceInitAssignName_t*)UsersimWdfFunctions[WdfDeviceInitAssignNameTableIndex];
-    status = WdfDeviceInitAssignName(UsersimWdfDriverGlobals, init.get(), &device_name);
+    NTSTATUS status = WdfDeviceInitAssignName(UsersimWdfDriverGlobals, init.get(), &unicode_device_name);
     REQUIRE(status == STATUS_SUCCESS);
 
     // Set file object config.
@@ -158,47 +149,78 @@ TEST_CASE("WdfDeviceCreate", "[wdf]")
     WdfDeviceInitSetFileObjectConfig(UsersimWdfDriverGlobals, init.get(), &file_object_config, &attributes);
 
     WdfDeviceInitAssignWdmIrpPreprocessCallback_t* WdfDeviceInitAssignWdmIrpPreprocessCallback =
-        (WdfDeviceInitAssignWdmIrpPreprocessCallback_t*)UsersimWdfFunctions[WdfDeviceInitAssignWdmIrpPreprocessCallbackTableIndex];
+        (WdfDeviceInitAssignWdmIrpPreprocessCallback_t*)
+            UsersimWdfFunctions[WdfDeviceInitAssignWdmIrpPreprocessCallbackTableIndex];
     status = WdfDeviceInitAssignWdmIrpPreprocessCallback(
         UsersimWdfDriverGlobals, init.get(), driver_query_volume_information, IRP_MJ_QUERY_VOLUME_INFORMATION, NULL, 0);
     REQUIRE(status == STATUS_SUCCESS);
 
     // Create device.
-    WDFDEVICE temporary_device = nullptr;
+    WDFDEVICE device = nullptr;
     WdfDeviceCreate_t* WdfDeviceCreate = (WdfDeviceCreate_t*)UsersimWdfFunctions[WdfDeviceCreateTableIndex];
     WDFDEVICE_INIT* temporary_init = init.release();
-    std::unique_ptr<void*, _wdf_control_device_free_functor> device;
-    status = WdfDeviceCreate(UsersimWdfDriverGlobals, &temporary_init, nullptr, &temporary_device);
-    device.reset((void**)temporary_device);
+    status = WdfDeviceCreate(UsersimWdfDriverGlobals, &temporary_init, nullptr, &device);
     init.reset(temporary_init);
     REQUIRE(status == STATUS_SUCCESS);
     REQUIRE(device != nullptr);
 
     WdfDeviceWdmGetDeviceObject_t* WdfDeviceWdmGetDeviceObject =
         (WdfDeviceWdmGetDeviceObject_t*)UsersimWdfFunctions[WdfDeviceWdmGetDeviceObjectTableIndex];
-    PDEVICE_OBJECT device_object = WdfDeviceWdmGetDeviceObject(UsersimWdfDriverGlobals, device.get());
+    PDEVICE_OBJECT device_object = WdfDeviceWdmGetDeviceObject(UsersimWdfDriverGlobals, device);
     REQUIRE(device_object != nullptr);
 
     // Create symbolic link for control object for user mode.
-    UNICODE_STRING symbolic_device_name;
-    RtlInitUnicodeString(&symbolic_device_name, L"symbolic device name");
+    UNICODE_STRING unicode_symbolic_device_name;
+    RtlInitUnicodeString(&unicode_symbolic_device_name, symbolic_device_name);
     WdfDeviceCreateSymbolicLink_t* WdfDeviceCreateSymbolicLink =
         (WdfDeviceCreateSymbolicLink_t*)UsersimWdfFunctions[WdfDeviceCreateSymbolicLinkTableIndex];
-    status = WdfDeviceCreateSymbolicLink(UsersimWdfDriverGlobals, device.get(), &symbolic_device_name);
+    status = WdfDeviceCreateSymbolicLink(UsersimWdfDriverGlobals, device, &unicode_symbolic_device_name);
     REQUIRE(status == STATUS_SUCCESS);
 
     // Create an I/O queue.
     WDF_IO_QUEUE_CONFIG io_queue_configuration = {0};
     WdfIoQueueCreate_t* WdfIoQueueCreate = (WdfIoQueueCreate_t*)UsersimWdfFunctions[WdfIoQueueCreateTableIndex];
-#pragma warning(suppress:28193) // status must be inspected
+#pragma warning(suppress : 28193) // status must be inspected
     status = WdfIoQueueCreate(
-        UsersimWdfDriverGlobals, device.get(), &io_queue_configuration, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
+        UsersimWdfDriverGlobals, device, &io_queue_configuration, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
     REQUIRE(status == STATUS_SUCCESS);
 
     // Finish initializing the control device object.
     WdfControlFinishInitializing_t* WdfControlFinishInitializing =
         (WdfControlFinishInitializing_t*)UsersimWdfFunctions[WdfControlFinishInitializingTableIndex];
-    WdfControlFinishInitializing(UsersimWdfDriverGlobals, device.get());
+    WdfControlFinishInitializing(UsersimWdfDriverGlobals, device);
 
+    return device;
+}
+
+TEST_CASE("WdfDeviceCreate", "[wdf]")
+{
+    // Create driver to hold device.
+    DRIVER_OBJECT driver_object = {0};
+    WDF_DRIVER_CONFIG config;
+    WDF_DRIVER_CONFIG_INIT(&config, nullptr);
+    WdfDriverCreate_t* WdfDriverCreate = (WdfDriverCreate_t*)UsersimWdfFunctions[WdfDriverCreateTableIndex];
+    WDFDRIVER driver = nullptr;
+    DECLARE_CONST_UNICODE_STRING(registry_path, L"");
+    NTSTATUS status = WdfDriverCreate(UsersimWdfDriverGlobals, &driver_object, &registry_path, nullptr, &config, &driver);
+    REQUIRE(status == STATUS_SUCCESS);
+
+    WDFDEVICE device1 = _test_create_device(driver, L"test device name 1", L"symbolic device name 1");
+    WDFDEVICE device2 = _test_create_device(driver, L"test device name 2", L"symbolic device name 2");
+    WDFDEVICE device3 = _test_create_device(driver, L"test device name 3", L"symbolic device name 3");
+
+    // Free device3, which will free the control device object.
+    // This tests a driver explicitly freeing a device.
+    WdfObjectDelete_t* WdfObjectDelete = (WdfObjectDelete_t*)UsersimWdfFunctions[WdfObjectDeleteTableIndex];
+    WdfObjectDelete(UsersimWdfDriverGlobals, (WDFDEVICE)device3);
+
+    // Free the other devices remaining in the driver as if the driver were now
+    // getting cleaned up.
+    if (driver_object.device) {
+        // Free device, which will free the control device object.
+        WdfObjectDelete_t* WdfObjectDelete = (WdfObjectDelete_t*)UsersimWdfFunctions[WdfObjectDeleteTableIndex];
+        WdfObjectDelete(UsersimWdfDriverGlobals, driver_object.device);
+        driver_object.device = NULL;
+    }
     UsersimWdfDriverGlobals->Driver = nullptr;
 }

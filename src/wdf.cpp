@@ -116,6 +116,7 @@ _WdfDeviceCreate(
     }
 
     DRIVER_OBJECT* driver_object = (DRIVER_OBJECT*)driver_globals->Driver;
+    CXPLAT_DEBUG_ASSERT(driver_object->device == nullptr);
     driver_object->device = device_object;
 
     *device = device_object;
