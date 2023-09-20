@@ -21,9 +21,6 @@
     <ClInclude Include="..\..\inc\cxplat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\inc\cxplat_fault_injection.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\inc\cxplat_common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -55,6 +52,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\inc\winuser\cxplat_passed_test_log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\winuser\cxplat_fault_injection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
