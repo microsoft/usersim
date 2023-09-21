@@ -181,13 +181,6 @@ usersim_lock_create(_Out_ usersim_lock_t* lock);
 void
 usersim_lock_destroy(_In_ _Post_invalid_ usersim_lock_t* lock);
 
-#undef PASSIVE_LEVEL
-#undef APC_LEVEL
-#undef DISPATCH_LEVEL
-#define PASSIVE_LEVEL THREAD_PRIORITY_NORMAL         // Passive release level.
-#define APC_LEVEL THREAD_PRIORITY_ABOVE_NORMAL       // APC interrupt level.
-#define DISPATCH_LEVEL THREAD_PRIORITY_TIME_CRITICAL // Dispatcher level.
-
 /**
  * @brief Acquire exclusive access to the lock.
  * @param[in, out] lock Pointer to memory location that contains the lock.
