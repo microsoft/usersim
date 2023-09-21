@@ -3,7 +3,7 @@
 #pragma once
 #include "cxplat_common.h"
 
-#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
+#ifndef CXPLAT_DEBUGGING_FEATURES_ENABLED
 #define cxplat_fault_injection_is_enabled() false
 #define cxplat_fault_injection_inject_fault() false
 #else
