@@ -12,11 +12,9 @@
 #include <psapi.h>
 #include <string>
 
-#ifndef NDEBUG
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
 extern "C" bool cxplat_fuzzing_enabled = false;
-
 cxplat_leak_detector_ptr _cxplat_leak_detector_ptr;
-#endif
 
 /**
  * @brief Environment variable to enable fault injection testing.
@@ -89,6 +87,7 @@ _get_environment_variable_as_size_t(const std::string& name)
         return 0;
     }
 }
+#endif
 
 static std::mutex cxplat_initialization_mutex;
 static ULONG _cxplat_initialization_count = 0;
@@ -118,7 +117,7 @@ cxplat_initialize()
 
     std::unique_lock lock(cxplat_initialization_mutex);
     if (_cxplat_initialization_count > 0) {
-#ifndef NDEBUG
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
         if (cxplat_fault_injection_is_enabled()) {
             if (cxplat_fault_injection_add_module(_cxplat_get_caller_module()) != 0) {
                 return CXPLAT_STATUS_NO_MEMORY;
@@ -132,7 +131,7 @@ cxplat_initialize()
     }
 
     try {
-#ifndef NDEBUG
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
         auto fault_injection_stack_depth =
             _get_environment_variable_as_size_t(CXPLAT_FAULT_INJECTION_SIMULATION_ENVIRONMENT_VARIABLE_NAME);
         auto leak_detector = _get_environment_variable_as_bool(CXPLAT_MEMORY_LEAK_DETECTION_ENVIRONMENT_VARIABLE_NAME);
@@ -178,7 +177,7 @@ cxplat_cleanup()
     CXPLAT_RUNTIME_ASSERT(_cxplat_initialization_count > 0);
     _cxplat_initialization_count--;
     if (_cxplat_initialization_count > 0) {
-#ifndef NDEBUG
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
         cxplat_fault_injection_remove_module(_cxplat_get_caller_module());
 #endif
         // Don't clean up until the count hits 0.
@@ -187,7 +186,7 @@ cxplat_cleanup()
 
     cxplat_winuser_clean_up_thread_pool();
 
-#ifndef NDEBUG
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
     if (_cxplat_leak_detector_ptr) {
         _cxplat_leak_detector_ptr->dump_leaks();
         _cxplat_leak_detector_ptr.reset();

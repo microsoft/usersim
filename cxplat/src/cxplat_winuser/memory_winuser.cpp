@@ -3,8 +3,8 @@
 
 #include "../tags.h"
 #include "cxplat.h"
-#ifndef NDEBUG
 #include "cxplat_fault_injection.h"
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
 #include "leak_detector.h"
 #endif
 #if !defined(UNREFERENCED_PARAMETER)
@@ -21,11 +21,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#ifndef NDEBUG
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
 extern cxplat_leak_detector_ptr _cxplat_leak_detector_ptr;
-
 extern "C" size_t cxplat_fuzzing_memory_limit = MAXSIZE_T;
+#endif
 
+#ifndef NDEBUG
 typedef struct
 {
     cxplat_pool_flags_t pool_flags;
@@ -80,7 +81,7 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
     cxplat_pool_flags_t pool_flags, size_t size, uint32_t tag)
 {
     CXPLAT_RUNTIME_ASSERT(size > 0);
-#ifndef NDEBUG
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
     if (size > cxplat_fuzzing_memory_limit) {
         return nullptr;
     }
@@ -137,7 +138,7 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
     _In_ _Post_invalid_ void* pointer, cxplat_pool_flags_t pool_flags, size_t old_size, size_t new_size, uint32_t tag)
 {
-#ifndef NDEBUG
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
     if (new_size > cxplat_fuzzing_memory_limit) {
         return nullptr;
     }
@@ -145,7 +146,9 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) v
     if (cxplat_fault_injection_inject_fault()) {
         return nullptr;
     }
+#endif
 
+#ifndef NDEBUG
     cxplat_allocation_header_t* header = _header_from_pointer(pointer);
     CXPLAT_DEBUG_ASSERT(header->size == old_size);
     CXPLAT_DEBUG_ASSERT(!tag || header->tag == tag);
@@ -164,7 +167,7 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) v
         p = (new_memory_block) ? _unaligned_pointer_from_memory_block(new_memory_block) : nullptr;
     }
 
-#ifndef NDEBUG
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
     if (_cxplat_leak_detector_ptr) {
         _cxplat_leak_detector_ptr->unregister_allocation(reinterpret_cast<uintptr_t>(pointer));
     }
@@ -180,7 +183,7 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) v
             }
         }
 
-#ifndef NDEBUG
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
         if (_cxplat_leak_detector_ptr) {
             _cxplat_leak_detector_ptr->register_allocation(reinterpret_cast<uintptr_t>(p), new_size);
         }
@@ -200,7 +203,8 @@ cxplat_free(_Frees_ptr_opt_ void* pointer, cxplat_pool_flags_t pool_flags, uint3
     cxplat_allocation_header_t* header = _header_from_pointer(pointer);
     CXPLAT_DEBUG_ASSERT(!tag || header->tag == tag);
     CXPLAT_DEBUG_ASSERT(header->pool_flags == pool_flags);
-
+#endif
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
     if (_cxplat_leak_detector_ptr) {
         _cxplat_leak_detector_ptr->unregister_allocation(reinterpret_cast<uintptr_t>(pointer));
     }
