@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "cxplat.h"
+#include "cxplat_fault_injection.h"
 #include "tracelog.h"
 #include "usersim/ex.h"
 #include "usersim/ke.h"

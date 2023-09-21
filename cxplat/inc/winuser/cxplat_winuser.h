@@ -5,10 +5,11 @@
 #include <winerror.h>
 
 #define CXPLAT_RUNTIME_ASSERT(x) assert(x)
-#ifdef NDEBUG
+#ifdef NDEBUG // Release build.
 #define CXPLAT_DEBUG_ASSERT(x) (void)(x)
-#else
+#else // Debug build.
 #define CXPLAT_DEBUG_ASSERT(x) assert(x)
+#define CXPLAT_DEBUGGING_FEATURES_ENABLED
 #endif //! NDEBUG
 
 // Map specific cxplat_status_t values to HRESULT values.

@@ -3,6 +3,7 @@
 
 // This file contains initialization/cleanup routines for the Windows user-mode cxplat library.
 #include "cxplat.h"
+#include "cxplat_fault_injection.h"
 #include "leak_detector.h"
 #include "symbol_decoder.h"
 
@@ -11,8 +12,8 @@
 #include <psapi.h>
 #include <string>
 
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
 extern "C" bool cxplat_fuzzing_enabled = false;
-
 cxplat_leak_detector_ptr _cxplat_leak_detector_ptr;
 
 /**
@@ -86,6 +87,7 @@ _get_environment_variable_as_size_t(const std::string& name)
         return 0;
     }
 }
+#endif
 
 static std::mutex cxplat_initialization_mutex;
 static ULONG _cxplat_initialization_count = 0;
@@ -115,11 +117,13 @@ cxplat_initialize()
 
     std::unique_lock lock(cxplat_initialization_mutex);
     if (_cxplat_initialization_count > 0) {
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
         if (cxplat_fault_injection_is_enabled()) {
             if (cxplat_fault_injection_add_module(_cxplat_get_caller_module()) != 0) {
                 return CXPLAT_STATUS_NO_MEMORY;
             }
         }
+#endif
 
         // Already initialized.
         _cxplat_initialization_count++;
@@ -127,6 +131,7 @@ cxplat_initialize()
     }
 
     try {
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
         auto fault_injection_stack_depth =
             _get_environment_variable_as_size_t(CXPLAT_FAULT_INJECTION_SIMULATION_ENVIRONMENT_VARIABLE_NAME);
         auto leak_detector = _get_environment_variable_as_bool(CXPLAT_MEMORY_LEAK_DETECTION_ENVIRONMENT_VARIABLE_NAME);
@@ -152,6 +157,7 @@ cxplat_initialize()
         if (leak_detector) {
             _cxplat_leak_detector_ptr = std::make_unique<cxplat_leak_detector_t>();
         }
+#endif
 
         cxplat_status_t status = cxplat_winuser_initialize_thread_pool();
         if (!CXPLAT_SUCCEEDED(status)) {
@@ -171,16 +177,20 @@ cxplat_cleanup()
     CXPLAT_RUNTIME_ASSERT(_cxplat_initialization_count > 0);
     _cxplat_initialization_count--;
     if (_cxplat_initialization_count > 0) {
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
         cxplat_fault_injection_remove_module(_cxplat_get_caller_module());
+#endif
         // Don't clean up until the count hits 0.
         return;
     }
 
     cxplat_winuser_clean_up_thread_pool();
 
+#ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
     if (_cxplat_leak_detector_ptr) {
         _cxplat_leak_detector_ptr->dump_leaks();
         _cxplat_leak_detector_ptr.reset();
     }
     _cxplat_symbol_decoder_deinitialize();
+#endif
 }

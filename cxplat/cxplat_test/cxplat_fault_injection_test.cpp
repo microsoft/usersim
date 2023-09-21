@@ -64,6 +64,7 @@ _is_fault_injection_enabled_in_environment()
     }
 }
 
+#ifndef NDEBUG
 TEST_CASE("fault_injection", "[fault_injection]")
 {
     if (_is_fault_injection_enabled_in_environment()) {
@@ -139,3 +140,4 @@ TEST_CASE("fault_injection", "[fault_injection]")
     // Verify that removing a module again succeeds.
     REQUIRE(cxplat_fault_injection_remove_module(GetModuleHandle(nullptr)) == CXPLAT_STATUS_SUCCESS);
 }
+#endif // !NDEBUG

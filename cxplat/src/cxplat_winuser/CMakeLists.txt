@@ -11,9 +11,9 @@ add_library(cxplat_winuser STATIC
   ../../inc/winuser/cxplat_platform.h
   ../../inc/winuser/cxplat_winuser.h
   cxplat_winuser.cpp
-  fault_injection.cpp
-  leak_detector.cpp
-  leak_detector.h
+  $<$<CONFIG:Debug>:fault_injection.cpp>
+  $<$<CONFIG:Debug>:leak_detector.cpp>
+  $<$<CONFIG:Debug>:leak_detector.h>
   ../memory.c
   memory_winuser.cpp
   rundown_winuser.cpp

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "cxplat.h"
+#include "cxplat_fault_injection.h"
 #include "symbol_decoder.h"
 
 #include <DbgHelp.h>

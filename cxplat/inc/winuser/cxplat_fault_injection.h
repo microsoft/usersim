@@ -1,9 +1,12 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 #pragma once
-
 #include "cxplat_common.h"
 
+#ifndef CXPLAT_DEBUGGING_FEATURES_ENABLED
+#define cxplat_fault_injection_is_enabled() false
+#define cxplat_fault_injection_inject_fault() false
+#else
 #include <stdbool.h>
 
 CXPLAT_EXTERN_C_BEGIN
@@ -76,3 +79,4 @@ cxplat_status_t
 cxplat_fault_injection_remove_module(_In_ void* module_handle) CXPLAT_NOEXCEPT;
 
 CXPLAT_EXTERN_C_END
+#endif

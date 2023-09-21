@@ -41,7 +41,6 @@
   <ItemGroup>
     <ClInclude Include="..\..\inc\cxplat.h" />
     <ClInclude Include="..\..\inc\cxplat_common.h" />
-    <ClInclude Include="..\..\inc\cxplat_fault_injection.h" />
     <ClInclude Include="..\..\inc\cxplat_memory.h" />
     <ClInclude Include="..\..\inc\cxplat_rundown.h" />
     <ClInclude Include="..\..\inc\cxplat_size.h" />

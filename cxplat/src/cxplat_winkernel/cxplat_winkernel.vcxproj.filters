@@ -41,9 +41,6 @@
     <ClInclude Include="..\..\inc\cxplat_common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\inc\cxplat_fault_injection.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\inc\cxplat_memory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -60,6 +57,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\inc\cxplat_workitem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tags.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
