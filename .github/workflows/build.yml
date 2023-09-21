@@ -67,12 +67,14 @@ jobs:
         .\usersim_tests -d yes
 
     - name: Run cxplat tests with fault injection
+      if: matrix.configurations == 'Debug'
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
         powershell ..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test.exe" 4
 
     - name: Run usersim tests with fault injection
+      if: matrix.configurations == 'Debug'
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
@@ -132,12 +134,14 @@ jobs:
         .\usersim_tests -d yes
 
     - name: Run cxplat tests with fault injection
+      if: matrix.configurations == 'Debug'
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
         powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test.exe" 4
 
     - name: Run usersim tests with fault injection
+      if: matrix.configurations == 'Debug'
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
