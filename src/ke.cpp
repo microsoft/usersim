@@ -74,11 +74,29 @@ KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
     *old_irql = KfRaiseIrql(new_irql);
 }
 
+const int _irql_thread_priority[3] = {
+    /* PASSIVE_LEVEL */ THREAD_PRIORITY_NORMAL,
+    /* APC_LEVEL */ THREAD_PRIORITY_ABOVE_NORMAL,
+    /* DISPATCH_LEVEL */ THREAD_PRIORITY_TIME_CRITICAL};
+
+inline int
+_get_irql_thread_priority(KIRQL irql)
+{
+    ASSERT(irql < _countof(_irql_thread_priority));
+    return _irql_thread_priority[irql];
+}
+
+inline BOOL
+_set_current_thread_priority_by_irql(KIRQL new_irql)
+{
+    return SetThreadPriority(GetCurrentThread(), _get_irql_thread_priority(new_irql));
+}
+
 _IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ KIRQL KfRaiseIrql(_In_ KIRQL new_irql)
 {
     KIRQL old_irql = KeGetCurrentIrql();
     _usersim_current_irql = new_irql;
-    BOOL result = SetThreadPriority(GetCurrentThread(), new_irql);
+    BOOL result = _set_current_thread_priority_by_irql(new_irql);
     ASSERT(result);
 
     if (new_irql >= DISPATCH_LEVEL && old_irql < DISPATCH_LEVEL) {
@@ -118,7 +136,7 @@ KeLowerIrql(_In_ KIRQL new_irql)
         ASSERT(result);
     }
     _usersim_current_irql = new_irql;
-    result = SetThreadPriority(GetCurrentThread(), new_irql);
+    result = _set_current_thread_priority_by_irql(new_irql);
     ASSERT(result);
 }
 
@@ -469,12 +487,12 @@ class _usersim_emulated_dpc
         usersim_list_initialize(&head);
         usersim_list_initialize(&flush_entry);
         thread = std::thread([i, this]() {
-            SetThreadPriority(GetCurrentThread(), DISPATCH_LEVEL);
+            _set_current_thread_priority_by_irql(DISPATCH_LEVEL);
             KeSetSystemAffinityThreadEx((ULONG_PTR)1 << i);
             std::unique_lock<std::mutex> l(mutex);
             for (;;) {
                 if (terminate) {
-                    SetThreadPriority(GetCurrentThread(), PASSIVE_LEVEL);
+                    _set_current_thread_priority_by_irql(PASSIVE_LEVEL);
                     return;
                 }
 
@@ -513,7 +531,7 @@ class _usersim_emulated_dpc
      */
     ~_usersim_emulated_dpc()
     {
-        SetThreadPriority(GetCurrentThread(), PASSIVE_LEVEL);
+        _set_current_thread_priority_by_irql(PASSIVE_LEVEL);
         // Set the flag to terminate the thread while holding the lock, to make
         // sure the thread is not in the middle of a wait.
         {
