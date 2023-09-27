@@ -701,10 +701,7 @@ _usersim_timer_callback(
     timer->signaled = TRUE;
 
     if (timer->dpc) {
-        KIRQL old_irql = KeRaiseIrqlToDpcLevel();
-        timer->dpc->work_item_routine(
-            timer->dpc, timer->dpc->context, timer->dpc->parameter_1, timer->dpc->parameter_2);
-        KeLowerIrql(old_irql);
+        KeInsertQueueDpc(timer->dpc, timer->dpc->parameter_1, timer->dpc->parameter_2);
     }
 }
 
