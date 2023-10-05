@@ -71,7 +71,7 @@ cxplat_allocate_lookaside_list(
             lookaside_list,
             NULL,
             NULL,
-            pool_flags_to_type(pool_flags),
+            _pool_flags_to_type(pool_flags),
             EX_LOOKASIDE_LIST_EX_FLAGS_FAIL_NO_RAISE,
             size,
             tag,
