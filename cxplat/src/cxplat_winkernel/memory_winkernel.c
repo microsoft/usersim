@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "cxplat.h"
+#include "cxplat_platform.h"
 
 #include <wdm.h>
 
@@ -59,16 +60,10 @@ cxplat_free(_Frees_ptr_opt_ void* pointer, cxplat_pool_flags_t pool_flags, uint3
 
 _Must_inspect_result_ cxplat_status_t
 cxplat_allocate_lookaside_list(
-    _In_ size_t size, _In_ uint32_t tag, _In_ cxplat_pool_flags_t pool_flags, _Out_ void** lookaside)
+    _Out_ cxplat_lookaside_list_t* lookaside, _In_ size_t size, _In_ uint32_t tag, _In_ cxplat_pool_flags_t pool_flags)
 {
-    LOOKASIDE_LIST_EX* lookaside_list = ExAllocatePool2(NonPagedPoolNx, sizeof(LOOKASIDE_LIST_EX), tag);
-
-    if (lookaside_list == NULL) {
-        return CXPLAT_STATUS_NO_MEMORY;
-    }
-
     if (!NT_SUCCESS(ExInitializeLookasideListEx(
-            lookaside_list,
+            lookaside,
             NULL,
             NULL,
             _pool_flags_to_type(pool_flags),
@@ -76,31 +71,26 @@ cxplat_allocate_lookaside_list(
             size,
             tag,
             0))) {
-        ExFreePoolWithTag(lookaside_list, tag);
         return CXPLAT_STATUS_NO_MEMORY;
+    } else {
+        return CXPLAT_STATUS_SUCCESS;
     }
-    *lookaside = lookaside_list;
-    return CXPLAT_STATUS_SUCCESS;
 }
 
 void
-cxplat_free_lookaside_list(_In_ _Post_invalid_ void* lookaside, _In_ uint32_t tag)
+cxplat_free_lookaside_list(_Inout_ cxplat_lookaside_list_t* lookaside)
 {
-    if (lookaside == NULL) {
-        return;
-    }
     ExDeleteLookasideListEx(lookaside);
-    ExFreePoolWithTag(lookaside, tag);
 }
 
 _Must_inspect_result_ void*
-cxplat_lookaside_list_alloc(_Inout_ void* lookaside)
+cxplat_lookaside_list_alloc(_Inout_ cxplat_lookaside_list_t* lookaside)
 {
     return ExAllocateFromLookasideListEx(lookaside);
 }
 
 void
-cxplat_lookaside_list_free(_Inout_ void* lookaside, _In_ _Post_invalid_ void* entry)
+cxplat_lookaside_list_free(_Inout_ cxplat_lookaside_list_t* lookaside, _In_ _Post_invalid_ void* entry)
 {
     ExFreeToLookasideListEx(lookaside, entry);
 }

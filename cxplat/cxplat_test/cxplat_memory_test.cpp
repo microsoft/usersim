@@ -8,6 +8,7 @@
 #include <catch2/catch.hpp>
 #endif
 #include "cxplat.h"
+#include "cxplat_platform.h"
 
 #define TEST_TAG 'tset'
 
@@ -89,14 +90,14 @@ TEST_CASE("cxplat_duplicate_utf8_string", "[memory]")
 
 TEST_CASE("cxplat_allocate_lookaside_list", "[memory]")
 {
-    void* lookaside;
-    cxplat_status_t status = cxplat_allocate_lookaside_list(8, TEST_TAG, CXPLAT_POOL_FLAG_NON_PAGED, &lookaside);
-    REQUIRE(status == CXPLAT_STATUS_SUCCESS);
-    REQUIRE(lookaside != nullptr);
+    cxplat_lookaside_list_t lookaside = {0};
 
-    void* entry = cxplat_lookaside_list_alloc(lookaside);
+    cxplat_status_t status = cxplat_initialize_lookaside_list(&lookaside, 8, TEST_TAG, CXPLAT_POOL_FLAG_NON_PAGED);
+    REQUIRE(status == CXPLAT_STATUS_SUCCESS);
+
+    void* entry = cxplat_lookaside_list_alloc(&lookaside);
     REQUIRE(entry != nullptr);
 
-    cxplat_lookaside_list_free(lookaside, entry);
-    cxplat_free_lookaside_list(lookaside, TEST_TAG);
+    cxplat_lookaside_list_free(&lookaside, entry);
+    cxplat_uninitialize_lookaside_list(&lookaside);
 }

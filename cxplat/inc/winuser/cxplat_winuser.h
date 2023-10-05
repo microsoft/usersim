@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include <assert.h>
+#include <stdint.h>
 #include <winerror.h>
 
 #define CXPLAT_RUNTIME_ASSERT(x) assert(x)
@@ -24,3 +25,10 @@ typedef struct _cxplat_rundown_reference
 {
     void* reserved;
 } cxplat_rundown_reference_t;
+
+typedef struct _cxplat_lookaside_list
+{
+    uint32_t tag;
+    uint32_t pool_flags;
+    uint32_t size;
+} cxplat_lookaside_list_t;

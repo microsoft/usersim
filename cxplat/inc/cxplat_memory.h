@@ -114,20 +114,20 @@ void
 cxplat_free_string(_Frees_ptr_opt_ _In_z_ const char* string);
 
 /**
- * @brief Allocate a lookaside list.
+ * @brief Initialize a lookaside list.
  *
+ * @param[out] lookaside The initialized lookaside list.
  * @param[in] size Allocation size of each entry in the lookaside list.
  * @param[in] tag Tag to use for the lookaside list.
  * @param[in] pool_flags Flags to use for the lookaside list.
  * @param[in] allocate Optional allocation callback.
  * @param[in] free Optional free callback.
- * @param[out] lookaside The allocated lookaside list.
  * @retval CXPLAT_STATUS_SUCCESS The operation was successful.
  * @retval CXPLAT_STATUS_NO_MEMORY Unable to allocate resources for this lookaside list.
  */
 _Must_inspect_result_ cxplat_status_t
-cxplat_allocate_lookaside_list(
-    _In_ size_t size, _In_ uint32_t tag, _In_ cxplat_pool_flags_t pool_flags, _Out_ void** lookaside);
+cxplat_initialize_lookaside_list(
+    _Out_ cxplat_lookaside_list_t* lookaside, _In_ size_t size, _In_ uint32_t tag, _In_ cxplat_pool_flags_t pool_flags);
 
 /**
  * @brief Free a lookaside list.
@@ -135,7 +135,7 @@ cxplat_allocate_lookaside_list(
  * @param[in] lookaside Lookaside list to free.
  */
 void
-cxplat_free_lookaside_list(_In_ _Post_invalid_ void* lookaside, _In_ uint32_t tag);
+cxplat_uninitialize_lookaside_list(_Inout_ cxplat_lookaside_list_t* lookaside);
 
 /**
  * @brief Allocate an entry from a lookaside list.
@@ -144,7 +144,7 @@ cxplat_free_lookaside_list(_In_ _Post_invalid_ void* lookaside, _In_ uint32_t ta
  * @return Allocation from the lookaside list, or NULL if the allocation failed.
  */
 _Must_inspect_result_ void*
-cxplat_lookaside_list_alloc(_Inout_ void* lookaside);
+cxplat_lookaside_list_alloc(_Inout_ cxplat_lookaside_list_t* lookaside);
 
 /**
  * @brief Free an entry to a lookaside list.
@@ -153,6 +153,6 @@ cxplat_lookaside_list_alloc(_Inout_ void* lookaside);
  * @param[in] entry Entry to free.
  */
 void
-cxplat_lookaside_list_free(_Inout_ void* lookaside, _In_ _Post_invalid_ void* entry);
+cxplat_lookaside_list_free(_Inout_ cxplat_lookaside_list_t* lookaside, _In_ _Post_invalid_ void* entry);
 
 CXPLAT_EXTERN_C_END

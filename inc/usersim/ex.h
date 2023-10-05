@@ -84,6 +84,14 @@ typedef _Enum_is_bitflag_ enum _POOL_TYPE {
 typedef ULONG64 POOL_FLAGS;
 #define POOL_FLAG_NON_PAGED 0x00000040
 
+typedef cxplat_lookaside_list_t LOOKASIDE_LIST_EX;
+
+typedef _IRQL_requires_same_ _Function_class_(ALLOCATE_FUNCTION_EX) PVOID ALLOCATE_FUNCTION_EX(
+    _In_ POOL_TYPE pool_type, _In_ SIZE_T number_og_bytes, _In_ ULONG tag, _Inout_ LOOKASIDE_LIST_EX* lookaside);
+
+typedef _IRQL_requires_same_ _Function_class_(FREE_FUNCTION_EX) VOID
+    FREE_FUNCTION_EX(_In_ __drv_freesMem(Mem) void* buffer, _Inout_ LOOKASIDE_LIST_EX* lookaside);
+
 USERSIM_API
 void
 ExInitializeRundownProtection(_Out_ EX_RUNDOWN_REF* rundown_ref);
@@ -214,5 +222,23 @@ void
 usersim_initialize_ex(bool leak_detector);
 void
 usersim_clean_up_ex();
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API NTSTATUS ExInitializeLookasideListEx(
+    _Out_ LOOKASIDE_LIST_EX* lookaside,
+    _In_opt_ ALLOCATE_FUNCTION_EX* allocate,
+    _In_opt_ FREE_FUNCTION_EX* free,
+    _In_ POOL_TYPE pool_type,
+    _In_ unsigned long flags,
+    _In_ size_t size,
+    _In_ unsigned long tag,
+    _In_ unsigned short depth);
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API void ExDeleteLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside);
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API _Ret_maybenull_
+    void* ExAllocateFromLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside);
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API
+    void ExFreeToLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside, _In_ _Post_invalid_ void* entry);
 
 #endif

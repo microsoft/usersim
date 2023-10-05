@@ -293,3 +293,42 @@ ExRaiseDatatypeMisalignment()
 {
     ExRaiseDatatypeMisalignmentCPP();
 }
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API NTSTATUS ExInitializeLookasideListEx(
+    _Out_ LOOKASIDE_LIST_EX* lookaside,
+    _In_opt_ ALLOCATE_FUNCTION_EX* allocate,
+    _In_opt_ FREE_FUNCTION_EX* free,
+    _In_ POOL_TYPE pool_type,
+    _In_ unsigned long flags,
+    _In_ size_t size,
+    _In_ unsigned long tag,
+    _In_ unsigned short depth)
+{
+    if (allocate || free) {
+        return STATUS_NOT_SUPPORTED;
+    }
+
+    if (cxplat_initialize_lookaside_list(lookaside, size, tag, _pool_type_to_flags(pool_type, true)) ==
+        CXPLAT_STATUS_SUCCESS) {
+        return STATUS_SUCCESS;
+    } else {
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API void ExDeleteLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside)
+{
+    cxplat_uninitialize_lookaside_list(lookaside);
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API _Ret_maybenull_
+    void* ExAllocateFromLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside)
+{
+    return cxplat_lookaside_list_alloc(lookaside);
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API
+    void ExFreeToLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside, _In_ _Post_invalid_ void* entry)
+{
+    cxplat_lookaside_list_free(lookaside, entry);
+}

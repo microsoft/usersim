@@ -23,3 +23,5 @@
 #define CXPLAT_SUCCEEDED(status) NT_SUCCESS(status)
 
 typedef struct _EX_RUNDOWN_REF cxplat_rundown_reference_t;
+
+typedef struct _LOOKASIDE_LIST_EX cxplat_lookaside_list_t;
