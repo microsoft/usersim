@@ -79,6 +79,7 @@ cxplat_allocate_lookaside_list(
         ExFreePoolWithTag(lookaside_list, tag);
         return CXPLAT_STATUS_NO_MEMORY;
     }
+    *lookaside = lookaside_list;
     return CXPLAT_STATUS_SUCCESS;
 }
 
