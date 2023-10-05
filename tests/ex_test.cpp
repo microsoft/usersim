@@ -120,13 +120,13 @@ TEST_CASE("ExRaiseDatatypeMisalignment", "[ex]")
 
 TEST_CASE("LOOKASIDE_LIST_EX", "[ex]")
 {
-    LOOKASIDE_LIST_EX lookaside;
+    LOOKASIDE_LIST_EX lookaside_list;
     REQUIRE(
-        ExInitializeLookasideListEx(&lookaside, nullptr, nullptr, NonPagedPoolNx, 0, 8, 'tset', 0) == STATUS_SUCCESS);
+        ExInitializeLookasideListEx(&lookaside_list, nullptr, nullptr, NonPagedPoolNx, 0, 8, 'tset', 0) == STATUS_SUCCESS);
 
-    void* p = ExAllocateFromLookasideListEx(&lookaside);
+    void* p = ExAllocateFromLookasideListEx(&lookaside_list);
     REQUIRE(p != nullptr);
 
-    ExFreeToLookasideListEx(&lookaside, p);
-    ExDeleteLookasideListEx(&lookaside);
+    ExFreeToLookasideListEx(&lookaside_list, p);
+    ExDeleteLookasideListEx(&lookaside_list);
 }
