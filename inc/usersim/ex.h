@@ -87,7 +87,7 @@ typedef ULONG64 POOL_FLAGS;
 typedef cxplat_lookaside_list_t LOOKASIDE_LIST_EX;
 
 typedef _IRQL_requires_same_ _Function_class_(ALLOCATE_FUNCTION_EX) PVOID ALLOCATE_FUNCTION_EX(
-    _In_ POOL_TYPE pool_type, _In_ SIZE_T number_og_bytes, _In_ ULONG tag, _Inout_ LOOKASIDE_LIST_EX* lookaside);
+    POOL_TYPE pool_type, size_t number_og_bytes, unsigned long tag, _Inout_ LOOKASIDE_LIST_EX* lookaside);
 
 typedef _IRQL_requires_same_ _Function_class_(FREE_FUNCTION_EX) VOID
     FREE_FUNCTION_EX(_In_ __drv_freesMem(Mem) void* buffer, _Inout_ LOOKASIDE_LIST_EX* lookaside);
