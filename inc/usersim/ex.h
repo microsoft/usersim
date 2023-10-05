@@ -210,6 +210,18 @@ _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API _Ret_maybenull_
 _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API
     void ExFreeToLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside_list, _In_ _Post_invalid_ void* entry);
 
+USERSIM_API
+USHORT
+ExQueryDepthSList(_In_ PSLIST_HEADER SListHead);
+
+USERSIM_API
+PSLIST_ENTRY
+ExpInterlockedPushEntrySList(__inout PSLIST_HEADER ListHead, __inout __drv_aliasesMem PSLIST_ENTRY ListEntry);
+
+USERSIM_API
+PSLIST_ENTRY
+ExpInterlockedPopEntrySList(_Inout_ PSLIST_HEADER ListHead);
+
 CXPLAT_EXTERN_C_END
 
 #if defined(__cplusplus)

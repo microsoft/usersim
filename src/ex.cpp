@@ -335,3 +335,18 @@ _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API
 {
     cxplat_free_lookaside_list_entry(lookaside_list, entry);
 }
+
+USERSIM_API
+USHORT
+ExQueryDepthSList(_In_ PSLIST_HEADER SListHead) { return QueryDepthSList(SListHead); }
+
+USERSIM_API
+PSLIST_ENTRY
+ExpInterlockedPushEntrySList(__inout PSLIST_HEADER ListHead, __inout __drv_aliasesMem PSLIST_ENTRY ListEntry)
+{
+    return InterlockedPushEntrySList(ListHead, ListEntry);
+}
+
+USERSIM_API
+PSLIST_ENTRY
+ExpInterlockedPopEntrySList(_Inout_ PSLIST_HEADER ListHead) { return InterlockedPopEntrySList(ListHead); }
