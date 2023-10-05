@@ -192,6 +192,24 @@ ExRaiseAccessViolation();
 USERSIM_API void
 ExRaiseDatatypeMisalignment();
 
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API NTSTATUS ExInitializeLookasideListEx(
+    _Out_ LOOKASIDE_LIST_EX* lookaside,
+    _In_opt_ ALLOCATE_FUNCTION_EX* allocate,
+    _In_opt_ FREE_FUNCTION_EX* free,
+    _In_ POOL_TYPE pool_type,
+    _In_ unsigned long flags,
+    _In_ size_t size,
+    _In_ unsigned long tag,
+    _In_ unsigned short depth);
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API void ExDeleteLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside);
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API _Ret_maybenull_
+    void* ExAllocateFromLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside);
+
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API
+    void ExFreeToLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside, _In_ _Post_invalid_ void* entry);
+
 CXPLAT_EXTERN_C_END
 
 #if defined(__cplusplus)
@@ -222,23 +240,5 @@ void
 usersim_initialize_ex(bool leak_detector);
 void
 usersim_clean_up_ex();
-
-_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API NTSTATUS ExInitializeLookasideListEx(
-    _Out_ LOOKASIDE_LIST_EX* lookaside,
-    _In_opt_ ALLOCATE_FUNCTION_EX* allocate,
-    _In_opt_ FREE_FUNCTION_EX* free,
-    _In_ POOL_TYPE pool_type,
-    _In_ unsigned long flags,
-    _In_ size_t size,
-    _In_ unsigned long tag,
-    _In_ unsigned short depth);
-
-_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API void ExDeleteLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside);
-
-_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API _Ret_maybenull_
-    void* ExAllocateFromLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside);
-
-_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API
-    void ExFreeToLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside, _In_ _Post_invalid_ void* entry);
 
 #endif
