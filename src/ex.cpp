@@ -295,14 +295,14 @@ ExRaiseDatatypeMisalignment()
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API NTSTATUS ExInitializeLookasideListEx(
-    _Out_ LOOKASIDE_LIST_EX* lookaside,
+    _Out_ LOOKASIDE_LIST_EX* lookaside_list,
     _In_opt_ ALLOCATE_FUNCTION_EX* allocate,
     _In_opt_ FREE_FUNCTION_EX* free,
-    _In_ POOL_TYPE pool_type,
-    _In_ unsigned long flags,
-    _In_ size_t size,
-    _In_ unsigned long tag,
-    _In_ unsigned short depth)
+    POOL_TYPE pool_type,
+    unsigned long flags,
+    size_t size,
+    unsigned long tag,
+    unsigned short depth)
 {
     if (allocate || free) {
         return STATUS_NOT_SUPPORTED;
@@ -311,7 +311,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API NTSTATUS ExInitializeLookasideLi
     UNREFERENCED_PARAMETER(flags);
     UNREFERENCED_PARAMETER(depth);
 
-    if (cxplat_initialize_lookaside_list(lookaside, size, tag, _pool_type_to_flags(pool_type, true)) ==
+    if (cxplat_initialize_lookaside_list(lookaside_list, size, tag, _pool_type_to_flags(pool_type, true)) ==
         CXPLAT_STATUS_SUCCESS) {
         return STATUS_SUCCESS;
     } else {
@@ -319,19 +319,19 @@ _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API NTSTATUS ExInitializeLookasideLi
     }
 }
 
-_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API void ExDeleteLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside)
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API void ExDeleteLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside_list)
 {
-    cxplat_uninitialize_lookaside_list(lookaside);
+    cxplat_uninitialize_lookaside_list(lookaside_list);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API _Ret_maybenull_
-    void* ExAllocateFromLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside)
+    void* ExAllocateFromLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside_list)
 {
-    return cxplat_lookaside_list_alloc(lookaside);
+    return cxplat_allocate_lookaside_list_entry(lookaside_list);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API
-    void ExFreeToLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside, _In_ _Post_invalid_ void* entry)
+    void ExFreeToLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside_list, _In_ _Post_invalid_ void* entry)
 {
-    cxplat_lookaside_list_free(lookaside, entry);
+    cxplat_free_lookaside_list_entry(lookaside_list, entry);
 }

@@ -90,14 +90,14 @@ TEST_CASE("cxplat_duplicate_utf8_string", "[memory]")
 
 TEST_CASE("cxplat_allocate_lookaside_list", "[memory]")
 {
-    cxplat_lookaside_list_t lookaside = {0};
+    cxplat_lookaside_list_t list = {0};
 
-    cxplat_status_t status = cxplat_initialize_lookaside_list(&lookaside, 8, TEST_TAG, CXPLAT_POOL_FLAG_NON_PAGED);
+    cxplat_status_t status = cxplat_initialize_lookaside_list(&list, 8, TEST_TAG, CXPLAT_POOL_FLAG_NON_PAGED);
     REQUIRE(status == CXPLAT_STATUS_SUCCESS);
 
-    void* entry = cxplat_lookaside_list_alloc(&lookaside);
+    void* entry = cxplat_allocate_lookaside_list_entry(&list);
     REQUIRE(entry != nullptr);
 
-    cxplat_lookaside_list_free(&lookaside, entry);
-    cxplat_uninitialize_lookaside_list(&lookaside);
+    cxplat_free_lookaside_list_entry(&list, entry);
+    cxplat_uninitialize_lookaside_list(&list);
 }
