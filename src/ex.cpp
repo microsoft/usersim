@@ -308,6 +308,9 @@ _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API NTSTATUS ExInitializeLookasideLi
         return STATUS_NOT_SUPPORTED;
     }
 
+    UNREFERENCED_PARAMETER(flags);
+    UNREFERENCED_PARAMETER(depth);
+
     if (cxplat_initialize_lookaside_list(lookaside, size, tag, _pool_type_to_flags(pool_type, true)) ==
         CXPLAT_STATUS_SUCCESS) {
         return STATUS_SUCCESS;
