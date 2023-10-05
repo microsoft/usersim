@@ -56,3 +56,50 @@ cxplat_free(_Frees_ptr_opt_ void* pointer, cxplat_pool_flags_t pool_flags, uint3
         ExFreePoolWithTag(pointer, tag);
     }
 }
+
+_Must_inspect_result_ cxplat_status_t
+cxplat_allocate_lookaside_list(
+    _In_ size_t size, _In_ uint32_t tag, _In_ cxplat_pool_flags_t pool_flags, _Out_ void** lookaside)
+{
+    LOOKASIDE_LIST_EX* lookaside_list = ExAllocatePool2(NonPagedPoolNx, sizeof(LOOKASIDE_LIST_EX), tag);
+
+    if (lookaside_list == NULL) {
+        return CXPLAT_STATUS_NO_MEMORY;
+    }
+
+    if (!NT_SUCCESS(ExInitializeLookasideListEx(
+            lookaside_list,
+            NULL,
+            NULL,
+            pool_flags_to_type(pool_flags),
+            EX_LOOKASIDE_LIST_EX_FLAGS_FAIL_NO_RAISE,
+            size,
+            tag,
+            0))) {
+        ExFreePoolWithTag(lookaside_list, tag);
+        return CXPLAT_STATUS_NO_MEMORY;
+    }
+    return CXPLAT_STATUS_SUCCESS;
+}
+
+void
+cxplat_free_lookaside_list(_In_ _Post_invalid_ void* lookaside, _In_ uint32_t tag)
+{
+    if (lookaside == NULL) {
+        return;
+    }
+    ExDeleteLookasideListEx(lookaside);
+    ExFreePoolWithTag(lookaside, tag);
+}
+
+_Must_inspect_result_ void*
+cxplat_lookaside_list_alloc(_Inout_ void* lookaside)
+{
+    return ExAllocateFromLookasideListEx(lookaside);
+}
+
+void
+cxplat_lookaside_list_free(_Inout_ void* lookaside, _In_ _Post_invalid_ void* entry)
+{
+    ExFreeToLookasideListEx(lookaside, entry);
+}

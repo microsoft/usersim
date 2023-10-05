@@ -217,3 +217,54 @@ cxplat_free(_Frees_ptr_opt_ void* pointer, cxplat_pool_flags_t pool_flags, uint3
         free(memory_block);
     }
 }
+
+typedef struct _cxplat_lookaside_list
+{
+    uint32_t tag;
+    cxplat_pool_flags_t pool_flags;
+    uint32_t size;
+} cxplat_lookaside_list_t;
+
+_Must_inspect_result_ cxplat_status_t
+cxplat_allocate_lookaside_list(
+    _In_ size_t size, _In_ uint32_t tag, _In_ cxplat_pool_flags_t pool_flags, _Out_ void** lookaside)
+{
+    cxplat_lookaside_list_t* lookaside_list =
+        reinterpret_cast<cxplat_lookaside_list_t*>(cxplat_allocate(pool_flags, sizeof(cxplat_lookaside_list_t), tag));
+
+    if (lookaside_list == nullptr) {
+        return CXPLAT_STATUS_NO_MEMORY;
+    }
+
+    lookaside_list->tag = tag;
+    lookaside_list->pool_flags = pool_flags;
+    lookaside_list->size = static_cast<uint32_t>(size);
+
+    *lookaside = lookaside_list;
+    return CXPLAT_STATUS_SUCCESS;
+}
+
+void
+cxplat_free_lookaside_list(_In_ _Post_invalid_ void* lookaside, _In_ uint32_t tag)
+{
+    cxplat_lookaside_list_t* lookaside_list = reinterpret_cast<cxplat_lookaside_list_t*>(lookaside);
+    if (!lookaside_list) {
+        return;
+    }
+    cxplat_free(lookaside, lookaside_list->pool_flags, tag);
+}
+
+_Must_inspect_result_ void*
+cxplat_lookaside_list_alloc(_Inout_ void* lookaside)
+{
+    cxplat_lookaside_list_t* lookaside_list = reinterpret_cast<cxplat_lookaside_list_t*>(lookaside);
+
+    return cxplat_allocate(lookaside_list->pool_flags, lookaside_list->size, lookaside_list->tag);
+}
+
+void
+cxplat_lookaside_list_free(_Inout_ void* lookaside, _In_ _Post_invalid_ void* entry)
+{
+    cxplat_lookaside_list_t* lookaside_list = reinterpret_cast<cxplat_lookaside_list_t*>(lookaside);
+    cxplat_free(entry, lookaside_list->pool_flags, lookaside_list->tag);
+}
