@@ -67,7 +67,7 @@ cxplat_initialize_lookaside_list(
             NULL,
             NULL,
             _pool_flags_to_type(pool_flags),
-            EX_LOOKASIDE_LIST_EX_FLAGS_FAIL_NO_RAISE,
+            0,
             size,
             tag,
             0))) {

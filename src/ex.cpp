@@ -311,29 +311,28 @@ _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API NTSTATUS ExInitializeLookasideLi
     UNREFERENCED_PARAMETER(flags);
     UNREFERENCED_PARAMETER(depth);
 
-    if (cxplat_initialize_lookaside_list(lookaside_list, size, tag, _pool_type_to_flags(pool_type, true)) ==
-        CXPLAT_STATUS_SUCCESS) {
-        return STATUS_SUCCESS;
-    } else {
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
+    lookaside_list->pool_flags = _pool_type_to_flags(pool_type, true);
+    lookaside_list->size = (uint32_t)size;
+    lookaside_list->tag = tag;
+
+    return STATUS_SUCCESS;
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API void ExDeleteLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside_list)
 {
-    cxplat_uninitialize_lookaside_list(lookaside_list);
+    UNREFERENCED_PARAMETER(lookaside_list);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API _Ret_maybenull_
     void* ExAllocateFromLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside_list)
 {
-    return cxplat_allocate_lookaside_list_entry(lookaside_list);
+    return cxplat_allocate((cxplat_pool_flags_t)lookaside_list->pool_flags, lookaside_list->size, lookaside_list->tag);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API
     void ExFreeToLookasideListEx(_Inout_ LOOKASIDE_LIST_EX* lookaside_list, _In_ _Post_invalid_ void* entry)
 {
-    cxplat_free_lookaside_list_entry(lookaside_list, entry);
+    cxplat_free(entry, (cxplat_pool_flags_t)lookaside_list->pool_flags, lookaside_list->tag);
 }
 
 USERSIM_API
