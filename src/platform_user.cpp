@@ -125,13 +125,13 @@ usersim_get_code_integrity_state(_Out_ usersim_code_integrity_state_t* state)
     USERSIM_RETURN_RESULT(STATUS_SUCCESS);
 }
 
-struct _usersim_ring_descriptor
+struct usersim_ring_descriptor_t
 {
     void* primary_view;
     void* secondary_view;
     size_t length;
 };
-typedef struct _usersim_ring_descriptor usersim_ring_descriptor_t;
+typedef struct usersim_ring_descriptor_t usersim_ring_descriptor_t;
 
 // This code is derived from the sample at:
 // https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc2
@@ -580,8 +580,8 @@ usersim_utf8_string_to_unicode(_In_ const cxplat_utf8_string_t* input, _Outptr_ 
 
     result++;
 
-    unicode_string = (wchar_t*)cxplat_allocate(
-        CXPLAT_POOL_FLAG_NON_PAGED, result * sizeof(wchar_t), USERSIM_TAG_UNICODE_STRING);
+    unicode_string =
+        (wchar_t*)cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, result * sizeof(wchar_t), USERSIM_TAG_UNICODE_STRING);
     if (unicode_string == NULL) {
         retval = STATUS_NO_MEMORY;
         goto Done;

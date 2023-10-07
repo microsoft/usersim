@@ -7,11 +7,11 @@
 #include <unordered_map>
 #include <vector>
 
-typedef class _cxplat_leak_detector
+typedef class cxplat_leak_detector_t
 {
   public:
-    _cxplat_leak_detector() = default;
-    ~_cxplat_leak_detector() = default;
+    cxplat_leak_detector_t() = default;
+    ~cxplat_leak_detector_t() = default;
 
     void
     register_allocation(uintptr_t address, size_t size);
@@ -29,7 +29,7 @@ typedef class _cxplat_leak_detector
     void
     output_stack_trace(std::ostringstream& output, std::string label, unsigned long stack_hash);
 
-    typedef struct _allocation
+    typedef struct allocation_t
     {
         uintptr_t address;
         size_t size;

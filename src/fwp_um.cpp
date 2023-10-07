@@ -61,14 +61,14 @@ void static _free_connection_request()
     _fwp_um_connect_request = nullptr;
 }
 
-#pragma region fwp_engine
+#pragma region fwp_engine_t
 
-std::unique_ptr<_fwp_engine> _fwp_engine::_engine;
+std::unique_ptr<fwp_engine_t> fwp_engine_t::_engine;
 
 // Attempt to classify a test packet at a given WFP layer on a given interface index.
 // This is used to test the xdp hook.
 FWP_ACTION_TYPE
-_fwp_engine::classify_test_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_index)
+fwp_engine_t::classify_test_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_index)
 {
     shared_lock_t l(lock);
     const GUID* callout_key = get_callout_key_from_layer_guid_under_lock(layer_guid);
@@ -130,7 +130,7 @@ _fwp_engine::classify_test_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_in
 
 // This is used to test the bind hook.
 FWP_ACTION_TYPE
-_fwp_engine::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_IP_LOCAL_PORT].value.uint16 = parameters->destination_port;
@@ -146,7 +146,7 @@ _fwp_engine::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
         incoming_value);
 }
 
-_Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE _fwp_engine::test_callout(
+_Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
     uint16_t layer_id,
     _In_ const GUID& layer_guid,
     _In_ const GUID& sublayer_guid,
@@ -194,7 +194,7 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE _fwp_engine::test_callout(
 
 // This is used to test the INET4_RECV_ACCEPT hook.
 FWP_ACTION_TYPE
-_fwp_engine::test_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* parameters)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V4_IP_LOCAL_ADDRESS].value.uint32 =
@@ -218,7 +218,7 @@ _fwp_engine::test_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* param
 
 // This is used to test the INET6_RECV_ACCEPT hook.
 FWP_ACTION_TYPE
-_fwp_engine::test_cgroup_inet6_recv_accept(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_cgroup_inet6_recv_accept(_In_ fwp_classify_parameters_t* parameters)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_AUTH_RECV_ACCEPT_V6_IP_LOCAL_ADDRESS].value.byteArray16 =
@@ -240,7 +240,7 @@ _fwp_engine::test_cgroup_inet6_recv_accept(_In_ fwp_classify_parameters_t* param
 
 // This is used to test the INET4_CONNECT hook.
 FWP_ACTION_TYPE
-_fwp_engine::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* parameters)
 {
     FWP_ACTION_TYPE action;
     bool redirected = false;
@@ -307,7 +307,7 @@ _fwp_engine::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* parameter
 
 // This is used to test the INET6_CONNECT hook.
 FWP_ACTION_TYPE
-_fwp_engine::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameters)
 {
     FWP_ACTION_TYPE action;
     bool redirected = false;
@@ -379,7 +379,7 @@ _fwp_engine::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameter
 
 // This is used to test the SOCK_OPS hook for IPv4 traffic.
 FWP_ACTION_TYPE
-_fwp_engine::test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS].value.uint32 =
@@ -398,7 +398,7 @@ _fwp_engine::test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters)
 
 // This is used to test the SOCK_OPS hook for IPv6 traffic.
 FWP_ACTION_TYPE
-_fwp_engine::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_IP_LOCAL_ADDRESS].value.byteArray16 =
@@ -416,14 +416,14 @@ _fwp_engine::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
         FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6, _default_sublayer, incoming_value);
 }
 
-#pragma endregion fwp_engine
+#pragma endregion fwp_engine_t
 
 #pragma region fwpm_apis
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmFilterDeleteById0(_In_ HANDLE engine_handle, _In_ uint64_t id)
 {
     // Skip fault injection for this API because return failure status requires to remove filter from the list.
-    auto& engine = *reinterpret_cast<_fwp_engine*>(engine_handle);
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
 
     if (engine.remove_fwpm_filter(id)) {
         return STATUS_SUCCESS;
@@ -456,7 +456,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmFilterAdd0(
 
     UNREFERENCED_PARAMETER(sd);
 
-    auto& engine = *reinterpret_cast<_fwp_engine*>(engine_handle);
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
 
     auto id_returned = engine.add_fwpm_filter(filter);
 
@@ -491,7 +491,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmCalloutAdd0(
         return STATUS_NO_MEMORY;
     }
 
-    auto& engine = *reinterpret_cast<_fwp_engine*>(engine_handle);
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
 
     auto id_returned = engine.add_fwpm_callout(callout);
 
@@ -518,7 +518,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmEngineOpen0(
     UNREFERENCED_PARAMETER(auth_identity);
     UNREFERENCED_PARAMETER(session);
 
-    *engine_handle = _fwp_engine::get()->get();
+    *engine_handle = fwp_engine_t::get()->get();
     return STATUS_SUCCESS;
 }
 
@@ -529,7 +529,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
         return STATUS_NO_MEMORY;
     }
 
-    auto& engine = *reinterpret_cast<_fwp_engine*>(engine_handle);
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
 
     engine.add_fwpm_provider(provider);
 
@@ -545,7 +545,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
     }
 
     UNREFERENCED_PARAMETER(sd);
-    auto& engine = *reinterpret_cast<_fwp_engine*>(engine_handle);
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
 
     engine.add_fwpm_sub_layer(sub_layer);
 
@@ -558,7 +558,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmEngineClose0(_Inout_ HANDLE engi
         return STATUS_NO_MEMORY;
     }
 
-    if (engine_handle != _fwp_engine::get()->get()) {
+    if (engine_handle != fwp_engine_t::get()->get()) {
         return STATUS_INVALID_PARAMETER;
     } else {
         return STATUS_SUCCESS;
@@ -586,7 +586,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
 
     UNREFERENCED_PARAMETER(device_object);
 
-    auto& engine = *_fwp_engine::get()->get();
+    auto& engine = *fwp_engine_t::get()->get();
 
     auto id_returned = engine.register_fwps_callout(callout);
 
@@ -603,7 +603,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpsCalloutUnregisterById0(_In_ cons
         return STATUS_NO_MEMORY;
     }
 
-    auto& engine = *_fwp_engine::get()->get();
+    auto& engine = *fwp_engine_t::get()->get();
 
     if (engine.remove_fwps_callout(callout_id)) {
         return STATUS_SUCCESS;
@@ -643,7 +643,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS
     FwpsFlowRemoveContext0(_In_ uint64_t flow_id, _In_ UINT16 layer_id, _In_ uint32_t callout_id)
 {
     // Skip fault injection.
-    auto& engine = *_fwp_engine::get()->get();
+    auto& engine = *fwp_engine_t::get()->get();
     engine.delete_flow_context(flow_id, layer_id, callout_id);
 
     return STATUS_SUCCESS;
@@ -658,7 +658,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS FwpsFlowAssociateContext0(
 
     UNREFERENCED_PARAMETER(layer_id);
 
-    auto& engine = *_fwp_engine::get()->get();
+    auto& engine = *fwp_engine_t::get()->get();
     engine.associate_flow_context(flow_id, callout_id, flowContext);
 
     return STATUS_SUCCESS;
@@ -900,56 +900,56 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(DISPATCH_LEVEL) FWPS_CONN
 FWP_ACTION_TYPE
 usersim_fwp_classify_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_index)
 {
-    return _fwp_engine::get()->classify_test_packet(layer_guid, if_index);
+    return fwp_engine_t::get()->classify_test_packet(layer_guid, if_index);
 }
 
 FWP_ACTION_TYPE
 usersim_fwp_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
 {
-    return _fwp_engine::get()->test_bind_ipv4(parameters);
+    return fwp_engine_t::get()->test_bind_ipv4(parameters);
 }
 
 FWP_ACTION_TYPE
 usersim_fwp_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* parameters)
 {
-    return _fwp_engine::get()->test_cgroup_inet4_recv_accept(parameters);
+    return fwp_engine_t::get()->test_cgroup_inet4_recv_accept(parameters);
 }
 
 FWP_ACTION_TYPE
 usersim_fwp_cgroup_inet6_recv_accept(_In_ fwp_classify_parameters_t* parameters)
 {
-    return _fwp_engine::get()->test_cgroup_inet6_recv_accept(parameters);
+    return fwp_engine_t::get()->test_cgroup_inet6_recv_accept(parameters);
 }
 
 FWP_ACTION_TYPE
 usersim_fwp_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* parameters)
 {
-    return _fwp_engine::get()->test_cgroup_inet4_connect(parameters);
+    return fwp_engine_t::get()->test_cgroup_inet4_connect(parameters);
 }
 
 FWP_ACTION_TYPE
 usersim_fwp_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameters)
 {
-    return _fwp_engine::get()->test_cgroup_inet6_connect(parameters);
+    return fwp_engine_t::get()->test_cgroup_inet6_connect(parameters);
 }
 
 FWP_ACTION_TYPE
 usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters)
 {
-    return _fwp_engine::get()->test_sock_ops_v4(parameters);
+    return fwp_engine_t::get()->test_sock_ops_v4(parameters);
 }
 
 FWP_ACTION_TYPE
 usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
 {
-    return _fwp_engine::get()->test_sock_ops_v6(parameters);
+    return fwp_engine_t::get()->test_sock_ops_v6(parameters);
 }
 
 void
 usersim_fwp_set_sublayer_guids(
     _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer)
 {
-    fwp_engine::get()->set_sublayer_guids(default_sublayer, connect_v4_sublayer, connect_v6_sublayer);
+    fwp_engine_t::get()->set_sublayer_guids(default_sublayer, connect_v4_sublayer, connect_v6_sublayer);
 }
 
 #pragma endregion test_fwp

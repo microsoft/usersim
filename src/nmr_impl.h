@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation
 // SPDX-License-Identifier: MIT
 
-#include "platform.h"
 #include "kernel_um.h"
+#include "platform.h"
 
 #include <../km/netioddk.h>
 #include <condition_variable>
@@ -13,15 +13,15 @@
 #include <optional>
 #include <vector>
 
-typedef class _nmr
+typedef class nmr_t
 {
   public:
     typedef void* nmr_provider_handle;
     typedef void* nmr_client_handle;
     typedef void* nmr_binding_handle;
 
-    _nmr() = default;
-    ~_nmr() = default;
+    nmr_t() = default;
+    ~nmr_t() = default;
 
     /**
      * @brief Register a provider.
@@ -115,7 +115,7 @@ typedef class _nmr
         _Outptr_ const void** provider_binding_context,
         _Outptr_ const void** provider_dispatch);
 
-    static _nmr&
+    static nmr_t&
     get()
     {
         return singleton;
@@ -271,5 +271,5 @@ typedef class _nmr
                      // on the other hand are not protected by this lock but instead use
                      // interlocked operations.
 
-    static _nmr singleton;
+    static nmr_t singleton;
 } nmr_t;

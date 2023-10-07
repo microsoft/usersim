@@ -11,7 +11,7 @@ static TP_CALLBACK_ENVIRON _callback_environment{};
 static PTP_POOL _pool = nullptr;
 static PTP_CLEANUP_GROUP _cleanup_group = nullptr;
 
-typedef struct _cxplat_preemptible_work_item
+typedef struct cxplat_preemptible_work_item_t
 {
     PTP_WORK work;
     cxplat_work_item_routine_t work_item_routine;

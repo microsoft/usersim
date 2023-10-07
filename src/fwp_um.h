@@ -11,13 +11,14 @@
 typedef std::unique_lock<std::shared_mutex> exclusive_lock_t;
 typedef std::shared_lock<std::shared_mutex> shared_lock_t;
 
-typedef class _fwp_engine
+typedef class fwp_engine_t
 {
   public:
-    _fwp_engine() = default;
+    fwp_engine_t() = default;
 
     void
-    set_sublayer_guids(_In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer)
+    set_sublayer_guids(
+        _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer)
     {
         _default_sublayer = default_sublayer;
         _connect_v4_sublayer = connect_v4_sublayer;
@@ -206,11 +207,11 @@ typedef class _fwp_engine
     FWP_ACTION_TYPE
     test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters);
 
-    static _fwp_engine*
+    static fwp_engine_t*
     get()
     {
         if (!_engine) {
-            _engine = std::make_unique<_fwp_engine>();
+            _engine = std::make_unique<fwp_engine_t>();
         }
         return _engine.get();
     }
@@ -267,7 +268,7 @@ typedef class _fwp_engine
         return nullptr;
     }
 
-    static std::unique_ptr<_fwp_engine> _engine;
+    static std::unique_ptr<fwp_engine_t> _engine;
 
     std::shared_mutex lock;
     uint32_t next_id = 1;
@@ -280,4 +281,4 @@ typedef class _fwp_engine
     GUID _default_sublayer = {};
     GUID _connect_v4_sublayer = {};
     GUID _connect_v6_sublayer = {};
-} fwp_engine;
+} fwp_engine_t;

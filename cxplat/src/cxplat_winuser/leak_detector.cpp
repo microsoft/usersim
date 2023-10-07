@@ -8,7 +8,7 @@
 #include <iostream>
 
 void
-_cxplat_leak_detector::register_allocation(uintptr_t address, size_t size)
+cxplat_leak_detector_t::register_allocation(uintptr_t address, size_t size)
 {
     std::unique_lock<std::mutex> lock(_mutex);
     allocation_t allocation = {address, size, 0};
@@ -27,7 +27,7 @@ _cxplat_leak_detector::register_allocation(uintptr_t address, size_t size)
 }
 
 void
-_cxplat_leak_detector::flush_output(std::ostringstream& output)
+cxplat_leak_detector_t::flush_output(std::ostringstream& output)
 {
     _in_memory_log.push_back(output.str());
     std::cout << output.str();
@@ -35,7 +35,7 @@ _cxplat_leak_detector::flush_output(std::ostringstream& output)
 }
 
 void
-_cxplat_leak_detector::output_stack_trace(std::ostringstream& output, std::string label, unsigned long stack_hash)
+cxplat_leak_detector_t::output_stack_trace(std::ostringstream& output, std::string label, unsigned long stack_hash)
 {
     std::vector<uintptr_t> stack = _stack_hashes[stack_hash];
     std::string name;
@@ -56,7 +56,7 @@ _cxplat_leak_detector::output_stack_trace(std::ostringstream& output, std::strin
 }
 
 void
-_cxplat_leak_detector::unregister_allocation(uintptr_t address)
+cxplat_leak_detector_t::unregister_allocation(uintptr_t address)
 {
     std::unique_lock<std::mutex> lock(_mutex);
     if (!_allocations.contains(address)) {
@@ -87,7 +87,7 @@ _cxplat_leak_detector::unregister_allocation(uintptr_t address)
 }
 
 void
-_cxplat_leak_detector::dump_leaks()
+cxplat_leak_detector_t::dump_leaks()
 {
     std::unique_lock<std::mutex> lock(_mutex);
     for (auto& allocation : _allocations) {
