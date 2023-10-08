@@ -6,7 +6,7 @@
 
 #include <wdm.h>
 
-typedef struct _cxplat_preemptible_work_item
+typedef struct cxplat_preemptible_work_item_t
 {
     PIO_WORKITEM io_work_item;
     cxplat_work_item_routine_t work_item_routine;

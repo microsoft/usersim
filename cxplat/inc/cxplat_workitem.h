@@ -4,9 +4,9 @@
 
 CXPLAT_EXTERN_C_BEGIN
 
-typedef struct _cxplat_preemptible_work_item cxplat_preemptible_work_item_t;
+typedef struct cxplat_preemptible_work_item_t cxplat_preemptible_work_item_t;
 
-typedef void(*cxplat_work_item_routine_t)(
+typedef void (*cxplat_work_item_routine_t)(
     _In_ cxplat_preemptible_work_item_t* work_item, _In_opt_ void* work_item_context);
 
 /**

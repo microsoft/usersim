@@ -20,7 +20,7 @@
 
 #define CXPLAT_SUCCEEDED(status) SUCCEEDED((HRESULT)(status))
 
-typedef struct _cxplat_rundown_reference
+typedef struct cxplat_rundown_reference_t
 {
     void* reserved;
 } cxplat_rundown_reference_t;

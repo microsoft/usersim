@@ -38,14 +38,14 @@ typedef enum _usersim_code_integrity_state
     USERSIM_CODE_INTEGRITY_HYPERVISOR_KERNEL_MODE = 1
 } usersim_code_integrity_state_t;
 
-typedef struct _usersim_non_preemptible_work_item usersim_non_preemptible_work_item_t;
+typedef struct usersim_non_preemptible_work_item_t usersim_non_preemptible_work_item_t;
 
-typedef struct _usersim_trampoline_table usersim_trampoline_table_t;
+typedef struct usersim_trampoline_table_t usersim_trampoline_table_t;
 
 typedef uintptr_t usersim_lock_t;
 typedef uint8_t usersim_lock_state_t;
 
-typedef struct _usersim_process_state usersim_process_state_t;
+typedef struct usersim_process_state_t usersim_process_state_t;
 
 // A self-relative security descriptor.
 typedef struct _SECURITY_DESCRIPTOR usersim_security_descriptor_t;
@@ -78,7 +78,7 @@ typedef enum _usersim_page_protection
     USERSIM_PAGE_PROTECT_READ_EXECUTE,
 } usersim_page_protection_t;
 
-typedef struct _usersim_ring_descriptor usersim_ring_descriptor_t;
+typedef struct usersim_ring_descriptor_t usersim_ring_descriptor_t;
 
 /**
  * @brief Allocate pages from physical memory and create a mapping into the
@@ -495,7 +495,7 @@ usersim_trace_initiate();
 void
 usersim_trace_terminate();
 
-typedef struct _usersim_cryptographic_hash usersim_cryptographic_hash_t;
+typedef struct usersim_cryptographic_hash_t usersim_cryptographic_hash_t;
 
 /**
  * @brief Create a cryptographic hash object.

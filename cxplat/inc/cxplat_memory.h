@@ -12,13 +12,12 @@ CXPLAT_EXTERN_C_BEGIN
 
 // Values in this enum line up with POOL_FLAGS in Windows,
 // and other values are legal.
-typedef _Enum_is_bitflag_ enum
-{
-    CXPLAT_POOL_FLAG_NONE          = 0x00000000,
+typedef _Enum_is_bitflag_ enum {
+    CXPLAT_POOL_FLAG_NONE = 0x00000000,
     CXPLAT_POOL_FLAG_CACHE_ALIGNED = 0x00000008,
     CXPLAT_POOL_FLAG_UNINITIALIZED = 0x00000002,
-    CXPLAT_POOL_FLAG_NON_PAGED     = 0x00000040,
-    CXPLAT_POOL_FLAG_PAGED         = 0x00000100,
+    CXPLAT_POOL_FLAG_NON_PAGED = 0x00000040,
+    CXPLAT_POOL_FLAG_PAGED = 0x00000100,
 } cxplat_pool_flags_t;
 
 /**
@@ -29,7 +28,7 @@ typedef _Enum_is_bitflag_ enum
  *  length.
  *
  */
-typedef struct _cxplat_utf8_string
+typedef struct cxplat_utf8_string_t
 {
     uint8_t* value;
     size_t length;
@@ -47,8 +46,8 @@ typedef struct _cxplat_utf8_string
  * @param[in] tag Pool tag to use.
  * @returns Pointer to memory block allocated, or null on failure.
  */
-__drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void* cxplat_allocate(
-    cxplat_pool_flags_t pool_flags, size_t size, uint32_t tag);
+__drv_allocatesMem(Mem) _Must_inspect_result_
+    _Ret_writes_maybenull_(size) void* cxplat_allocate(cxplat_pool_flags_t pool_flags, size_t size, uint32_t tag);
 
 /**
  * @brief Reallocate memory.
@@ -60,11 +59,7 @@ __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(size) void*
  * @returns Pointer to memory block allocated, or null on failure.
  */
 __drv_allocatesMem(Mem) _Must_inspect_result_ _Ret_writes_maybenull_(new_size) void* cxplat_reallocate(
-    _In_ _Post_invalid_ void* memory,
-    cxplat_pool_flags_t pool_flags,
-    size_t old_size,
-    size_t new_size,
-    uint32_t tag);
+    _In_ _Post_invalid_ void* memory, cxplat_pool_flags_t pool_flags, size_t old_size, size_t new_size, uint32_t tag);
 
 /**
  * @brief Free memory.
