@@ -11,6 +11,7 @@ add_library(cxplat_winkernel STATIC
   ../../inc/winkernel/cxplat_winkernel.h
   ../memory.c
   memory_winkernel.c
+  processor_winkernel.c
   rundown_winkernel.c
   workitem_winkernel.c
 )

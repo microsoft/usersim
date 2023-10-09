@@ -16,6 +16,7 @@ add_library(cxplat_winuser STATIC
   $<$<CONFIG:Debug>:leak_detector.h>
   ../memory.c
   memory_winuser.cpp
+  processor_winuser.cpp
   rundown_winuser.cpp
   size_winuser.c
   workitem_winuser.cpp
