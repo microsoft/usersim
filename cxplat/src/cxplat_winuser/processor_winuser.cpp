@@ -55,6 +55,7 @@ cxplat_winuser_initialize_processor_info()
         info->Group.ActiveGroupCount * sizeof(cxplat_processor_group_info_t),
         CXPLAT_TAG_PROCESSOR_GROUP_INFO);
     if (_cxplat_processor_group_info == nullptr) {
+        cxplat_free(info, CXPLAT_POOL_FLAG_NON_PAGED, CXPLAT_TAG_LOGICAL_PROCESSOR_INFO);
         return CXPLAT_STATUS_NO_MEMORY;
     }
 
@@ -64,6 +65,7 @@ cxplat_winuser_initialize_processor_info()
         _cxplat_processor_group_info[i].Offset = current_processor_count;
         current_processor_count += info->Group.GroupInfo[i].MaximumProcessorCount;
     }
+    cxplat_free(info, CXPLAT_POOL_FLAG_NON_PAGED, CXPLAT_TAG_LOGICAL_PROCESSOR_INFO);
     return CXPLAT_STATUS_SUCCESS;
 }
 
