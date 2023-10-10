@@ -89,3 +89,9 @@ cxplat_get_current_processor_number()
     GetCurrentProcessorNumberEx(&processor_number);
     return _cxplat_processor_group_info[processor_number.Group].Offset + processor_number.Number;
 }
+
+_Must_inspect_result_ uint32_t
+cxplat_get_active_processor_count()
+{
+    return GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
+}

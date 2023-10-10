@@ -15,3 +15,9 @@ cxplat_get_current_processor_number()
 {
     return KeGetCurrentProcessorIndex();
 }
+
+_Must_inspect_result_ uint32_t
+cxplat_get_active_processor_count()
+{
+    return KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS);
+}

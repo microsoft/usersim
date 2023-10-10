@@ -14,6 +14,13 @@ _Must_inspect_result_ uint32_t
 cxplat_get_current_processor_number();
 
 /**
+ * @brief Get the number of currently active processors on the system.
+ * @returns The number of currently active processors on the system.
+ */
+_Must_inspect_result_ uint32_t
+cxplat_get_active_processor_count();
+
+/**
  * @brief Get the maximum number of logical processors on the system.
  * @returns The maximum number of logical processors on the system.
  */
