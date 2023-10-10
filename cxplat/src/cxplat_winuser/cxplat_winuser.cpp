@@ -159,8 +159,14 @@ cxplat_initialize()
         }
 #endif
 
-        cxplat_status_t status = cxplat_winuser_initialize_thread_pool();
+        cxplat_status_t status = cxplat_winuser_initialize_processor_info();
         if (!CXPLAT_SUCCEEDED(status)) {
+            return status;
+        }
+
+        status = cxplat_winuser_initialize_thread_pool();
+        if (!CXPLAT_SUCCEEDED(status)) {
+            cxplat_winuser_clean_up_processor_info();
             return status;
         }
     } catch (const std::bad_alloc&) {
@@ -185,6 +191,7 @@ cxplat_cleanup()
     }
 
     cxplat_winuser_clean_up_thread_pool();
+    cxplat_winuser_clean_up_processor_info();
 
 #ifdef CXPLAT_DEBUGGING_FEATURES_ENABLED
     if (_cxplat_leak_detector_ptr) {

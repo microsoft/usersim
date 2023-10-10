@@ -57,6 +57,9 @@
     <ClInclude Include="..\..\inc\winuser\cxplat_fault_injection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\inc\cxplat_processor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="fault_injection.cpp">
@@ -81,6 +84,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="workitem_winuser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="processor_winuser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

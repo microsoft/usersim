@@ -33,5 +33,8 @@
     <ClCompile Include="cxplat_fault_injection_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cxplat_processor_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
