@@ -6,6 +6,7 @@
 #include "utilities.h"
 
 #include <format>
+#include <mutex>
 #include <sstream>
 #include <vector>
 #undef ASSERT
