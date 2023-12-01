@@ -143,9 +143,11 @@ _pool_type_to_flags(POOL_TYPE pool_type, bool initialize)
     case PagedPoolCacheAligned:
         return (cxplat_pool_flags_t)(pool_flags | CXPLAT_POOL_FLAG_PAGED | CXPLAT_POOL_FLAG_CACHE_ALIGNED);
     default:
-        // Others not yet implemented.
+        // Others not yet implemented -> bug check.
         KeBugCheckCPP(BAD_POOL_CALLER);
+#ifdef _DEBUG
         return CXPLAT_POOL_FLAG_NONE;
+#endif
     }
 }
 
@@ -157,7 +159,8 @@ ExAllocatePoolUninitializedCPP(_In_ POOL_TYPE pool_type, _In_ size_t number_of_b
     }
 
     cxplat_pool_flags_t pool_flags = _pool_type_to_flags(pool_type, false);
-    usersim_allocation_header_t* header = (usersim_allocation_header_t*)cxplat_allocate(pool_flags, sizeof(*header) + number_of_bytes, tag);
+    usersim_allocation_header_t* header =
+        (usersim_allocation_header_t*)cxplat_allocate(pool_flags, sizeof(*header) + number_of_bytes, tag);
     if (header) {
         header->pool_flags = (cxplat_pool_flags_t)pool_flags;
     }
@@ -180,8 +183,8 @@ ExAllocatePool2CPP(__drv_strictTypeMatch(__drv_typeExpr) POOL_FLAGS pool_flags, 
     if (!(pool_flags & POOL_FLAG_NON_PAGED)) {
         ASSERT(KeGetCurrentIrql() < DISPATCH_LEVEL);
     }
-    usersim_allocation_header_t* header =
-        (usersim_allocation_header_t*)cxplat_allocate((cxplat_pool_flags_t)pool_flags, sizeof(*header) + number_of_bytes, tag);
+    usersim_allocation_header_t* header = (usersim_allocation_header_t*)cxplat_allocate(
+        (cxplat_pool_flags_t)pool_flags, sizeof(*header) + number_of_bytes, tag);
     if (header) {
         header->pool_flags = (cxplat_pool_flags_t)pool_flags;
     }
@@ -189,8 +192,7 @@ ExAllocatePool2CPP(__drv_strictTypeMatch(__drv_typeExpr) POOL_FLAGS pool_flags, 
 }
 
 _Ret_maybenull_ void*
-ExAllocatePoolWithTagCPP(
-    __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, size_t number_of_bytes, ULONG tag)
+ExAllocatePoolWithTagCPP(__drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE pool_type, size_t number_of_bytes, ULONG tag)
 {
     cxplat_pool_flags_t pool_flags = _pool_type_to_flags(pool_type, true);
     return ExAllocatePool2CPP(pool_flags, number_of_bytes, tag);

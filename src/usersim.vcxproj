@@ -103,7 +103,6 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\inc;$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -117,7 +116,6 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\inc;$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -133,7 +131,6 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\inc;$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -149,7 +146,6 @@
       <PreprocessorDefinitions>USERSIM_SOURCE;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\inc;$(ProjectDir)..\cxplat\inc;$(ProjectDir)..\cxplat\inc\winuser;$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
@@ -165,7 +161,6 @@
       <PreprocessorDefinitions>USERSIM_SOURCE;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\inc;$(ProjectDir)..\cxplat\inc;$(ProjectDir)..\cxplat\inc\winuser;$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -182,7 +177,6 @@
       <PreprocessorDefinitions>USERSIM_SOURCE;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\inc;$(ProjectDir)..\cxplat\inc;$(ProjectDir)..\cxplat\inc\winuser;$(WindowsSdkDir)Include\10.0.22621.0\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
