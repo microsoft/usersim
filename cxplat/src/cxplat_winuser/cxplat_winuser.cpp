@@ -159,14 +159,13 @@ cxplat_initialize()
         }
 #endif
 
-        cxplat_status_t status = cxplat_winuser_initialize_processor_info();
+        cxplat_status_t status = cxplat_winuser_initialize_thread_pool();
         if (!CXPLAT_SUCCEEDED(status)) {
             return status;
         }
 
-        status = cxplat_winuser_initialize_thread_pool();
+        status = cxplat_winuser_initialize_processor_info();
         if (!CXPLAT_SUCCEEDED(status)) {
-            cxplat_winuser_clean_up_processor_info();
             return status;
         }
     } catch (const std::bad_alloc&) {
