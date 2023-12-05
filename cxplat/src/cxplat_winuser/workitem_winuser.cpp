@@ -139,6 +139,10 @@ Exit:
 void
 cxplat_wait_for_preemptible_work_items_complete()
 {
+    if (!_pool) {
+        return;
+    }
+
     cxplat_wait_for_rundown_protection_release(&_cxplat_preemptible_work_items_rundown_reference);
 }
 
