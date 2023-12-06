@@ -38,6 +38,8 @@ int32_t _usersim_platform_initiate_count = 0;
 static uint32_t _usersim_platform_maximum_group_count = 0;
 static uint32_t _usersim_platform_maximum_processor_count = 0;
 
+static bool _cxplat_initialized = false;
+
 // The starting index of the first processor in each group.
 // Used to compute the current CPU index.
 static std::vector<uint32_t> _usersim_platform_group_to_index_map;
@@ -58,6 +60,8 @@ usersim_platform_initiate()
         result = STATUS_NO_MEMORY;
         goto Exit;
     }
+
+    _cxplat_initialized = true;
 
     try {
         _usersim_platform_maximum_group_count = GetMaximumProcessorGroupCount();
@@ -89,7 +93,6 @@ Exit:
     if (result != STATUS_SUCCESS) {
         // Clean up since usersim_platform_terminate() will not be called by the caller.
         usersim_platform_terminate();
-        cxplat_cleanup();
     }
     return result;
 }
@@ -103,7 +106,10 @@ usersim_platform_terminate()
     usersim_free_threadpool_timers();
     usersim_clean_up_dpcs();
     usersim_clean_up_irql();
-    cxplat_cleanup();
+    if (_cxplat_initialized) {
+        cxplat_cleanup();
+        _cxplat_initialized = false;
+    }
 
     int32_t count = InterlockedDecrement((volatile long*)&_usersim_platform_initiate_count);
     if (count < 0) {
