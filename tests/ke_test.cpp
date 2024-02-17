@@ -438,3 +438,16 @@ TEST_CASE("event", "[ke]")
     REQUIRE(wait_status == STATUS_TIMEOUT);
     REQUIRE(end_time - start_time >= 1000);
 }
+
+TEST_CASE("processor count", "[ke]")
+{
+    uint32_t count = KeQueryMaximumProcessorCount();
+
+    REQUIRE(count > 0);
+
+    for (uint32_t i = 0; i < count; i++) {
+        PROCESSOR_NUMBER processor_number;
+        REQUIRE(NT_SUCCESS(KeGetProcessorNumberFromIndex(i)));
+        REQUIRE(KeGetProcessorIndexFromNumber(&processor_number) == i);
+    }
+}

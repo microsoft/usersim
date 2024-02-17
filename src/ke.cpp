@@ -620,6 +620,25 @@ class _usersim_emulated_dpc
     bool terminate;
 };
 
+NTSTATUS
+KeGetProcessorNumberFromIndex(ULONG ProcessorIndex, _Out_ PPROCESSOR_NUMBER ProcNumber)
+{
+    if (ProcessorIndex >= GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS)) {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    ProcNumber->Group = (WORD)(ProcessorIndex / 64);
+    ProcNumber->Number = (UCHAR)(ProcessorIndex % 64);
+    ProcNumber->Reserved = 0;
+    return STATUS_SUCCESS;
+}
+
+ULONG
+KeGetProcessorIndexFromNumber(_In_ PPROCESSOR_NUMBER ProcNumber)
+{
+    return (ULONG)ProcNumber->Group * 64 + (ULONG)ProcNumber->Number;
+}
+
 void
 KeInitializeDpc(
     _Out_ __drv_aliasesMem PRKDPC dpc,
@@ -636,6 +655,12 @@ void
 KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number)
 {
     dpc->cpu_id = number;
+}
+
+void
+KeSetTargetProcessorDpcEx(_Inout_ PRKDPC dpc, PPROCESSOR_NUMBER proc_number)
+{
+    dpc->cpu_id = KeGetProcessorIndexFromNumber(proc_number);
 }
 
 BOOLEAN

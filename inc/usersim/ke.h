@@ -45,6 +45,14 @@ USERSIM_API
 ULONG
 KeGetCurrentProcessorNumberEx(_Out_opt_ PPROCESSOR_NUMBER ProcNumber);
 
+USERSIM_API
+NTSTATUS
+KeGetProcessorNumberFromIndex(ULONG ProcessorIndex, _Out_ PPROCESSOR_NUMBER ProcNumber);
+
+USERSIM_API
+ULONG
+KeGetProcessorIndexFromNumber(_In_ PPROCESSOR_NUMBER ProcNumber);
+
 #pragma region irqls
 typedef uint8_t KIRQL;
 typedef KIRQL* PKIRQL;
@@ -245,7 +253,7 @@ struct _KDPC
 {
     usersim_list_entry_t entry;
     void* context;
-    CCHAR cpu_id;
+    uint32_t cpu_id;
     void* parameter_1;
     void* parameter_2;
     PKDEFERRED_ROUTINE work_item_routine;
@@ -273,6 +281,10 @@ KeFlushQueuedDpcs();
 USERSIM_API
 void
 KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number);
+
+USERSIM_API
+void
+KeSetTargetProcessorDpcEx(_Inout_ PRKDPC dpc, PPROCESSOR_NUMBER proc_number);
 
 void
 usersim_initialize_dpcs();
