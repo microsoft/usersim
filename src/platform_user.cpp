@@ -394,7 +394,6 @@ KeGetProcessorIndexFromNumber(_In_ PPROCESSOR_NUMBER ProcNumber)
 NTSTATUS
 KeGetProcessorNumberFromIndex(ULONG ProcessorIndex, _Out_ PPROCESSOR_NUMBER ProcNumber)
 {
-
     if (ProcessorIndex >= _usersim_platform_maximum_processor_count) {
         return STATUS_INVALID_PARAMETER;
     }
