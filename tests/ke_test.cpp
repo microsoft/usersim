@@ -93,6 +93,12 @@ TEST_CASE("processor count", "[ke]")
     REQUIRE(KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS) == count);
     REQUIRE(KeQueryActiveProcessorCount() == count);
     REQUIRE(KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS) == count);
+
+    for (uint32_t i = 0; i < count; i++) {
+        PROCESSOR_NUMBER processor_number;
+        REQUIRE(NT_SUCCESS(KeGetProcessorNumberFromIndex(i, &processor_number)));
+        REQUIRE(KeGetProcessorIndexFromNumber(&processor_number) == i);
+    }
 }
 
 TEST_CASE("semaphore", "[ke]")

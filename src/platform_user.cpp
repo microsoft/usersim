@@ -381,7 +381,38 @@ KeGetCurrentProcessorNumberEx(_Out_opt_ PPROCESSOR_NUMBER ProcNumber)
     }
 
     // Compute the CPU index from the group and number.
-    return _usersim_platform_group_to_index_map[processor_number.Group] + processor_number.Number;
+    return KeGetProcessorIndexFromNumber(&processor_number);
+}
+
+ULONG
+KeGetProcessorIndexFromNumber(_In_ PPROCESSOR_NUMBER ProcNumber)
+{
+    // Compute the CPU index from the group and number.
+    return _usersim_platform_group_to_index_map[ProcNumber->Group] + ProcNumber->Number;
+}
+
+NTSTATUS
+KeGetProcessorNumberFromIndex(ULONG ProcessorIndex, _Out_ PPROCESSOR_NUMBER ProcNumber)
+{
+    if (ProcessorIndex >= _usersim_platform_maximum_processor_count) {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    // Find the group that contains the processor index.
+    for (size_t i = 0; i < _usersim_platform_group_to_index_map.size(); i++) {
+        if (ProcessorIndex < _usersim_platform_group_to_index_map[i]) {
+            // This is the first group with a processor index greater than the input.
+            // The previous group contains the processor index and the number is the difference.
+            ProcNumber->Group = (uint16_t)(i - 1);
+            ProcNumber->Number = (uint8_t)(ProcessorIndex - _usersim_platform_group_to_index_map[i - 1]);
+            return STATUS_SUCCESS;
+        }
+    }
+
+    // The processor index is in the last group.
+    ProcNumber->Group = (uint16_t)(_usersim_platform_group_to_index_map.size() - 1);
+    ProcNumber->Number = (uint8_t)(ProcessorIndex - _usersim_platform_group_to_index_map.back());
+    return STATUS_SUCCESS;
 }
 
 uint64_t

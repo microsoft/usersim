@@ -638,6 +638,12 @@ KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number)
     dpc->cpu_id = number;
 }
 
+void
+KeSetTargetProcessorDpcEx(_Inout_ PRKDPC dpc, PPROCESSOR_NUMBER proc_number)
+{
+    dpc->cpu_id = KeGetProcessorIndexFromNumber(proc_number);
+}
+
 BOOLEAN
 KeInsertQueueDpc(_Inout_ PRKDPC dpc, _In_opt_ PVOID system_argument1, _In_opt_ __drv_aliasesMem PVOID system_argument2)
 {
