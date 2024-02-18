@@ -638,10 +638,11 @@ KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number)
     dpc->cpu_id = number;
 }
 
-void
+NTSTATUS
 KeSetTargetProcessorDpcEx(_Inout_ PRKDPC dpc, PPROCESSOR_NUMBER proc_number)
 {
     dpc->cpu_id = KeGetProcessorIndexFromNumber(proc_number);
+    return STATUS_SUCCESS;
 }
 
 BOOLEAN

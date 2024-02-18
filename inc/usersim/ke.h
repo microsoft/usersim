@@ -283,7 +283,7 @@ void
 KeSetTargetProcessorDpc(_Inout_ PRKDPC dpc, CCHAR number);
 
 USERSIM_API
-void
+NTSTATUS
 KeSetTargetProcessorDpcEx(_Inout_ PRKDPC dpc, PPROCESSOR_NUMBER proc_number);
 
 void
