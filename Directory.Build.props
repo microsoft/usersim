@@ -10,6 +10,7 @@
   <Import Project="$(ParentDirectoryBuildProps)" Condition="Exists('$(ParentDirectoryBuildProps)')"/>
   <ItemDefinitionGroup>
     <ClCompile>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
