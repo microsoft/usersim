@@ -17,6 +17,13 @@ PsGetCurrentProcessId();
 USERSIM_API
 _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE PsGetCurrentThreadId();
 
+typedef struct _CLIENT_ID
+{
+    HANDLE UniqueProcess;
+    HANDLE UniqueThread;
+} CLIENT_ID;
+typedef CLIENT_ID* PCLIENT_ID;
+
 typedef struct _PS_CREATE_NOTIFY_INFO
 {
     _In_ SIZE_T Size;
@@ -31,7 +38,7 @@ typedef struct _PS_CREATE_NOTIFY_INFO
         };
     };
     _In_ HANDLE ParentProcessId;
-    _In_ HANDLE CreatingThreadId;
+    _In_ CLIENT_ID CreatingThreadId;
     _Inout_ struct _FILE_OBJECT* FileObject;
     _In_ PCUNICODE_STRING ImageFileName;
     _In_opt_ PCUNICODE_STRING CommandLine;
@@ -44,5 +51,10 @@ typedef VOID (*PCREATE_PROCESS_NOTIFY_ROUTINE_EX)(
 USERSIM_API
 NTSTATUS
 PsSetCreateProcessNotifyRoutineEx(_In_ PCREATE_PROCESS_NOTIFY_ROUTINE_EX notify_routine, _In_ BOOLEAN remove);
+
+USERSIM_API
+void
+usersime_invoke_process_creation_notify_routine(
+    _Inout_ PEPROCESS process, _In_ HANDLE process_id, _Inout_opt_ PPS_CREATE_NOTIFY_INFO create_info);
 
 CXPLAT_EXTERN_C_END
