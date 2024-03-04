@@ -130,6 +130,9 @@ typedef struct _UNICODE_STRING
 } UNICODE_STRING, *PUNICODE_STRING;
 typedef const UNICODE_STRING* PCUNICODE_STRING;
 
+typedef STRING UTF8_STRING;
+typedef PSTRING PUTF8_STRING;
+
 #define DECLARE_CONST_UNICODE_STRING(_var, _string)                                                                   \
     const WCHAR _var##_buffer[] = _string;                                                                            \
     __pragma(warning(push)) __pragma(warning(disable : 4221)) __pragma(warning(disable : 4204))                       \
@@ -144,6 +147,65 @@ _IRQL_requires_max_(DISPATCH_LEVEL) _At_(destination_string->Buffer, _Post_equal
         _At_(destination_string->MaximumLength, _Post_equal_to_((_String_length_(source_string) + 1) * sizeof(WCHAR)))
             USERSIM_API VOID NTAPI
     RtlInitUnicodeString(_Out_ PUNICODE_STRING destination_string, _In_opt_z_ __drv_aliasesMem PCWSTR source_string);
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+USERSIM_API
+VOID
+NTAPI
+RtlInitUTF8String(
+    _Out_ PUTF8_STRING DestinationString,
+    _In_opt_z_ __drv_aliasesMem const char* SourceString
+    );
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+USERSIM_API
+VOID
+NTAPI
+RtlFreeUnicodeString(
+    _Inout_ _At_(UnicodeString->Buffer, _Frees_ptr_opt_)
+        PUNICODE_STRING UnicodeString
+    );
+
+_When_(AllocateDestinationString,
+       _At_(DestinationString->MaximumLength,
+            _Out_range_(<=, (SourceString->MaximumLength / sizeof(WCHAR)))))
+_When_(!AllocateDestinationString,
+       _At_(DestinationString->Buffer, _Const_)
+       _At_(DestinationString->MaximumLength, _Const_))
+_IRQL_requires_max_(PASSIVE_LEVEL)
+_When_(AllocateDestinationString, _Must_inspect_result_)
+USERSIM_API
+NTSTATUS
+NTAPI
+RtlUnicodeStringToUTF8String(
+    _When_(AllocateDestinationString, _Out_ _At_(DestinationString->Buffer, __drv_allocatesMem(Mem)))
+    _When_(!AllocateDestinationString, _Inout_)
+        PUTF8_STRING DestinationString,
+    _In_ PCUNICODE_STRING SourceString,
+    _In_ BOOLEAN AllocateDestinationString
+    );
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+_Must_inspect_result_
+NTSYSAPI
+NTSTATUS
+NTAPI
+RtlUTF8StringToUnicodeString(
+    _When_(AllocateDestinationString, _Out_ _At_(DestinationString->Buffer, __drv_allocatesMem(Mem)))
+    _When_(!AllocateDestinationString, _Inout_)
+        PUNICODE_STRING DestinationString,
+    _In_ PUTF8_STRING SourceString,
+    _In_ BOOLEAN AllocateDestinationString
+    );
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+USERSIM_API
+void
+NTAPI
+RtlFreeUTF8String(
+    _Inout_ _At_(utf8String->Buffer, _Frees_ptr_opt_)
+        PUTF8_STRING utf8String
+    );
 
 typedef struct _OBJECT_ATTRIBUTES
 {

@@ -84,3 +84,29 @@ TEST_CASE("RtlInitUnicodeString", "[rtl]")
     REQUIRE(unicode_string.Length == 8);
     REQUIRE(unicode_string.MaximumLength == 10);
 }
+
+TEST_CASE("RtlUnicodeStringToUTF8String", "[rtl]")
+{
+    UNICODE_STRING unicode_string = {0};
+    RtlInitUnicodeString(&unicode_string, L"test");
+    UTF8_STRING utf8_string = {0};
+    REQUIRE(RtlUnicodeStringToUTF8String(&utf8_string, &unicode_string, TRUE) == STATUS_SUCCESS);
+    REQUIRE(utf8_string.Buffer != nullptr);
+    REQUIRE(utf8_string.Length == 4);
+    REQUIRE(utf8_string.MaximumLength == 5);
+    REQUIRE(strcmp(utf8_string.Buffer, "test") == 0);
+    RtlFreeUTF8String(&utf8_string);
+}
+
+TEST_CASE("RtlUTF8StringToUnicodeString", "[rtl]")
+{
+    UTF8_STRING utf8_string = {0};
+    RtlInitUTF8String(&utf8_string, "test");
+    UNICODE_STRING unicode_string = {0};
+    REQUIRE(RtlUTF8StringToUnicodeString(&unicode_string, &utf8_string, TRUE) == STATUS_SUCCESS);
+    REQUIRE(unicode_string.Buffer != nullptr);
+    REQUIRE(unicode_string.Length == 8);
+    REQUIRE(unicode_string.MaximumLength == 10);
+    REQUIRE(wcscmp(unicode_string.Buffer, L"test") == 0);
+    RtlFreeUnicodeString(&unicode_string);
+}
