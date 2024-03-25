@@ -148,64 +148,34 @@ _IRQL_requires_max_(DISPATCH_LEVEL) _At_(destination_string->Buffer, _Post_equal
             USERSIM_API VOID NTAPI
     RtlInitUnicodeString(_Out_ PUNICODE_STRING destination_string, _In_opt_z_ __drv_aliasesMem PCWSTR source_string);
 
-_IRQL_requires_max_(DISPATCH_LEVEL)
-USERSIM_API
-VOID
-NTAPI
-RtlInitUTF8String(
-    _Out_ PUTF8_STRING DestinationString,
-    _In_opt_z_ __drv_aliasesMem const char* SourceString
-    );
+_IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API VOID NTAPI
+    RtlInitUTF8String(_Out_ PUTF8_STRING DestinationString, _In_opt_z_ __drv_aliasesMem const char* SourceString);
 
-_IRQL_requires_max_(PASSIVE_LEVEL)
-USERSIM_API
-VOID
-NTAPI
-RtlFreeUnicodeString(
-    _Inout_ _At_(UnicodeString->Buffer, _Frees_ptr_opt_)
-        PUNICODE_STRING UnicodeString
-    );
+_IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API VOID NTAPI
+    RtlFreeUnicodeString(_Inout_ _At_(UnicodeString->Buffer, _Frees_ptr_opt_) PUNICODE_STRING UnicodeString);
 
-_When_(AllocateDestinationString,
-       _At_(DestinationString->MaximumLength,
-            _Out_range_(<=, (SourceString->MaximumLength / sizeof(WCHAR)))))
-_When_(!AllocateDestinationString,
-       _At_(DestinationString->Buffer, _Const_)
-       _At_(DestinationString->MaximumLength, _Const_))
-_IRQL_requires_max_(PASSIVE_LEVEL)
-_When_(AllocateDestinationString, _Must_inspect_result_)
-USERSIM_API
-NTSTATUS
-NTAPI
-RtlUnicodeStringToUTF8String(
+_When_(
+    AllocateDestinationString,
+    _At_(DestinationString->MaximumLength, _Out_range_(<=, (SourceString->MaximumLength / sizeof(WCHAR)))))
+    _When_(
+        !AllocateDestinationString,
+        _At_(DestinationString->Buffer, _Const_) _At_(DestinationString->MaximumLength, _Const_))
+        _IRQL_requires_max_(PASSIVE_LEVEL)
+            _When_(AllocateDestinationString, _Must_inspect_result_) USERSIM_API NTSTATUS NTAPI
+    RtlUnicodeStringToUTF8String(
+        _When_(AllocateDestinationString, _Out_ _At_(DestinationString->Buffer, __drv_allocatesMem(Mem)))
+            _When_(!AllocateDestinationString, _Inout_) PUTF8_STRING DestinationString,
+        _In_ PCUNICODE_STRING SourceString,
+        _In_ BOOLEAN AllocateDestinationString);
+
+_IRQL_requires_max_(PASSIVE_LEVEL) _Must_inspect_result_ NTSYSAPI NTSTATUS NTAPI RtlUTF8StringToUnicodeString(
     _When_(AllocateDestinationString, _Out_ _At_(DestinationString->Buffer, __drv_allocatesMem(Mem)))
-    _When_(!AllocateDestinationString, _Inout_)
-        PUTF8_STRING DestinationString,
-    _In_ PCUNICODE_STRING SourceString,
-    _In_ BOOLEAN AllocateDestinationString
-    );
-
-_IRQL_requires_max_(PASSIVE_LEVEL)
-_Must_inspect_result_
-NTSYSAPI
-NTSTATUS
-NTAPI
-RtlUTF8StringToUnicodeString(
-    _When_(AllocateDestinationString, _Out_ _At_(DestinationString->Buffer, __drv_allocatesMem(Mem)))
-    _When_(!AllocateDestinationString, _Inout_)
-        PUNICODE_STRING DestinationString,
+        _When_(!AllocateDestinationString, _Inout_) PUNICODE_STRING DestinationString,
     _In_ PUTF8_STRING SourceString,
-    _In_ BOOLEAN AllocateDestinationString
-    );
+    _In_ BOOLEAN AllocateDestinationString);
 
-_IRQL_requires_max_(PASSIVE_LEVEL)
-USERSIM_API
-void
-NTAPI
-RtlFreeUTF8String(
-    _Inout_ _At_(utf8String->Buffer, _Frees_ptr_opt_)
-        PUTF8_STRING utf8String
-    );
+_IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API void NTAPI
+    RtlFreeUTF8String(_Inout_ _At_(utf8String->Buffer, _Frees_ptr_opt_) PUTF8_STRING utf8String);
 
 typedef struct _OBJECT_ATTRIBUTES
 {
@@ -216,6 +186,104 @@ typedef struct _OBJECT_ATTRIBUTES
     SECURITY_DESCRIPTOR* SecurityDescriptor;
     SECURITY_QUALITY_OF_SERVICE* SecurityQualityOfService;
 } OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
+
+typedef ULONG CLONG;
+
+typedef struct _RTL_BALANCED_LINKS
+{
+    struct _RTL_BALANCED_LINKS* Parent;
+    struct _RTL_BALANCED_LINKS* LeftChild;
+    struct _RTL_BALANCED_LINKS* RightChild;
+    CHAR Balance;
+    UCHAR Reserved[3];
+} RTL_BALANCED_LINKS;
+typedef RTL_BALANCED_LINKS* PRTL_BALANCED_LINKS;
+
+typedef enum _TABLE_SEARCH_RESULT
+{
+    TableEmptyTree,
+    TableFoundNode,
+    TableInsertAsLeft,
+    TableInsertAsRight
+} TABLE_SEARCH_RESULT;
+
+typedef enum _RTL_GENERIC_COMPARE_RESULTS
+{
+    GenericLessThan,
+    GenericGreaterThan,
+    GenericEqual
+} RTL_GENERIC_COMPARE_RESULTS;
+
+typedef RTL_GENERIC_COMPARE_RESULTS (*PRTL_AVL_COMPARE_ROUTINE)(
+    _In_ struct _RTL_AVL_TABLE* Table, _In_ PVOID FirstStruct, _In_ PVOID SecondStruct);
+
+typedef PVOID (*PRTL_AVL_ALLOCATE_ROUTINE)(_In_ struct _RTL_AVL_TABLE* Table, _In_ CLONG ByteSize);
+
+typedef VOID (*PRTL_AVL_FREE_ROUTINE)(_In_ struct _RTL_AVL_TABLE* Table, _In_ PVOID Buffer);
+
+typedef struct _RTL_AVL_TABLE
+{
+    RTL_BALANCED_LINKS BalancedRoot;
+    PVOID OrderedPointer;
+    ULONG WhichOrderedElement;
+    ULONG NumberGenericTableElements;
+    ULONG DepthOfTree;
+    PRTL_BALANCED_LINKS RestartKey;
+    ULONG DeleteCount;
+    PRTL_AVL_COMPARE_ROUTINE CompareRoutine;
+    PRTL_AVL_ALLOCATE_ROUTINE AllocateRoutine;
+    PRTL_AVL_FREE_ROUTINE FreeRoutine;
+    PVOID TableContext;
+} RTL_AVL_TABLE, *PRTL_AVL_TABLE;
+
+NTSYSAPI VOID
+RtlInitializeGenericTableAvl(
+    _Out_ PRTL_AVL_TABLE Table,
+    _In_ PRTL_AVL_COMPARE_ROUTINE CompareRoutine,
+    _In_ PRTL_AVL_ALLOCATE_ROUTINE AllocateRoutine,
+    _In_ PRTL_AVL_FREE_ROUTINE FreeRoutine,
+    _In_opt_ PVOID TableContext);
+
+NTSYSAPI BOOLEAN
+RtlDeleteElementGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ PVOID Buffer);
+
+NTSYSAPI PVOID
+RtlEnumerateGenericTableWithoutSplayingAvl(_In_ PRTL_AVL_TABLE Table, _Inout_ PVOID* RestartKey);
+
+NTSYSAPI PVOID
+RtlEnumerateGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ BOOLEAN Restart);
+
+NTSYSAPI PVOID
+RtlGetElementGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ ULONG I);
+
+NTSYSAPI PVOID
+RtlInsertElementGenericTableAvl(
+    _In_ PRTL_AVL_TABLE Table, _In_ PVOID Buffer, _In_ CLONG BufferSize, _Out_opt_ PBOOLEAN NewElement);
+
+NTSYSAPI PVOID
+RtlInsertElementGenericTableFullAvl(
+    _In_ PRTL_AVL_TABLE Table,
+    _In_ PVOID Buffer,
+    _In_ CLONG BufferSize,
+    _Out_opt_ PBOOLEAN NewElement,
+    _In_ PVOID NodeOrParent,
+    _In_ TABLE_SEARCH_RESULT SearchResult);
+
+NTSYSAPI BOOLEAN
+RtlIsGenericTableEmptyAvl(_In_ PRTL_AVL_TABLE Table);
+
+NTSYSAPI PVOID
+RtlLookupElementGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ PVOID Buffer);
+
+NTSYSAPI PVOID
+RtlLookupElementGenericTableFullAvl(
+    _In_ PRTL_AVL_TABLE Table, _In_ PVOID Buffer, _Out_ PVOID* NodeOrParent, _Out_ TABLE_SEARCH_RESULT* SearchResult);
+
+NTSYSAPI PVOID
+RtlLookupFirstMatchingElementGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ PVOID Buffer, _In_ PVOID* RestartKey);
+
+NTSYSAPI ULONG
+RtlNumberGenericTableElementsAvl(_In_ PRTL_AVL_TABLE Table);
 
 // Include Rtl* implementations from ntdll.lib.
 #pragma comment(lib, "ntdll.lib")
