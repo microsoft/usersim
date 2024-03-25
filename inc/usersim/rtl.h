@@ -244,18 +244,6 @@ RtlInitializeGenericTableAvl(
     _In_ PRTL_AVL_FREE_ROUTINE FreeRoutine,
     _In_opt_ PVOID TableContext);
 
-NTSYSAPI BOOLEAN
-RtlDeleteElementGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ PVOID Buffer);
-
-NTSYSAPI PVOID
-RtlEnumerateGenericTableWithoutSplayingAvl(_In_ PRTL_AVL_TABLE Table, _Inout_ PVOID* RestartKey);
-
-NTSYSAPI PVOID
-RtlEnumerateGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ BOOLEAN Restart);
-
-NTSYSAPI PVOID
-RtlGetElementGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ ULONG I);
-
 NTSYSAPI PVOID
 RtlInsertElementGenericTableAvl(
     _In_ PRTL_AVL_TABLE Table, _In_ PVOID Buffer, _In_ CLONG BufferSize, _Out_opt_ PBOOLEAN NewElement);
@@ -270,7 +258,10 @@ RtlInsertElementGenericTableFullAvl(
     _In_ TABLE_SEARCH_RESULT SearchResult);
 
 NTSYSAPI BOOLEAN
-RtlIsGenericTableEmptyAvl(_In_ PRTL_AVL_TABLE Table);
+RtlDeleteElementGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ PVOID Buffer);
+
+NTSYSAPI PVOID
+RtlGetElementGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ ULONG I);
 
 NTSYSAPI PVOID
 RtlLookupElementGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ PVOID Buffer);
@@ -281,6 +272,15 @@ RtlLookupElementGenericTableFullAvl(
 
 NTSYSAPI PVOID
 RtlLookupFirstMatchingElementGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ PVOID Buffer, _In_ PVOID* RestartKey);
+
+NTSYSAPI PVOID
+RtlEnumerateGenericTableAvl(_In_ PRTL_AVL_TABLE Table, _In_ BOOLEAN Restart);
+
+NTSYSAPI PVOID
+RtlEnumerateGenericTableWithoutSplayingAvl(_In_ PRTL_AVL_TABLE Table, _Inout_ PVOID* RestartKey);
+
+NTSYSAPI BOOLEAN
+RtlIsGenericTableEmptyAvl(_In_ PRTL_AVL_TABLE Table);
 
 NTSYSAPI ULONG
 RtlNumberGenericTableElementsAvl(_In_ PRTL_AVL_TABLE Table);

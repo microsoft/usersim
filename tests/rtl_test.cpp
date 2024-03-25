@@ -235,7 +235,7 @@ TEST_CASE("RtlDeleteElementGenericTableAvl", "[rtl]")
     REQUIRE(RtlDeleteElementGenericTableAvl(&table, &entry) == FALSE);
 }
 
-TEST_CASE("RtlIsGenericTableEmptyAvl", "[rtl]")
+TEST_CASE("RtlGetElementGenericTableAvl", "[rtl]")
 {
     RTL_AVL_TABLE table = {0};
     int entry = 0;
@@ -243,16 +243,19 @@ TEST_CASE("RtlIsGenericTableEmptyAvl", "[rtl]")
     RtlInitializeGenericTableAvl(
         &table, _test_avl_compare_routine, _test_avl_allocate_routine, _test_avl_free_routine, nullptr);
 
-    // Table should be empty after initialization.
-    REQUIRE(RtlIsGenericTableEmptyAvl(&table) == TRUE);
+    for (int i = 0; i < 100; ++i) {
+        // Get on element i prior to insertion. This should fail.
+        REQUIRE(RtlGetElementGenericTableAvl(&table, i) == nullptr);
 
-    // Table should not be empty after inserting an element.
-    REQUIRE(RtlInsertElementGenericTableAvl(&table, &entry, sizeof(entry), nullptr) != nullptr);
-    REQUIRE(RtlIsGenericTableEmptyAvl(&table) == FALSE);
+        // Get on element should succeed after insertions.
+        REQUIRE(RtlInsertElementGenericTableAvl(&table, &i, sizeof(i), nullptr) != nullptr);
+        REQUIRE(RtlGetElementGenericTableAvl(&table, i) != nullptr);
+    }
 
-    // Table should be empty after removing the element.
-    REQUIRE(RtlDeleteElementGenericTableAvl(&table, &entry) == TRUE);
-    REQUIRE(RtlIsGenericTableEmptyAvl(&table) == TRUE);
+    // Remove all elements.
+    for (int i = 0; i < 100; ++i) {
+        REQUIRE(RtlDeleteElementGenericTableAvl(&table, &i));
+    }
 }
 
 TEST_CASE("RtlLookupElementGenericTableAvl", "[rtl]")
@@ -334,56 +337,6 @@ TEST_CASE("RtlLookupFirstMatchingElementGenericTableAvl", "[rtl]")
     REQUIRE(RtlDeleteElementGenericTableAvl(&table, &entry) == TRUE);
 }
 
-TEST_CASE("RtlGetElementGenericTableAvl", "[rtl]")
-{
-    RTL_AVL_TABLE table = {0};
-    int entry = 0;
-
-    RtlInitializeGenericTableAvl(
-        &table, _test_avl_compare_routine, _test_avl_allocate_routine, _test_avl_free_routine, nullptr);
-
-    for (int i = 0; i < 100; ++i) {
-        // Get on element i prior to insertion. This should fail.
-        REQUIRE(RtlGetElementGenericTableAvl(&table, i) == nullptr);
-
-        // Get on element should succeed after insertions.
-        REQUIRE(RtlInsertElementGenericTableAvl(&table, &i, sizeof(i), nullptr) != nullptr);
-        REQUIRE(RtlGetElementGenericTableAvl(&table, i) != nullptr);
-    }
-
-    // Remove all elements.
-    for (int i = 0; i < 100; ++i) {
-        REQUIRE(RtlDeleteElementGenericTableAvl(&table, &i));
-    }
-}
-
-TEST_CASE("RtlNumberGenericTableElementsAvl", "[rtl]")
-{
-    RTL_AVL_TABLE table = {0};
-    int entry = 0;
-
-    RtlInitializeGenericTableAvl(
-        &table, _test_avl_compare_routine, _test_avl_allocate_routine, _test_avl_free_routine, nullptr);
-
-    for (int i = 0; i < 100; ++i) {
-        // Get count of elements prior to insertion.
-        REQUIRE(RtlNumberGenericTableElementsAvl(&table) == i);
-
-        // Insert a new element and get the count.
-        REQUIRE(RtlInsertElementGenericTableAvl(&table, &i, sizeof(i), nullptr) != nullptr);
-        REQUIRE(RtlNumberGenericTableElementsAvl(&table) == i + 1);
-
-        // Re-insertion should not affect count of elements.
-        REQUIRE(RtlInsertElementGenericTableAvl(&table, &i, sizeof(i), nullptr) != nullptr);
-        REQUIRE(RtlNumberGenericTableElementsAvl(&table) == i + 1);
-    }
-
-    // Remove all elements.
-    for (int i = 0; i < 100; ++i) {
-        REQUIRE(RtlDeleteElementGenericTableAvl(&table, &i));
-    }
-}
-
 TEST_CASE("RtlEnumerateGenericTableAvl", "[rtl]")
 {
     RTL_AVL_TABLE table = {0};
@@ -432,6 +385,53 @@ TEST_CASE("RtlEnumerateGenericTableWithoutSplayingAvl", "[rtl]")
          enumerated_entry = RtlEnumerateGenericTableWithoutSplayingAvl(&table, &restart_key)) {
 
         REQUIRE(expected_entry++ == *(reinterpret_cast<int*>(enumerated_entry)));
+    }
+
+    // Remove all elements.
+    for (int i = 0; i < 100; ++i) {
+        REQUIRE(RtlDeleteElementGenericTableAvl(&table, &i));
+    }
+}
+
+TEST_CASE("RtlIsGenericTableEmptyAvl", "[rtl]")
+{
+    RTL_AVL_TABLE table = {0};
+    int entry = 0;
+
+    RtlInitializeGenericTableAvl(
+        &table, _test_avl_compare_routine, _test_avl_allocate_routine, _test_avl_free_routine, nullptr);
+
+    // Table should be empty after initialization.
+    REQUIRE(RtlIsGenericTableEmptyAvl(&table) == TRUE);
+
+    // Table should not be empty after inserting an element.
+    REQUIRE(RtlInsertElementGenericTableAvl(&table, &entry, sizeof(entry), nullptr) != nullptr);
+    REQUIRE(RtlIsGenericTableEmptyAvl(&table) == FALSE);
+
+    // Table should be empty after removing the element.
+    REQUIRE(RtlDeleteElementGenericTableAvl(&table, &entry) == TRUE);
+    REQUIRE(RtlIsGenericTableEmptyAvl(&table) == TRUE);
+}
+
+TEST_CASE("RtlNumberGenericTableElementsAvl", "[rtl]")
+{
+    RTL_AVL_TABLE table = {0};
+    int entry = 0;
+
+    RtlInitializeGenericTableAvl(
+        &table, _test_avl_compare_routine, _test_avl_allocate_routine, _test_avl_free_routine, nullptr);
+
+    for (int i = 0; i < 100; ++i) {
+        // Get count of elements prior to insertion.
+        REQUIRE(RtlNumberGenericTableElementsAvl(&table) == i);
+
+        // Insert a new element and get the count.
+        REQUIRE(RtlInsertElementGenericTableAvl(&table, &i, sizeof(i), nullptr) != nullptr);
+        REQUIRE(RtlNumberGenericTableElementsAvl(&table) == i + 1);
+
+        // Re-insertion should not affect count of elements.
+        REQUIRE(RtlInsertElementGenericTableAvl(&table, &i, sizeof(i), nullptr) != nullptr);
+        REQUIRE(RtlNumberGenericTableElementsAvl(&table) == i + 1);
     }
 
     // Remove all elements.
