@@ -45,6 +45,37 @@ ExReleaseRundownProtection(_Inout_ EX_RUNDOWN_REF* rundown_reference)
     cxplat_release_rundown_protection(rundown_reference);
 }
 
+EX_RUNDOWN_REF_CACHE_AWARE*
+ExAllocateCacheAwareRundownProtection(
+    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE PoolType, unsigned long PoolTag)
+{
+    EX_RUNDOWN_REF_CACHE_AWARE* rundown_reference =
+        (EX_RUNDOWN_REF_CACHE_AWARE*)ExAllocatePoolWithTag(PoolType, sizeof(EX_RUNDOWN_REF_CACHE_AWARE), PoolTag);
+
+    if (rundown_reference != nullptr) {
+        cxplat_initialize_rundown_protection(rundown_reference);
+    }
+    return rundown_reference;
+}
+
+BOOLEAN
+ExAcquireRundownProtectionCacheAware(_Inout_ EX_RUNDOWN_REF_CACHE_AWARE* RunRefCacheAware)
+{
+    return (BOOLEAN)cxplat_acquire_rundown_protection(RunRefCacheAware);
+}
+
+void
+ExReleaseRundownProtectionCacheAware(_Inout_ EX_RUNDOWN_REF_CACHE_AWARE* RunRefCacheAware)
+{
+    cxplat_release_rundown_protection(RunRefCacheAware);
+}
+
+void
+ExFreeCacheAwareRundownProtection(_Inout_ EX_RUNDOWN_REF_CACHE_AWARE* RunRefCacheAware)
+{
+    ExFreePool(RunRefCacheAware);
+}
+
 _Acquires_exclusive_lock_(push_lock->lock) void ExAcquirePushLockExclusiveEx(
     _Inout_ _Requires_lock_not_held_(*_Curr_) _Acquires_lock_(*_Curr_) EX_PUSH_LOCK* push_lock,
     _In_ unsigned long flags)

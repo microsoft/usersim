@@ -36,7 +36,11 @@ typedef struct _EX_SPIN_LOCK
 {
     SRWLOCK lock;
 } EX_SPIN_LOCK;
+
 typedef cxplat_rundown_reference_t EX_RUNDOWN_REF;
+
+// Initial usersim version of this API will not be cache aware and will use the same type as EX_RUNDOWN_REF.
+typedef cxplat_rundown_reference_t EX_RUNDOWN_REF_CACHE_AWARE;
 
 //
 // Pool Allocation routines (in pool.c)
@@ -103,6 +107,26 @@ ExAcquireRundownProtection(_Inout_ EX_RUNDOWN_REF* rundown_ref);
 USERSIM_API
 void
 ExReleaseRundownProtection(_Inout_ EX_RUNDOWN_REF* rundown_ref);
+
+USERSIM_API
+EX_RUNDOWN_REF_CACHE_AWARE*
+ExAllocateCacheAwareRundownProtection(
+    _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE PoolType, unsigned long PoolTag);
+
+USERSIM_API
+BOOLEAN ExAcquireRundownProtectionCacheAware(
+  _Inout_ EX_RUNDOWN_REF_CACHE_AWARE* RunRefCacheAware
+);
+
+USERSIM_API
+void ExReleaseRundownProtectionCacheAware(
+  _Inout_ EX_RUNDOWN_REF_CACHE_AWARE* RunRefCacheAware
+);
+
+USERSIM_API
+void ExFreeCacheAwareRundownProtection(
+  _Inout_ EX_RUNDOWN_REF_CACHE_AWARE* RunRefCacheAware
+);
 
 USERSIM_API
 _Acquires_exclusive_lock_(push_lock->lock) void ExAcquirePushLockExclusiveEx(
