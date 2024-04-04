@@ -7,6 +7,9 @@
 #include <catch2/catch.hpp>
 #endif
 #include "usersim/ex.h"
+#include "cxplat_winuser.h"
+
+#include <thread>
 
 TEST_CASE("ExAllocatePool", "[ex]")
 {
@@ -116,4 +119,112 @@ TEST_CASE("ExRaiseDatatypeMisalignment", "[ex]")
         int64_t code = _atoi64(ex);
         REQUIRE(code == STATUS_DATATYPE_MISALIGNMENT);
     }
+}
+
+TEST_CASE("EX_RUNDOWN_REF", "[ex]")
+{
+    EX_RUNDOWN_REF ref;
+    std::atomic<bool> thread_completed = false;
+    ExInitializeRundownProtection(&ref);
+
+    // Acquire before rundown is initiated.
+    // Acquire the first rundown protection reference.
+    REQUIRE(ExAcquireRundownProtection(&ref));
+
+    // Acquire the second rundown protection reference.
+    REQUIRE(ExAcquireRundownProtection(&ref));
+
+    // Wait for the rundown protection to be released.
+    std::thread thread([&]() {
+        // Wait for the rundown protection to be released.
+        ExWaitForRundownProtectionRelease(&ref);
+        thread_completed = true;
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Thread should be waiting for the rundown protection to be released.
+    REQUIRE(!thread_completed);
+
+    // Acquire after rundown is initiated.
+    // Future acquire of the rundown protection should fail.
+    REQUIRE(!ExAcquireRundownProtection(&ref));
+
+    // Release the second rundown protection reference.
+    ExReleaseRundownProtection(&ref);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Thread should be waiting for the rundown protection to be released.
+    REQUIRE(!thread_completed);
+
+    // Release the first rundown protection reference.
+    ExReleaseRundownProtection(&ref);
+
+    // Thread should have completed.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    thread.join();
+
+    // Thread should be waiting for the rundown protection to be released.
+    REQUIRE(thread_completed);
+
+    // Acquire after rundown is completed.
+
+    // Future acquire of the rundown protection should fail.
+    REQUIRE(!ExAcquireRundownProtection(&ref));
+}
+
+TEST_CASE("EX_RUNDOWN_REF_CACHE_AWARE", "[ex]")
+{
+    EX_RUNDOWN_REF_CACHE_AWARE* ref = ExAllocateCacheAwareRundownProtection(NonPagedPoolNx, 'tset');
+    std::atomic<bool> thread_completed = false;
+    REQUIRE(ref != nullptr);
+
+    // Acquire before rundown is initiated.
+    // Acquire the first rundown protection reference.
+    REQUIRE(ExAcquireRundownProtectionCacheAware(ref));
+
+    // Acquire the second rundown protection reference.
+    REQUIRE(ExAcquireRundownProtectionCacheAware(ref));
+
+    // Wait for the rundown protection to be released.
+    std::thread thread([&]() {
+        // Wait for the rundown protection to be released.
+        ExWaitForRundownProtectionRelease(ref);
+        thread_completed = true;
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Thread should be waiting for the rundown protection to be released.
+    REQUIRE(!thread_completed);
+
+    // Acquire after rundown is initiated.
+    // Future acquire of the rundown protection should fail.
+    REQUIRE(!ExAcquireRundownProtectionCacheAware(ref));
+
+    // Release the second rundown protection reference.
+    ExReleaseRundownProtectionCacheAware(ref);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Thread should be waiting for the rundown protection to be released.
+    REQUIRE(!thread_completed);
+
+    // Release the first rundown protection reference.
+    ExReleaseRundownProtectionCacheAware(ref);
+
+    // Thread should have completed.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    thread.join();
+    REQUIRE(thread_completed);
+
+    // Acquire after rundown is completed.
+
+    // Future acquire of the rundown protection should fail.
+    REQUIRE(!ExAcquireRundownProtectionCacheAware(ref));
+
+    ExFreeCacheAwareRundownProtection(ref);
 }
