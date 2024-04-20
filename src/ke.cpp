@@ -227,6 +227,7 @@ KeSetSystemAffinityThreadEx(KAFFINITY affinity)
     _usersim_thread_affinity.Group = old_affinity.Group;
     _usersim_thread_affinity.Mask = affinity;
     if (KeGetCurrentIrql() < DISPATCH_LEVEL && SetThreadAffinityMask(GetCurrentThread(), affinity) == 0) {
+        _usersim_thread_affinity = old_affinity;
         return 0;
     }
     return (KAFFINITY)old_affinity.Mask;
