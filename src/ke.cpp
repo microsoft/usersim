@@ -228,7 +228,7 @@ KeSetSystemAffinityThreadEx(KAFFINITY affinity)
     _usersim_thread_affinity.Mask = affinity;
     if (KeGetCurrentIrql() < DISPATCH_LEVEL && SetThreadAffinityMask(GetCurrentThread(), affinity) == 0) {
         unsigned long error = GetLastError();
-        KeBugCheckEx(0, error, 0, 0, 0);
+        return 0;
     }
     return (KAFFINITY)old_affinity.Mask;
 }
