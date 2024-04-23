@@ -38,6 +38,37 @@ TEST_CASE("irql", "[ke]")
     REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
 }
 
+TEST_CASE("irql_perf_override", "[ke]")
+{
+    usersim_set_affinity_and_priority_override(0);
+
+    REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
+
+    KIRQL old_irql;
+    KeRaiseIrql(DISPATCH_LEVEL, &old_irql);
+    REQUIRE(old_irql == PASSIVE_LEVEL);
+    REQUIRE(KeGetCurrentIrql() == DISPATCH_LEVEL);
+
+    KeRaiseIrql(DISPATCH_LEVEL, &old_irql);
+    REQUIRE(old_irql == DISPATCH_LEVEL);
+    REQUIRE(KeGetCurrentIrql() == DISPATCH_LEVEL);
+
+    KeLowerIrql(DISPATCH_LEVEL);
+    REQUIRE(KeGetCurrentIrql() == DISPATCH_LEVEL);
+
+    KeLowerIrql(PASSIVE_LEVEL);
+    REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
+
+    old_irql = KeRaiseIrqlToDpcLevel();
+    REQUIRE(old_irql == PASSIVE_LEVEL);
+    REQUIRE(KeGetCurrentIrql() == DISPATCH_LEVEL);
+
+    KeLowerIrql(old_irql);
+    REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
+
+    usersim_clear_affinity_and_priority_override();
+}
+
 TEST_CASE("KfRaiseIrql", "[ke]")
 {
     REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
