@@ -224,11 +224,17 @@ KeSetSystemAffinityThreadEx(KAFFINITY affinity)
 {
     GROUP_AFFINITY old_affinity;
     usersim_get_current_thread_group_affinity(&old_affinity);
+    // Reject affinities that are not valid for the current group.
+    // Assume that the affinity mask is contiguous.
+    KAFFINITY valid_affinity_mask = (1 << KeQueryMaximumProcessorCountEx(old_affinity.Group)) - 1;
+    if ((affinity & valid_affinity_mask) == 0) {
+        return 0;
+    }
     _usersim_thread_affinity.Group = old_affinity.Group;
     _usersim_thread_affinity.Mask = affinity;
     if (KeGetCurrentIrql() < DISPATCH_LEVEL && SetThreadAffinityMask(GetCurrentThread(), affinity) == 0) {
-        unsigned long error = GetLastError();
-        KeBugCheckEx(0, error, 0, 0, 0);
+        _usersim_thread_affinity = old_affinity;
+        return 0;
     }
     return (KAFFINITY)old_affinity.Mask;
 }
