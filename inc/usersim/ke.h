@@ -85,6 +85,14 @@ usersim_initialize_irql();
 void
 usersim_clean_up_irql();
 
+USERSIM_API
+void
+usersim_set_affinity_and_priority_override(uint32_t processor_index);
+
+USERSIM_API
+void
+usersim_clear_affinity_and_priority_override();
+
 #pragma endregion irqls
 
 #pragma region spin_locks

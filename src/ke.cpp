@@ -22,6 +22,9 @@
 
 thread_local KIRQL _usersim_current_irql = PASSIVE_LEVEL;
 thread_local GROUP_AFFINITY _usersim_dispatch_previous_affinity;
+thread_local bool _usersim_affinity_and_priority_override = false;
+thread_local GROUP_AFFINITY _usersim_affinity_before_override;
+thread_local int _usersim_thread_priority_before_override;
 
 static uint32_t _usersim_original_priority_class;
 static std::vector<std::mutex> _usersim_dispatch_locks;
@@ -66,15 +69,6 @@ usersim_clean_up_irql()
     }
 }
 
-KIRQL
-KeGetCurrentIrql() { return _usersim_current_irql; }
-
-VOID
-KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
-{
-    *old_irql = KfRaiseIrql(new_irql);
-}
-
 const int _irql_thread_priority[3] = {
     /* PASSIVE_LEVEL */ THREAD_PRIORITY_NORMAL,
     /* APC_LEVEL */ THREAD_PRIORITY_ABOVE_NORMAL,
@@ -90,8 +84,67 @@ _get_irql_thread_priority(KIRQL irql)
 inline BOOL
 _set_current_thread_priority_by_irql(KIRQL new_irql)
 {
+    if (_usersim_affinity_and_priority_override) {
+        return true;
+    }
     return SetThreadPriority(GetCurrentThread(), _get_irql_thread_priority(new_irql));
 }
+
+/**
+ * @brief Preset the affinity and priority of the current thread to the specified processor to
+ * lower the cost of of KeRaiseIrql and LeLowerIrql.
+ *
+ * Setting affinity and thread priority is a costly operation, so we want to avoid doing it
+ * every time we raise or lower the IRQL. Instead, we can set the affinity and priority of the
+ * current thread to the processor that the thread is currently running on. This way, we can
+ * avoid the cost of setting the affinity and priority every time we raise or lower the IRQL.
+ *
+ * This is useful primarily when running performance tests that involve a lot of calls to
+ * KeRaiseIrql and KeLowerIrql.
+ *
+ * @param processor_index The index of the processor to set the affinity to.
+ */
+void
+usersim_set_affinity_and_priority_override(uint32_t processor_index)
+{
+    GetThreadGroupAffinity(GetCurrentThread(), &_usersim_affinity_before_override);
+    _usersim_thread_priority_before_override = GetThreadPriority(GetCurrentThread());
+
+    _set_current_thread_priority_by_irql(DISPATCH_LEVEL);
+    PROCESSOR_NUMBER processor;
+    KeGetProcessorNumberFromIndex(processor_index, &processor);
+
+    GROUP_AFFINITY new_affinity = {0};
+    new_affinity.Group = processor.Group;
+    new_affinity.Mask = (ULONG_PTR)1 << processor.Number;
+    bool result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, nullptr);
+    ASSERT(result);
+
+    _usersim_affinity_and_priority_override = true;
+}
+
+/**
+ * @brief Restore the affinity and priority of the current thread to the values before the call to
+ * usersim_set_affinity_and_priority_override.
+ */
+void
+usersim_clear_affinity_and_priority_override()
+{
+    SetThreadPriority(GetCurrentThread(), _usersim_thread_priority_before_override);
+    SetThreadGroupAffinity(GetCurrentThread(), &_usersim_affinity_before_override, nullptr);
+    _usersim_affinity_and_priority_override = false;
+}
+
+KIRQL
+KeGetCurrentIrql() { return _usersim_current_irql; }
+
+VOID
+KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
+{
+    *old_irql = KfRaiseIrql(new_irql);
+}
+
+
 
 _IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ KIRQL KfRaiseIrql(_In_ KIRQL new_irql)
 {
@@ -103,13 +156,13 @@ _IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ KIRQL KfRai
     if (new_irql >= DISPATCH_LEVEL && old_irql < DISPATCH_LEVEL) {
         PROCESSOR_NUMBER processor;
         uint32_t processor_index = KeGetCurrentProcessorNumberEx(&processor);
-
-        GROUP_AFFINITY new_affinity = {0};
-        new_affinity.Group = processor.Group;
-        new_affinity.Mask = (ULONG_PTR)1 << processor.Number;
-        result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, nullptr);
-        ASSERT(result);
-
+        if (!_usersim_affinity_and_priority_override) {
+            GROUP_AFFINITY new_affinity = {0};
+            new_affinity.Group = processor.Group;
+            new_affinity.Mask = (ULONG_PTR)1 << processor.Number;
+            result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, nullptr);
+            ASSERT(result);
+        }
         _usersim_dispatch_locks[processor_index].lock();
     }
 
@@ -131,10 +184,12 @@ KeLowerIrql(_In_ KIRQL new_irql)
     if (_usersim_current_irql >= DISPATCH_LEVEL && new_irql < DISPATCH_LEVEL) {
         uint32_t processor_index = KeGetCurrentProcessorNumberEx(nullptr);
         _usersim_dispatch_locks[processor_index].unlock();
-        GROUP_AFFINITY new_affinity;
-        usersim_get_current_thread_group_affinity(&new_affinity);
-        result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, nullptr);
-        ASSERT(result);
+        if (!_usersim_affinity_and_priority_override) {
+            GROUP_AFFINITY new_affinity;
+            usersim_get_current_thread_group_affinity(&new_affinity);
+            result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, nullptr);
+            ASSERT(result);
+        }
     }
     _usersim_current_irql = new_irql;
     result = _set_current_thread_priority_by_irql(new_irql);
