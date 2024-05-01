@@ -4,7 +4,6 @@
 #include "kernel_um.h"
 #include "platform.h"
 #include "usersim/ps.h"
-#include <map>
 
 // Ps* functions.
 
