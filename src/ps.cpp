@@ -4,6 +4,7 @@
 #include "kernel_um.h"
 #include "platform.h"
 #include "usersim/ps.h"
+#include <map>
 
 // Ps* functions.
 
@@ -13,6 +14,25 @@ PsGetCurrentProcessId() { return (HANDLE)(uintptr_t)GetCurrentProcessId(); }
 _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE PsGetCurrentThreadId()
 {
     return (HANDLE)(uintptr_t)GetCurrentThreadId();
+}
+
+static PGETPROCESSEXITSTATUS _usersim_get_process_exit_status_callback = NULL;
+
+NTSTATUS
+PsGetProcessExitStatus(_In_ PEPROCESS Process) {
+    if (_usersim_get_process_exit_status_callback != NULL) {
+        return _usersim_get_process_exit_status_callback(Process);
+    }
+
+    // Fall back to a failure code
+    return -1;
+}
+
+USERSIM_API
+void
+usersime_set_process_exit_status_callback(_In_ PGETPROCESSEXITSTATUS callback)
+{
+    _usersim_get_process_exit_status_callback = callback;
 }
 
 static PCREATE_PROCESS_NOTIFY_ROUTINE_EX _usersim_process_creation_notify_routine = NULL;

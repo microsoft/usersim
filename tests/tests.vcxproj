@@ -156,6 +156,7 @@
     <ClCompile Include="mm_test.cpp" />
     <ClCompile Include="nmr_test.cpp" />
     <ClCompile Include="ob_test.cpp" />
+    <ClCompile Include="ps_test.cpp" />
     <ClCompile Include="rtl_test.cpp" />
     <ClCompile Include="se_test.cpp" />
     <ClCompile Include="wdf_test.cpp" />

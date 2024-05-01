@@ -14,6 +14,16 @@ USERSIM_API
 HANDLE
 PsGetCurrentProcessId();
 
+typedef NTSTATUS (*PGETPROCESSEXITSTATUS)(_In_ PEPROCESS process);
+
+USERSIM_API
+NTSTATUS
+PsGetProcessExitStatus(_In_ PEPROCESS Process);
+
+USERSIM_API
+void
+usersime_set_process_exit_status_callback(_In_ PGETPROCESSEXITSTATUS callback);
+
 USERSIM_API
 _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE PsGetCurrentThreadId();
 
