@@ -42,3 +42,23 @@ TEST_CASE("PsSetCreateProcessNotifyRoutineEx", "[ps]")
     status = PsSetCreateProcessNotifyRoutineEx(notify_routine, TRUE);
     REQUIRE(status == STATUS_SUCCESS);
 }
+
+TEST_CASE("PsGetProcessExitStatus", "[ps]")
+{
+    // If no callback is installed, we default to -1
+    auto status = PsGetProcessExitStatus((PEPROCESS)0);
+    REQUIRE(status == -1);
+
+    usersime_set_process_exit_status_callback([](PEPROCESS proc) -> NTSTATUS { return ((int)proc)  +  1; });
+
+    status = PsGetProcessExitStatus((PEPROCESS)0);
+    REQUIRE(status == 1);
+
+    status = PsGetProcessExitStatus((PEPROCESS)1234);
+    REQUIRE(status == 1235);
+
+    // Setting back to a NULL callback reverts to returning -1
+    usersime_set_process_exit_status_callback(NULL);
+    status = PsGetProcessExitStatus((PEPROCESS)0);
+    REQUIRE(status == -1);
+}
