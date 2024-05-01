@@ -17,8 +17,7 @@ PsGetCurrentProcessId();
 typedef NTSTATUS (*PGETPROCESSEXITSTATUS)(_In_ PEPROCESS process);
 
 USERSIM_API
-NTSTATUS
-PsGetProcessExitStatus(_In_ PEPROCESS Process);
+_IRQL_requires_max_(APC_LEVEL) NTKERNELAPI NTSTATUS PsGetProcessExitStatus(_In_ PEPROCESS Process);
 
 USERSIM_API
 void
