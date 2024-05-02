@@ -49,7 +49,7 @@ TEST_CASE("PsGetProcessExitStatus", "[ps]")
     auto status = PsGetProcessExitStatus((PEPROCESS)0);
     REQUIRE(status == -1);
 
-    usersime_set_process_exit_status_callback([](PEPROCESS proc) -> NTSTATUS { return ((int)proc)  +  1; });
+    usersime_set_process_exit_status_callback([](PEPROCESS proc) -> NTSTATUS { return ((int)proc) + 1; });
 
     status = PsGetProcessExitStatus((PEPROCESS)0);
     REQUIRE(status == 1);
@@ -61,4 +61,41 @@ TEST_CASE("PsGetProcessExitStatus", "[ps]")
     usersime_set_process_exit_status_callback(NULL);
     status = PsGetProcessExitStatus((PEPROCESS)0);
     REQUIRE(status == -1);
+}
+
+TEST_CASE("PsGetProcessCreateTimeQuadPart", "[ps]")
+{
+    // If no callback is installed, we default to 0
+    auto time = PsGetProcessCreateTimeQuadPart((PEPROCESS)0);
+    REQUIRE(time == 0);
+
+    usersime_set_process_create_time_quadpart_callback([](PEPROCESS proc) -> LONGLONG { return ((int)proc) + 1; });
+
+    time = PsGetProcessCreateTimeQuadPart((PEPROCESS)0);
+    REQUIRE(time == 1);
+
+    time = PsGetProcessCreateTimeQuadPart((PEPROCESS)1234);
+    REQUIRE(time == 1235);
+
+    // Setting back to a NULL callback reverts to returning 0
+    usersime_set_process_create_time_quadpart_callback(NULL);
+    time = PsGetProcessCreateTimeQuadPart((PEPROCESS)0);
+    REQUIRE(time == 0);
+}
+
+TEST_CASE("PsGetProcessExitTime", "[ps]")
+{
+    // If no callback is installed, we default to 0
+    auto time = PsGetProcessExitTime();
+    REQUIRE(time.QuadPart == 0);
+
+    usersime_set_process_exit_time_callback([]() -> LARGE_INTEGER { return {123}; });
+
+    time = PsGetProcessExitTime();
+    REQUIRE(time.QuadPart == 123);
+
+    // Setting back to a NULL callback reverts to returning 0
+    usersime_set_process_exit_time_callback(NULL);
+    time = PsGetProcessExitTime();
+    REQUIRE(time.QuadPart == 0);
 }
