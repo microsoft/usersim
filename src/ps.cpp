@@ -17,8 +17,10 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE PsGetCurrentThreadId()
 
 static PGETPROCESSEXITSTATUS _usersim_get_process_exit_status_callback = NULL;
 
+USERSIM_API
 NTSTATUS
-PsGetProcessExitStatus(_In_ PEPROCESS Process) {
+PsGetProcessExitStatus(_In_ PEPROCESS Process)
+{
     if (_usersim_get_process_exit_status_callback != NULL) {
         return _usersim_get_process_exit_status_callback(Process);
     }
@@ -32,6 +34,47 @@ void
 usersime_set_process_exit_status_callback(_In_ PGETPROCESSEXITSTATUS callback)
 {
     _usersim_get_process_exit_status_callback = callback;
+}
+
+static PGETPROCESSCREATETIMEQUADPART _usersim_get_process_create_time_quadpart_callback = NULL;
+
+USERSIM_API
+LONGLONG
+PsGetProcessCreateTimeQuadPart(_In_ PEPROCESS Process)
+{
+    if (_usersim_get_process_create_time_quadpart_callback != NULL) {
+        return _usersim_get_process_create_time_quadpart_callback(Process);
+    }
+
+    // Fall back to the beginning of time
+    return 0;
+}
+
+USERSIM_API
+void
+usersime_set_process_create_time_quadpart_callback(_In_ PGETPROCESSCREATETIMEQUADPART callback)
+{
+    _usersim_get_process_create_time_quadpart_callback = callback;
+}
+
+static PGETPROCESSEXITTIME _usersim_get_process_exit_time_callback = NULL;
+
+USERSIM_API
+LARGE_INTEGER PsGetProcessExitTime(VOID)
+{
+    if (_usersim_get_process_exit_time_callback != NULL) {
+        return _usersim_get_process_exit_time_callback();
+    }
+
+    // Fall back to the beginning of time
+    LARGE_INTEGER li = {0};
+    return li;
+}
+
+void
+usersime_set_process_exit_time_callback(_In_ PGETPROCESSEXITTIME callback)
+{
+    _usersim_get_process_exit_time_callback = callback;
 }
 
 static PCREATE_PROCESS_NOTIFY_ROUTINE_EX _usersim_process_creation_notify_routine = NULL;

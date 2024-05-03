@@ -23,6 +23,24 @@ USERSIM_API
 void
 usersime_set_process_exit_status_callback(_In_ PGETPROCESSEXITSTATUS callback);
 
+typedef LONGLONG (*PGETPROCESSCREATETIMEQUADPART)(_In_ PEPROCESS process);
+
+USERSIM_API
+_IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI LONGLONG PsGetProcessCreateTimeQuadPart(_In_ PEPROCESS Process);
+
+USERSIM_API
+void
+usersime_set_process_create_time_quadpart_callback(_In_ PGETPROCESSCREATETIMEQUADPART callback);
+
+typedef LARGE_INTEGER (*PGETPROCESSEXITTIME)(VOID);
+
+USERSIM_API
+_IRQL_requires_max_(APC_LEVEL) NTKERNELAPI LARGE_INTEGER PsGetProcessExitTime(VOID);
+
+USERSIM_API
+void
+usersime_set_process_exit_time_callback(_In_ PGETPROCESSEXITTIME callback);
+
 USERSIM_API
 _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE PsGetCurrentThreadId();
 
