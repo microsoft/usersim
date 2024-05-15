@@ -106,13 +106,6 @@ cxplat_winuser_initialize_thread_pool()
         goto Exit;
     }
 
-    SetThreadpoolThreadMaximum(_pool, 1);
-    return_value = SetThreadpoolThreadMinimum(_pool, 1);
-    if (!return_value) {
-        status = CXPLAT_STATUS_FROM_WIN32(GetLastError());
-        goto Exit;
-    }
-
     _cleanup_group = CreateThreadpoolCleanupGroup();
     if (_cleanup_group == nullptr) {
         status = CXPLAT_STATUS_FROM_WIN32(GetLastError());
