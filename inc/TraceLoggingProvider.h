@@ -32,6 +32,7 @@ typedef enum
     _tlgBool,
     _tlgGuid,
     _tlgIPv6Address,
+    _tlgBinary,
 } usersim_tlg_type_t;
 
 USERSIM_API
@@ -117,6 +118,9 @@ usersim_trace_logging_set_enabled(bool enabled, UCHAR event_level, ULONGLONG eve
 
 #undef TraceLoggingBool
 #define TraceLoggingBool(...) _tlgBool, USERSIM_VA_ARGC(__VA_ARGS__), __VA_ARGS__
+
+#undef TraceLoggingBinary
+#define TraceLoggingBinary(pValue, cValue, ...) _tlgBinary, pValue, cValue, USERSIM_VA_ARGC(__VA_ARGS__), __VA_ARGS__
 
 #undef TraceLoggingProviderEnabled
 #define TraceLoggingProviderEnabled(hProvider, eventLevel, eventKeyword) \
