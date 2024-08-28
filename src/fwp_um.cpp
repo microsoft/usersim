@@ -265,7 +265,7 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
 
     action = test_callout(
         FWPS_LAYER_ALE_CONNECT_REDIRECT_V4, FWPM_LAYER_ALE_CONNECT_REDIRECT_V4, _default_sublayer, incoming_value);
-    CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || fault_injection_enabled);
+    CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT  || action == FWP_ACTION_CONTINUE || fault_injection_enabled);
 
     if (_fwp_um_connect_request != nullptr) {
         redirected =
@@ -290,7 +290,7 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
 
     if (redirected) {
         // In case the connection is redirected, AUTH_CONNECT callout will be invoked twice.
-        CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || fault_injection_enabled);
+        CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || action == FWP_ACTION_CONTINUE || fault_injection_enabled);
 
         incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_PORT].value.uint16 = ntohs(redirected_port);
         incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32 =
@@ -334,7 +334,7 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
     // TODO: why does this use _connect_v6_sublayer but test_cgroup_inet4_connect uses _default_sublayer?
     action = test_callout(
         FWPS_LAYER_ALE_CONNECT_REDIRECT_V6, FWPM_LAYER_ALE_CONNECT_REDIRECT_V6, _connect_v6_sublayer, incoming_value);
-    CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || fault_injection_enabled);
+    CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || action == FWP_ACTION_CONTINUE || fault_injection_enabled);
 
     if (_fwp_um_connect_request != nullptr) {
         redirected =
@@ -360,7 +360,7 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
 
     if (redirected) {
         // In case the connection is redirected, AUTH_CONNECT callout will be invoked twice.
-        CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || fault_injection_enabled);
+        CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || action == FWP_ACTION_CONTINUE || fault_injection_enabled);
 
         FWP_BYTE_ARRAY16 destination_ip = {0};
         memcpy(destination_ip.byteArray16, redirected_address, 16);
