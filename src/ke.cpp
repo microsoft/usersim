@@ -975,4 +975,23 @@ _wait_for_kevent(_Inout_ KEVENT* event, _In_opt_ PLARGE_INTEGER timeout)
     }
 }
 
+NTSTATUS KeExpandKernelStackAndCalloutEx(
+    _In_ PEXPAND_STACK_CALLOUT Callout,
+    _In_opt_ PVOID Parameter,
+    _In_ SIZE_T Size,
+    _In_ BOOLEAN Wait,
+    _In_opt_ PVOID Context)
+    {
+        // This is a mock implementation of KeExpandKernelStackAndCalloutEx that does not
+        // actually expand the stack. This is sufficient for the purposes of the tests.
+        UNREFERENCED_PARAMETER(Size);
+        UNREFERENCED_PARAMETER(Wait);
+        UNREFERENCED_PARAMETER(Context);
+
+        // Invoke the callout function.
+        Callout(Parameter);
+
+        return STATUS_SUCCESS;
+    }
+
 #pragma endregion events
