@@ -20,6 +20,7 @@ jobs:
     strategy:
       matrix:
         configurations: [Debug, Release]
+        architecture: [x64, ARM64]
     runs-on: windows-2022
     env:
       # Configuration type to build.
@@ -27,8 +28,9 @@ jobs:
       # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
       BUILD_CONFIGURATION: ${{matrix.configurations}}
 
-      BUILD_PLATFORM: x64
+      BUILD_PLATFORM: ${{matrix.architecture}}
       CXPLAT_MEMORY_LEAK_DETECTION: true
+      PLATFORM_TOOLSET: v143
       DUMP_PATH: c:/dumps/x64/${{matrix.configurations}}
       TEST_TIMEOUT: 900 # 15 minute timeout for tests.
 
@@ -46,7 +48,7 @@ jobs:
 
     - name: Generate Catch2 projects
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF
+      run: cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF -A ${{env.BUILD_PLATFORM}} -T ${{env.PLATFORM_TOOLSET}}
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
@@ -55,26 +57,28 @@ jobs:
       run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} /p:RunCodeAnalysis='True' ${{env.SOLUTION_FILE_PATH}}
 
     - name: Run cxplat tests without fault injection
+      if: matrix.architecture == 'x64'
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
         .\cxplat_test -d yes
 
     - name: Run usersim tests without fault injection
+      if: matrix.architecture == 'x64'
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
         .\usersim_tests -d yes
 
     - name: Run cxplat tests with fault injection
-      if: matrix.configurations == 'Debug'
+      if: matrix.configurations == 'Debug' && matrix.architecture == 'x64'
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
         powershell ..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test.exe" 4
 
     - name: Run usersim tests with fault injection
-      if: matrix.configurations == 'Debug'
+      if: matrix.configurations == 'Debug' && matrix.architecture == 'x64'
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
@@ -86,6 +90,7 @@ jobs:
     strategy:
       matrix:
         configurations: [Debug, Release]
+        architecture: [x64, ARM64]
     runs-on: windows-2022
     env:
       # Configuration type to build.
@@ -112,7 +117,7 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       shell: cmd
       run: |
-        cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF
+        cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF -A ${{env.BUILD_PLATFORM}} -T ${{env.PLATFORM_TOOLSET}}
         cmake -S . -B build -G "${{env.CMAKE_GENERATOR}}" -A ${{env.BUILD_PLATFORM}} -T ${{env.PLATFORM_TOOLSET}}
 
     - name: Build the project
@@ -122,26 +127,28 @@ jobs:
         cmake --build build --config ${{env.BUILD_CONFIGURATION }}
 
     - name: Run cxplat tests without fault injection
+      if: matrix.architecture == 'x64'
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
         .\cxplat_test -d yes
 
     - name: Run usersim tests without fault injection
+      if: matrix.architecture == 'x64'
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
         .\usersim_tests -d yes
 
     - name: Run cxplat tests with fault injection
-      if: matrix.configurations == 'Debug'
+      if: matrix.configurations == 'Debug' && matrix.architecture == 'x64'
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
         powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\cxplat_test.exe" 4
 
     - name: Run usersim tests with fault injection
-      if: matrix.configurations == 'Debug'
+      if: matrix.configurations == 'Debug' && matrix.architecture == 'x64'
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
