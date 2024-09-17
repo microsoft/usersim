@@ -30,7 +30,6 @@ jobs:
 
       BUILD_PLATFORM: ${{matrix.architecture}}
       CXPLAT_MEMORY_LEAK_DETECTION: true
-      PLATFORM_TOOLSET: v143
       DUMP_PATH: c:/dumps/x64/${{matrix.configurations}}
       TEST_TIMEOUT: 900 # 15 minute timeout for tests.
 
@@ -48,7 +47,7 @@ jobs:
 
     - name: Generate Catch2 projects
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF -A ${{env.BUILD_PLATFORM}} -T ${{env.PLATFORM_TOOLSET}}
+      run: cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF -A ${{env.BUILD_PLATFORM}}
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
@@ -117,7 +116,7 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       shell: cmd
       run: |
-        cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF -A ${{env.BUILD_PLATFORM}} -T ${{env.PLATFORM_TOOLSET}}
+        cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF -A ${{env.BUILD_PLATFORM}}
         cmake -S . -B build -G "${{env.CMAKE_GENERATOR}}" -A ${{env.BUILD_PLATFORM}} -T ${{env.PLATFORM_TOOLSET}}
 
     - name: Build the project
