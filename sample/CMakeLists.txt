@@ -12,7 +12,6 @@ target_include_directories(sample PRIVATE
 
 target_compile_definitions(sample PRIVATE
   _WINDLL
-  _AMD64_
   _WIN32_WINNT=0x0a00
 )
 
