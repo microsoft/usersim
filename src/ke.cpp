@@ -196,6 +196,11 @@ KeLowerIrql(_In_ KIRQL new_irql)
     ASSERT(result);
 }
 
+void KfLowerIrql(_In_ KIRQL new_irql)
+{
+    return KeLowerIrql(new_irql);
+}
+
 _IRQL_requires_min_(DISPATCH_LEVEL) NTKERNELAPI LOGICAL KeShouldYieldProcessor(VOID) { return false; }
 
 #pragma endregion irqls

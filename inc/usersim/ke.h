@@ -77,6 +77,10 @@ void
 KeLowerIrql(_In_ KIRQL new_irql);
 
 USERSIM_API
+void
+KfLowerIrql(_In_ KIRQL new_irql);
+
+USERSIM_API
 _IRQL_requires_min_(DISPATCH_LEVEL) NTKERNELAPI LOGICAL KeShouldYieldProcessor(VOID);
 
 usersim_result_t
