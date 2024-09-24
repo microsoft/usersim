@@ -265,7 +265,7 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
 
     action = test_callout(
         FWPS_LAYER_ALE_CONNECT_REDIRECT_V4, FWPM_LAYER_ALE_CONNECT_REDIRECT_V4, _default_sublayer, incoming_value);
-    CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT  || action == FWP_ACTION_CONTINUE || fault_injection_enabled);
+    CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || action == FWP_ACTION_CONTINUE || fault_injection_enabled);
 
     if (_fwp_um_connect_request != nullptr) {
         redirected =
@@ -502,6 +502,20 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmCalloutAdd0(
     return STATUS_SUCCESS;
 }
 
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmCalloutDeleteByKey0(_In_ HANDLE engine_handle, _In_ const GUID* key)
+{
+    if (cxplat_fault_injection_inject_fault()) {
+        return STATUS_NO_MEMORY;
+    }
+
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    if (!engine.remove_fwpm_callout(key)) {
+        return STATUS_NOT_FOUND;
+    }
+    return STATUS_SUCCESS;
+}
+
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmEngineOpen0(
     _In_opt_ const wchar_t* server_name,
     _In_ uint32_t authn_service,
@@ -537,6 +551,22 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
     return STATUS_SUCCESS;
 }
 
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmProviderDeleteByKey0(_In_ HANDLE engine_handle, _In_ const GUID* key)
+{
+    if (cxplat_fault_injection_inject_fault()) {
+        return STATUS_NO_MEMORY;
+    }
+
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    engine.remove_fwpm_provider(key);
+    if (cxplat_fault_injection_inject_fault()) {
+        return STATUS_NOT_FOUND;
+    }
+
+    return STATUS_SUCCESS;
+}
+
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
     FwpmSubLayerAdd0(_In_ HANDLE engine_handle, _In_ const FWPM_SUBLAYER0* sub_layer, _In_opt_ PSECURITY_DESCRIPTOR sd)
 {
@@ -549,6 +579,21 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
 
     engine.add_fwpm_sub_layer(sub_layer);
 
+    return STATUS_SUCCESS;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
+    FwpmSubLayerDeleteByKey0(_In_ HANDLE engine_handle, _In_ const GUID* sub_layer_key)
+{
+    if (cxplat_fault_injection_inject_fault()) {
+        return STATUS_NO_MEMORY;
+    }
+
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    if (!engine.remove_fwpm_sub_layer(sub_layer_key)) {
+        return STATUS_NOT_FOUND;
+    }
     return STATUS_SUCCESS;
 }
 

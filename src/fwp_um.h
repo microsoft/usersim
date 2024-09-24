@@ -41,6 +41,19 @@ typedef class fwp_engine_t
         return fwpm_callouts.erase(id) == 1;
     }
 
+    bool
+    remove_fwpm_callout(_In_ const GUID* key)
+    {
+        exclusive_lock_t l(lock);
+        for (auto& [first, callout] : fwpm_callouts) {
+            if (memcmp(&callout.calloutKey, key, sizeof(GUID)) == 0) {
+                return fwpm_callouts.erase(first) == 1;
+            }
+        }
+
+        return false;
+    }
+
     uint32_t
     register_fwps_callout(_In_ const FWPS_CALLOUT3* callout)
     {
@@ -169,6 +182,12 @@ typedef class fwp_engine_t
         return;
     }
 
+    _Requires_lock_not_held_(this->lock) void remove_fwpm_provider(_In_ const GUID* key)
+    {
+        UNREFERENCED_PARAMETER(key);
+        return;
+    }
+
     _Requires_lock_not_held_(this->lock) uint32_t add_fwpm_sub_layer(_In_ const FWPM_SUBLAYER0* sub_layer)
     {
         exclusive_lock_t l(lock);
@@ -181,6 +200,18 @@ typedef class fwp_engine_t
     {
         exclusive_lock_t l(lock);
         return fwpm_sub_layers.erase(id) == 1;
+    }
+
+    _Requires_lock_not_held_(this->lock) bool remove_fwpm_sub_layer(_In_ const GUID* key)
+    {
+        exclusive_lock_t l(lock);
+        for (auto& [first, sub_layer] : fwpm_sub_layers) {
+            if (memcmp(&sub_layer.subLayerKey, key, sizeof(GUID)) == 0) {
+                return fwpm_sub_layers.erase(first) == 1;
+            }
+        }
+
+        return false;
     }
 
     FWP_ACTION_TYPE
