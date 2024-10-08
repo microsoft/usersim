@@ -152,6 +152,17 @@ USERSIM_API
 _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
     KeRevertToUserAffinityThreadEx(_In_ KAFFINITY affinity);
 
+USERSIM_API
+void KeSetSystemGroupAffinityThread(
+  _In_            PGROUP_AFFINITY Affinity,
+  _Out_opt_       PGROUP_AFFINITY PreviousAffinity
+);
+
+USERSIM_API
+void KeRevertToUserGroupAffinityThread(
+  PGROUP_AFFINITY PreviousAffinity
+);
+
 typedef struct _kthread* PKTHREAD;
 
 USERSIM_API

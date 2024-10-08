@@ -184,6 +184,23 @@ TEST_CASE("threads", "[ke]")
     REQUIRE(old_affinity != 0);
 
     KeRevertToUserAffinityThreadEx(old_affinity);
+
+     for (ULONG i = 0; i < processor_count; i++) {
+        PROCESSOR_NUMBER processor_number = {};
+        GROUP_AFFINITY old_group_affinity = {};
+        GROUP_AFFINITY new_group_affinity = {};
+
+        REQUIRE(KeGetProcessorNumberFromIndex(i, &processor_number) == STATUS_SUCCESS);
+
+        new_group_affinity.Group = processor_number.Group;
+        new_group_affinity.Mask = (ULONG_PTR)1 << processor_number.Number;
+        KeSetSystemGroupAffinityThread(&new_group_affinity, &old_group_affinity);
+        KAFFINITY new_affinity = ((ULONG_PTR)1 << processor_number.Number);
+
+        REQUIRE(KeGetCurrentProcessorNumberEx(NULL) == i);
+
+        KeRevertToUserGroupAffinityThread(&old_group_affinity);
+    }
 }
 
 static void
