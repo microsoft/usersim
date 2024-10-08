@@ -305,6 +305,24 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VO
     KeSetSystemAffinityThreadEx(affinity);
 }
 
+void KeSetSystemGroupAffinityThread(
+  _In_            const PGROUP_AFFINITY Affinity,
+  _Out_opt_       PGROUP_AFFINITY PreviousAffinity
+)
+{
+    if (!SetThreadGroupAffinity(GetCurrentThread(), Affinity, PreviousAffinity)) {
+        DWORD error = GetLastError();
+        assert(error == 0);
+    }
+}
+
+void KeRevertToUserGroupAffinityThread(
+  PGROUP_AFFINITY PreviousAffinity
+)
+{
+    SetThreadGroupAffinity(GetCurrentThread(), PreviousAffinity, NULL);
+}
+
 PKTHREAD
 NTAPI
 KeGetCurrentThread(VOID) { return (PKTHREAD)usersim_get_current_thread_id(); }
