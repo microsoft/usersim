@@ -279,6 +279,18 @@ KeQueryMaximumProcessorCount() { return GetMaximumProcessorCount(ALL_PROCESSOR_G
 ULONG
 KeQueryMaximumProcessorCountEx(_In_ USHORT group_number) { return GetMaximumProcessorCount(group_number); }
 
+ULONG
+KeQueryActiveProcessorCount()
+{
+    return KeQueryMaximumProcessorCount();
+}
+
+ULONG
+KeQueryActiveProcessorCountEx(_In_ USHORT group_number)
+{
+    return KeQueryMaximumProcessorCountEx(group_number);
+}
+
 KAFFINITY
 KeSetSystemAffinityThreadEx(KAFFINITY affinity)
 {
@@ -312,7 +324,11 @@ void KeSetSystemGroupAffinityThread(
 {
     if (!SetThreadGroupAffinity(GetCurrentThread(), Affinity, PreviousAffinity)) {
         DWORD error = GetLastError();
+        #if defined(NDEBUG)
+        UNREFERENCED_PARAMETER(error);
+        #else
         assert(error == 0);
+        #endif
     }
 }
 
