@@ -141,8 +141,13 @@ USERSIM_API
 ULONG
 KeQueryMaximumProcessorCountEx(_In_ USHORT group_number);
 
-#define KeQueryActiveProcessorCount KeQueryMaximumProcessorCount
-#define KeQueryActiveProcessorCountEx KeQueryMaximumProcessorCountEx
+USERSIM_API
+ULONG
+KeQueryActiveProcessorCount();
+
+USERSIM_API
+ULONG
+KeQueryActiveProcessorCountEx(_In_ USHORT group_number);
 
 USERSIM_API
 KAFFINITY
