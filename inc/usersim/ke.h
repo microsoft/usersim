@@ -90,12 +90,12 @@ void
 usersim_clean_up_irql();
 
 USERSIM_API
-void
-usersim_set_affinity_and_priority_override(uint32_t processor_index);
+bool
+usersim_set_current_thread_priority(int priority, int* old_priority);
 
 USERSIM_API
-void
-usersim_clear_affinity_and_priority_override();
+bool
+usersim_set_current_thread_affinity(const GROUP_AFFINITY* new_affinity, GROUP_AFFINITY* old_affinity);
 
 #pragma endregion irqls
 

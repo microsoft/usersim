@@ -40,8 +40,6 @@ TEST_CASE("irql", "[ke]")
 
 TEST_CASE("irql_perf_override", "[ke]")
 {
-    usersim_set_affinity_and_priority_override(0);
-
     REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
 
     KIRQL old_irql;
@@ -65,8 +63,6 @@ TEST_CASE("irql_perf_override", "[ke]")
 
     KeLowerIrql(old_irql);
     REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
-
-    usersim_clear_affinity_and_priority_override();
 }
 
 TEST_CASE("KfRaiseIrql", "[ke]")

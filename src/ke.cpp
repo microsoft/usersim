@@ -151,6 +151,7 @@ usersim_set_current_thread_priority(int priority, int* old_priority)
  * @return true Success.
  * @return false Failure.
  */
+USERSIM_API
 bool
 usersim_set_current_thread_affinity(const GROUP_AFFINITY* new_affinity, GROUP_AFFINITY* old_affinity)
 {
@@ -194,7 +195,7 @@ _get_irql_thread_priority(KIRQL irql)
 inline BOOL
 _set_current_thread_priority_by_irql(KIRQL new_irql)
 {
-    if (new_irql > DISPATCH_LEVEL) {
+    if (new_irql >= DISPATCH_LEVEL) {
         return usersim_set_current_thread_priority(
             _get_irql_thread_priority(new_irql), &_usersim_thread_priority_before_raise_irql);
     } else {
