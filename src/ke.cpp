@@ -21,11 +21,14 @@
 
 #pragma region irqls
 
-thread_local KIRQL _usersim_current_irql = PASSIVE_LEVEL;
-thread_local GROUP_AFFINITY _usersim_dispatch_previous_affinity;
-thread_local bool _usersim_affinity_and_priority_override = false;
-thread_local GROUP_AFFINITY _usersim_affinity_before_override;
-thread_local int _usersim_thread_priority_before_override;
+thread_local KIRQL _usersim_current_irql = PASSIVE_LEVEL;       ///< The current threads emulated IRQL.
+thread_local GROUP_AFFINITY _usersim_group_affinity_cache = {}; ///< The effective group affinity of the current thread.
+thread_local GROUP_AFFINITY
+    _usersim_group_before_raise_irql; ///< The group affinity of the current thread before raising IRQL.
+thread_local int _usersim_thread_priority_cache =
+    THREAD_PRIORITY_NORMAL; ///< The effective priority of the current thread.
+thread_local int
+    _usersim_thread_priority_before_raise_irql; ///< The priority of the current thread before raising IRQL.
 
 static uint32_t _usersim_original_priority_class;
 static std::vector<std::mutex> _usersim_dispatch_locks;
@@ -110,6 +113,72 @@ usersim_clean_up_irql()
     }
 }
 
+/**
+ * @brief Change the priority of the current thread and cache the new priority.
+ * If the new priority is the same as the cached priority, this function is a no-op.
+ *
+ * @param[in] priority New priority to set.
+ * @param[out] old_priority Old priority of the thread.
+ * @return true Success.
+ * @return false Failure.
+ */
+bool
+usersim_set_current_thread_priority(int priority, int* old_priority)
+{
+    if (_usersim_thread_priority_cache == priority) {
+        if (old_priority != nullptr) {
+            *old_priority = _usersim_thread_priority_cache;
+        }
+        return true;
+    } else {
+        bool result = SetThreadPriority(GetCurrentThread(), priority);
+        if (result) {
+            _usersim_thread_priority_cache = priority;
+            if (old_priority != nullptr) {
+                *old_priority = _usersim_thread_priority_cache;
+            }
+        }
+        return result;
+    }
+}
+
+/**
+ * @brief Change the affinity of the current thread and cache the new affinity.
+ * If the new affinity is the same as the cached affinity, this function is a no-op.
+ *
+ * @param[in] new_affinity The new affinity to set.
+ * @param[out] old_affinity The old affinity of the thread.
+ * @return true Success.
+ * @return false Failure.
+ */
+bool
+usersim_set_current_thread_affinity(const GROUP_AFFINITY* new_affinity, GROUP_AFFINITY* old_affinity)
+{
+    if (memcmp(new_affinity, &_usersim_group_affinity_cache, sizeof(*new_affinity)) == 0) {
+        if (old_affinity != nullptr) {
+            *old_affinity = _usersim_group_affinity_cache;
+        }
+        return true;
+    }
+
+    bool result = SetThreadGroupAffinity(GetCurrentThread(), new_affinity, old_affinity);
+    if (result) {
+        _usersim_group_affinity_cache = *new_affinity;
+        if (old_affinity != nullptr) {
+            *old_affinity = _usersim_group_affinity_cache;
+        }
+    }
+    return result;
+}
+
+void
+usersim_restore_current_thread_affinity(GROUP_AFFINITY* old_affinity)
+{
+    if (old_affinity != nullptr) {
+        usersim_set_current_thread_affinity(old_affinity, nullptr);
+    }
+}
+
 const int _irql_thread_priority[3] = {
     /* PASSIVE_LEVEL */ THREAD_PRIORITY_NORMAL,
     /* APC_LEVEL */ THREAD_PRIORITY_ABOVE_NORMAL,
@@ -125,55 +194,12 @@ _get_irql_thread_priority(KIRQL irql)
 inline BOOL
 _set_current_thread_priority_by_irql(KIRQL new_irql)
 {
-    if (_usersim_affinity_and_priority_override) {
-        return true;
+    if (new_irql > DISPATCH_LEVEL) {
+        return usersim_set_current_thread_priority(
+            _get_irql_thread_priority(new_irql), &_usersim_thread_priority_before_raise_irql);
+    } else {
+        return usersim_set_current_thread_priority(_usersim_thread_priority_before_raise_irql, nullptr);
     }
-    return SetThreadPriority(GetCurrentThread(), _get_irql_thread_priority(new_irql));
-}
-
-/**
- * @brief Preset the affinity and priority of the current thread to the specified processor to
- * lower the cost of of KeRaiseIrql and LeLowerIrql.
- *
- * Setting affinity and thread priority is a costly operation, so we want to avoid doing it
- * every time we raise or lower the IRQL. Instead, we can set the affinity and priority of the
- * current thread to the processor that the thread is currently running on. This way, we can
- * avoid the cost of setting the affinity and priority every time we raise or lower the IRQL.
- *
- * This is useful primarily when running performance tests that involve a lot of calls to
- * KeRaiseIrql and KeLowerIrql.
- *
- * @param processor_index The index of the processor to set the affinity to.
- */
-void
-usersim_set_affinity_and_priority_override(uint32_t processor_index)
-{
-    GetThreadGroupAffinity(GetCurrentThread(), &_usersim_affinity_before_override);
-    _usersim_thread_priority_before_override = GetThreadPriority(GetCurrentThread());
-
-    _set_current_thread_priority_by_irql(DISPATCH_LEVEL);
-    PROCESSOR_NUMBER processor;
-    KeGetProcessorNumberFromIndex(processor_index, &processor);
-
-    GROUP_AFFINITY new_affinity = {0};
-    new_affinity.Group = processor.Group;
-    new_affinity.Mask = (ULONG_PTR)1 << processor.Number;
-    bool result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, nullptr);
-    ASSERT(result);
-
-    _usersim_affinity_and_priority_override = true;
-}
-
-/**
- * @brief Restore the affinity and priority of the current thread to the values before the call to
- * usersim_set_affinity_and_priority_override.
- */
-void
-usersim_clear_affinity_and_priority_override()
-{
-    SetThreadPriority(GetCurrentThread(), _usersim_thread_priority_before_override);
-    SetThreadGroupAffinity(GetCurrentThread(), &_usersim_affinity_before_override, nullptr);
-    _usersim_affinity_and_priority_override = false;
 }
 
 KIRQL
@@ -195,13 +221,11 @@ _IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ KIRQL KfRai
     if (new_irql >= DISPATCH_LEVEL && old_irql < DISPATCH_LEVEL) {
         PROCESSOR_NUMBER processor;
         uint32_t processor_index = KeGetCurrentProcessorNumberEx(&processor);
-        if (!_usersim_affinity_and_priority_override) {
-            GROUP_AFFINITY new_affinity = {0};
-            new_affinity.Group = processor.Group;
-            new_affinity.Mask = (ULONG_PTR)1 << processor.Number;
-            result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, nullptr);
-            ASSERT(result);
-        }
+        GROUP_AFFINITY new_affinity = {0};
+        new_affinity.Group = processor.Group;
+        new_affinity.Mask = (ULONG_PTR)1 << processor.Number;
+        result = usersim_set_current_thread_affinity(&new_affinity, &_usersim_group_before_raise_irql);
+        ASSERT(result);
         _usersim_dispatch_locks[processor_index].lock();
     }
 
@@ -223,12 +247,8 @@ KeLowerIrql(_In_ KIRQL new_irql)
     if (_usersim_current_irql >= DISPATCH_LEVEL && new_irql < DISPATCH_LEVEL) {
         uint32_t processor_index = KeGetCurrentProcessorNumberEx(nullptr);
         _usersim_dispatch_locks[processor_index].unlock();
-        if (!_usersim_affinity_and_priority_override) {
-            GROUP_AFFINITY new_affinity;
-            usersim_get_current_thread_group_affinity(&new_affinity);
-            result = SetThreadGroupAffinity(GetCurrentThread(), &new_affinity, nullptr);
-            ASSERT(result);
-        }
+        result = usersim_set_current_thread_affinity(&_usersim_group_before_raise_irql, nullptr);
+        ASSERT(result);
     }
     _usersim_current_irql = new_irql;
     result = _set_current_thread_priority_by_irql(new_irql);
@@ -330,21 +350,22 @@ KeQueryActiveProcessorCountEx(_In_ USHORT group_number) { return KeQueryMaximumP
 KAFFINITY
 KeSetSystemAffinityThreadEx(KAFFINITY affinity)
 {
+    GROUP_AFFINITY new_affinity = {0};
+    new_affinity.Mask = affinity;
+    new_affinity.Group = _usersim_group_affinity_cache.Group;
     GROUP_AFFINITY old_affinity;
-    usersim_get_current_thread_group_affinity(&old_affinity);
-    // Reject affinities that are not valid for the current group.
-    // Assume that the affinity mask is contiguous.
-    KAFFINITY valid_affinity_mask = (1 << KeQueryMaximumProcessorCountEx(old_affinity.Group)) - 1;
-    if ((affinity & valid_affinity_mask) == 0) {
+
+    if (KeGetCurrentIrql() >= DISPATCH_LEVEL) {
+        _usersim_group_affinity_cache = new_affinity;
         return 0;
+    } else {
+        bool result = usersim_set_current_thread_affinity(&new_affinity, &old_affinity);
+        if (result) {
+            return (KAFFINITY)old_affinity.Mask;
+        } else {
+            return 0;
+        }
     }
-    _usersim_thread_affinity.Group = old_affinity.Group;
-    _usersim_thread_affinity.Mask = affinity;
-    if (KeGetCurrentIrql() < DISPATCH_LEVEL && SetThreadAffinityMask(GetCurrentThread(), affinity) == 0) {
-        _usersim_thread_affinity = old_affinity;
-        return 0;
-    }
-    return (KAFFINITY)old_affinity.Mask;
 }
 
 _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
@@ -356,7 +377,7 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VO
 void
 KeSetSystemGroupAffinityThread(_In_ const PGROUP_AFFINITY Affinity, _Out_opt_ PGROUP_AFFINITY PreviousAffinity)
 {
-    if (!SetThreadGroupAffinity(GetCurrentThread(), Affinity, PreviousAffinity)) {
+    if (usersim_set_current_thread_affinity(Affinity, PreviousAffinity)) {
         DWORD error = GetLastError();
 #if defined(NDEBUG)
         UNREFERENCED_PARAMETER(error);
@@ -369,28 +390,12 @@ KeSetSystemGroupAffinityThread(_In_ const PGROUP_AFFINITY Affinity, _Out_opt_ PG
 void
 KeRevertToUserGroupAffinityThread(PGROUP_AFFINITY PreviousAffinity)
 {
-    SetThreadGroupAffinity(GetCurrentThread(), PreviousAffinity, NULL);
+    (void)usersim_set_current_thread_affinity(PreviousAffinity, nullptr);
 }
 
 PKTHREAD
 NTAPI
 KeGetCurrentThread(VOID) { return (PKTHREAD)usersim_get_current_thread_id(); }
-
-void
-usersim_get_current_thread_group_affinity(_Out_ GROUP_AFFINITY* affinity)
-{
-    if (_usersim_thread_affinity.Mask != 0) {
-        *affinity = _usersim_thread_affinity;
-    } else {
-        // The thread's current group affinity has never been explicitly set. Report the
-        // current affinity is all processors in the current group.
-        PROCESSOR_NUMBER processor;
-        KeGetCurrentProcessorNumberEx(&processor);
-        RtlZeroMemory(affinity, sizeof(*affinity));
-        affinity->Group = processor.Group;
-        affinity->Mask = ((ULONG_PTR)1 << GetMaximumProcessorCount(affinity->Group)) - 1;
-    }
-}
 
 #pragma endregion threads
 
