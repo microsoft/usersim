@@ -29,6 +29,9 @@ thread_local int _usersim_thread_priority_before_override;
 static uint32_t _usersim_original_priority_class;
 static std::vector<std::mutex> _usersim_dispatch_locks;
 
+static TP_POOL* _usersim_threadpool = nullptr;
+static TP_CALLBACK_ENVIRON _usersim_threadpool_callback_environment{};
+
 static NTSTATUS
 _wait_for_kevent(_Inout_ KEVENT* event, _In_opt_ PLARGE_INTEGER timeout);
 
@@ -36,6 +39,22 @@ usersim_result_t
 usersim_initialize_irql()
 {
     usersim_result_t result;
+
+    _usersim_threadpool = CreateThreadpool(nullptr);
+    if (_usersim_threadpool == nullptr) {
+        result = win32_error_to_usersim_error(GetLastError());
+        goto Exit;
+    }
+
+    // Reserve one thread per processor.
+    if (!SetThreadpoolThreadMinimum(_usersim_threadpool, cxplat_get_maximum_processor_count())) {
+        result = win32_error_to_usersim_error(GetLastError());
+        goto Exit;
+    }
+
+    InitializeThreadpoolEnvironment(&_usersim_threadpool_callback_environment);
+
+    SetThreadpoolCallbackPool(&_usersim_threadpool_callback_environment, _usersim_threadpool);
 
     _usersim_original_priority_class = GetPriorityClass(GetCurrentProcess());
     if (_usersim_original_priority_class == 0) {
@@ -67,6 +86,10 @@ usersim_clean_up_irql()
 
         _usersim_original_priority_class = 0;
     }
+
+    DestroyThreadpoolEnvironment(&_usersim_threadpool_callback_environment);
+
+    CloseThreadpool(_usersim_threadpool);
 }
 
 const int _irql_thread_priority[3] = {
@@ -838,7 +861,8 @@ KeSetCoalescableTimer(
     std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
     BOOLEAN running = (timer->threadpool_timer != nullptr);
     if (!running) {
-        timer->threadpool_timer = CreateThreadpoolTimer(_usersim_timer_callback, timer, nullptr);
+        timer->threadpool_timer =
+            CreateThreadpoolTimer(_usersim_timer_callback, timer, &_usersim_threadpool_callback_environment);
         if (timer->threadpool_timer == nullptr) {
             KeBugCheck(0);
             return FALSE; // Keep code analysis happy.
