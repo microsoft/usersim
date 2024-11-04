@@ -39,6 +39,7 @@ usersim_result_t
 usersim_initialize_irql()
 {
     usersim_result_t result;
+    bool threadpool_environment_initialized = false;
 
     _usersim_threadpool = CreateThreadpool(nullptr);
     if (_usersim_threadpool == nullptr) {
@@ -53,6 +54,7 @@ usersim_initialize_irql()
     }
 
     InitializeThreadpoolEnvironment(&_usersim_threadpool_callback_environment);
+    threadpool_environment_initialized = true;
 
     SetThreadpoolCallbackPool(&_usersim_threadpool_callback_environment, _usersim_threadpool);
 
@@ -72,6 +74,16 @@ usersim_initialize_irql()
     result = STATUS_SUCCESS;
 
 Exit:
+    if (result != STATUS_SUCCESS){
+        if (threadpool_environment_initialized) {
+            DestroyThreadpoolEnvironment(&_usersim_threadpool_callback_environment);
+        }
+        if (_usersim_threadpool != nullptr) {
+            CloseThreadpool(_usersim_threadpool);
+            _usersim_threadpool = nullptr;
+        }
+    }
+
 
     return result;
 }
@@ -90,6 +102,7 @@ usersim_clean_up_irql()
     DestroyThreadpoolEnvironment(&_usersim_threadpool_callback_environment);
 
     CloseThreadpool(_usersim_threadpool);
+    _usersim_threadpool = nullptr;
 }
 
 const int _irql_thread_priority[3] = {
