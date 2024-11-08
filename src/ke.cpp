@@ -7,6 +7,7 @@
 
 #include <format>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <vector>
 #undef ASSERT
@@ -29,6 +30,9 @@ thread_local int _usersim_thread_priority_before_override;
 static uint32_t _usersim_original_priority_class;
 static std::vector<std::mutex> _usersim_dispatch_locks;
 
+static TP_POOL* _usersim_threadpool = nullptr;
+static std::optional<TP_CALLBACK_ENVIRON> _usersim_threadpool_callback_environment = std::nullopt;
+
 static NTSTATUS
 _wait_for_kevent(_Inout_ KEVENT* event, _In_opt_ PLARGE_INTEGER timeout);
 
@@ -36,6 +40,24 @@ usersim_result_t
 usersim_initialize_irql()
 {
     usersim_result_t result;
+
+    _usersim_threadpool = CreateThreadpool(nullptr);
+    if (_usersim_threadpool == nullptr) {
+        result = win32_error_to_usersim_error(GetLastError());
+        goto Exit;
+    }
+
+    // Reserve one thread per processor.
+    if (!SetThreadpoolThreadMinimum(_usersim_threadpool, cxplat_get_maximum_processor_count())) {
+        result = win32_error_to_usersim_error(GetLastError());
+        goto Exit;
+    }
+
+    _usersim_threadpool_callback_environment = std::make_optional<TP_CALLBACK_ENVIRON>();
+
+    InitializeThreadpoolEnvironment(&_usersim_threadpool_callback_environment.value());
+
+    SetThreadpoolCallbackPool(&_usersim_threadpool_callback_environment.value(), _usersim_threadpool);
 
     _usersim_original_priority_class = GetPriorityClass(GetCurrentProcess());
     if (_usersim_original_priority_class == 0) {
@@ -53,6 +75,16 @@ usersim_initialize_irql()
     result = STATUS_SUCCESS;
 
 Exit:
+    if (result != STATUS_SUCCESS) {
+        if (_usersim_threadpool_callback_environment.has_value()) {
+            DestroyThreadpoolEnvironment(&_usersim_threadpool_callback_environment.value());
+            _usersim_threadpool_callback_environment.reset();
+        }
+        if (_usersim_threadpool != nullptr) {
+            CloseThreadpool(_usersim_threadpool);
+            _usersim_threadpool = nullptr;
+        }
+    }
 
     return result;
 }
@@ -66,6 +98,15 @@ usersim_clean_up_irql()
         }
 
         _usersim_original_priority_class = 0;
+    }
+
+    if (_usersim_threadpool_callback_environment.has_value()) {
+        DestroyThreadpoolEnvironment(&_usersim_threadpool_callback_environment.value());
+        _usersim_threadpool_callback_environment.reset();
+    }
+    if (_usersim_threadpool != nullptr) {
+        CloseThreadpool(_usersim_threadpool);
+        _usersim_threadpool = nullptr;
     }
 }
 
@@ -144,8 +185,6 @@ KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
     *old_irql = KfRaiseIrql(new_irql);
 }
 
-
-
 _IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ KIRQL KfRaiseIrql(_In_ KIRQL new_irql)
 {
     KIRQL old_irql = KeGetCurrentIrql();
@@ -196,17 +235,25 @@ KeLowerIrql(_In_ KIRQL new_irql)
     ASSERT(result);
 }
 
+void
+KfLowerIrql(_In_ KIRQL new_irql)
+{
+    return KeLowerIrql(new_irql);
+}
+
 _IRQL_requires_min_(DISPATCH_LEVEL) NTKERNELAPI LOGICAL KeShouldYieldProcessor(VOID) { return false; }
 
 #pragma endregion irqls
 
 void
 KeEnterCriticalRegion(void)
-{}
+{
+}
 
 void
 KeLeaveCriticalRegion(void)
-{}
+{
+}
 
 #pragma region spin_locks
 
@@ -274,6 +321,12 @@ KeQueryMaximumProcessorCount() { return GetMaximumProcessorCount(ALL_PROCESSOR_G
 ULONG
 KeQueryMaximumProcessorCountEx(_In_ USHORT group_number) { return GetMaximumProcessorCount(group_number); }
 
+ULONG
+KeQueryActiveProcessorCount() { return KeQueryMaximumProcessorCount(); }
+
+ULONG
+KeQueryActiveProcessorCountEx(_In_ USHORT group_number) { return KeQueryMaximumProcessorCountEx(group_number); }
+
 KAFFINITY
 KeSetSystemAffinityThreadEx(KAFFINITY affinity)
 {
@@ -298,6 +351,25 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VO
     KeRevertToUserAffinityThreadEx(_In_ KAFFINITY affinity)
 {
     KeSetSystemAffinityThreadEx(affinity);
+}
+
+void
+KeSetSystemGroupAffinityThread(_In_ const PGROUP_AFFINITY Affinity, _Out_opt_ PGROUP_AFFINITY PreviousAffinity)
+{
+    if (!SetThreadGroupAffinity(GetCurrentThread(), Affinity, PreviousAffinity)) {
+        DWORD error = GetLastError();
+#if defined(NDEBUG)
+        UNREFERENCED_PARAMETER(error);
+#else
+        assert(error == 0);
+#endif
+    }
+}
+
+void
+KeRevertToUserGroupAffinityThread(PGROUP_AFFINITY PreviousAffinity)
+{
+    SetThreadGroupAffinity(GetCurrentThread(), PreviousAffinity, NULL);
 }
 
 PKTHREAD
@@ -799,7 +871,8 @@ KeSetCoalescableTimer(
     std::unique_lock<std::mutex> l(g_usersim_threadpool_mutex);
     BOOLEAN running = (timer->threadpool_timer != nullptr);
     if (!running) {
-        timer->threadpool_timer = CreateThreadpoolTimer(_usersim_timer_callback, timer, nullptr);
+        timer->threadpool_timer =
+            CreateThreadpoolTimer(_usersim_timer_callback, timer, &_usersim_threadpool_callback_environment.value());
         if (timer->threadpool_timer == nullptr) {
             KeBugCheck(0);
             return FALSE; // Keep code analysis happy.
@@ -973,6 +1046,26 @@ _wait_for_kevent(_Inout_ KEVENT* event, _In_opt_ PLARGE_INTEGER timeout)
             return STATUS_TIMEOUT;
         }
     }
+}
+
+NTSTATUS
+KeExpandKernelStackAndCalloutEx(
+    _In_ PEXPAND_STACK_CALLOUT Callout,
+    _In_opt_ PVOID Parameter,
+    _In_ SIZE_T Size,
+    _In_ BOOLEAN Wait,
+    _In_opt_ PVOID Context)
+{
+    // This is a mock implementation of KeExpandKernelStackAndCalloutEx that does not
+    // actually expand the stack. This is sufficient for the purposes of the tests.
+    UNREFERENCED_PARAMETER(Size);
+    UNREFERENCED_PARAMETER(Wait);
+    UNREFERENCED_PARAMETER(Context);
+
+    // Invoke the callout function.
+    Callout(Parameter);
+
+    return STATUS_SUCCESS;
 }
 
 #pragma endregion events

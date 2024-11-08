@@ -77,6 +77,10 @@ void
 KeLowerIrql(_In_ KIRQL new_irql);
 
 USERSIM_API
+void
+KfLowerIrql(_In_ KIRQL new_irql);
+
+USERSIM_API
 _IRQL_requires_min_(DISPATCH_LEVEL) NTKERNELAPI LOGICAL KeShouldYieldProcessor(VOID);
 
 usersim_result_t
@@ -137,8 +141,13 @@ USERSIM_API
 ULONG
 KeQueryMaximumProcessorCountEx(_In_ USHORT group_number);
 
-#define KeQueryActiveProcessorCount KeQueryMaximumProcessorCount
-#define KeQueryActiveProcessorCountEx KeQueryMaximumProcessorCountEx
+USERSIM_API
+ULONG
+KeQueryActiveProcessorCount();
+
+USERSIM_API
+ULONG
+KeQueryActiveProcessorCountEx(_In_ USHORT group_number);
 
 USERSIM_API
 KAFFINITY
@@ -147,6 +156,17 @@ KeSetSystemAffinityThreadEx(KAFFINITY affinity);
 USERSIM_API
 _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
     KeRevertToUserAffinityThreadEx(_In_ KAFFINITY affinity);
+
+USERSIM_API
+void KeSetSystemGroupAffinityThread(
+  _In_            PGROUP_AFFINITY Affinity,
+  _Out_opt_       PGROUP_AFFINITY PreviousAffinity
+);
+
+USERSIM_API
+void KeRevertToUserGroupAffinityThread(
+  PGROUP_AFFINITY PreviousAffinity
+);
 
 typedef struct _kthread* PKTHREAD;
 
@@ -358,6 +378,26 @@ KeBugCheckEx(
     ULONG_PTR bug_check_parameter2,
     ULONG_PTR bug_check_parameter3,
     ULONG_PTR bug_check_parameter4);
+
+typedef
+_IRQL_requires_same_
+_Function_class_(EXPAND_STACK_CALLOUT)
+VOID
+(NTAPI EXPAND_STACK_CALLOUT) (
+    _In_opt_ PVOID Parameter
+    );
+
+typedef EXPAND_STACK_CALLOUT *PEXPAND_STACK_CALLOUT;
+
+USERSIM_API
+NTSTATUS
+KeExpandKernelStackAndCalloutEx (
+    _In_ PEXPAND_STACK_CALLOUT Callout,
+    _In_opt_ PVOID Parameter,
+    _In_ SIZE_T Size,
+    _In_ BOOLEAN Wait,
+    _In_opt_ PVOID Context
+    );
 
 CXPLAT_EXTERN_C_END
 

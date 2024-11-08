@@ -6,12 +6,15 @@
 LIBRARY
 EXPORTS
     FwpmCalloutAdd0
+    FwpmCalloutDeleteByKey0
     FwpmEngineClose0
     FwpmEngineOpen0
     FwpmFilterAdd0
     FwpmFilterDeleteById0
     FwpmProviderAdd0
+    FwpmProviderDeleteByKey0
     FwpmSubLayerAdd0
+    FwpmSubLayerDeleteByKey0
     FwpmTransactionAbort0
     FwpmTransactionBegin0
     FwpmTransactionCommit0
