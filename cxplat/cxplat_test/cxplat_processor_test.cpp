@@ -21,3 +21,13 @@ TEST_CASE("processor", "[processor]")
     REQUIRE(current < maximum);
     cxplat_cleanup();
 }
+
+TEST_CASE("lock", "[processor]")
+{
+    REQUIRE(cxplat_initialize() == CXPLAT_STATUS_SUCCESS);
+    cxplat_spin_lock_t lock;
+    cxplat_lock_queue_handle_t handle;
+    cxplat_acquire_in_stack_queued_spin_lock(&lock, &handle);
+    cxplat_release_in_stack_queued_spin_lock(&handle);
+    cxplat_cleanup();
+}
