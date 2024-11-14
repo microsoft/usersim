@@ -32,6 +32,14 @@ TEST_CASE("queued_spin_lock", "[processor]")
     cxplat_cleanup();
 }
 
+#if !defined(PASSIVE_LEVEL)
+#define PASSIVE_LEVEL 0
+#endif
+
+#if !defined(DISPATCH_LEVEL)
+#define DISPATCH_LEVEL 2
+#endif
+
 TEST_CASE("spin_lock", "[processor]")
 {
     REQUIRE(cxplat_initialize() == CXPLAT_STATUS_SUCCESS);
