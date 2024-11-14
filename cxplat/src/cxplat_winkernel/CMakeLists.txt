@@ -13,6 +13,7 @@ add_library(cxplat_winkernel STATIC
   memory_winkernel.c
   processor_winkernel.c
   rundown_winkernel.c
+  time_winkernel.c
   workitem_winkernel.c
 )
 

@@ -18,6 +18,7 @@ add_executable(cxplat_test
   cxplat_processor_test.cpp
   cxplat_rundown_test.cpp
   cxplat_size_test.cpp
+  cxplat_time_test.cpp
   cxplat_workitem_test.cpp
 )
 

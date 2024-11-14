@@ -11,6 +11,7 @@
     <ClCompile Include="processor_winkernel.c" />
     <ClCompile Include="rundown_winkernel.c" />
     <ClCompile Include="size_winkernel.c" />
+    <ClCompile Include="time_winkernel.c" />
     <ClCompile Include="workitem_winkernel.c" />
   </ItemGroup>
   <ItemGroup>

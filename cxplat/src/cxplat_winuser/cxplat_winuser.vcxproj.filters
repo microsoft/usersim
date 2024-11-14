@@ -89,5 +89,8 @@
     <ClCompile Include="processor_winuser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="time_winuser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
