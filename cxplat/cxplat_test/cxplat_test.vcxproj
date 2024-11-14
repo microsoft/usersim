@@ -70,6 +70,7 @@
     <ClCompile Include="cxplat_processor_test.cpp" />
     <ClCompile Include="cxplat_rundown_test.cpp" />
     <ClCompile Include="cxplat_size_test.cpp" />
+    <ClCompile Include="cxplat_time_test.cpp" />
     <ClCompile Include="cxplat_workitem_test.cpp" />
   </ItemGroup>
   <ItemGroup>

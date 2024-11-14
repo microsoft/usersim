@@ -36,6 +36,9 @@
     <ClCompile Include="processor_winkernel.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="time_winkernel.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\inc\cxplat.h">
