@@ -21,6 +21,7 @@ add_library(cxplat_winuser STATIC
   size_winuser.c
   workitem_winuser.cpp
   symbol_decoder.h
+  time_winuser.cpp
   winuser_internal.h
 )
 
