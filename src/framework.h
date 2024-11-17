@@ -22,7 +22,7 @@ typedef NTSTATUS* PNTSTATUS;
 #define NT_SUCCESS(status) (((NTSTATUS)(status)) >= 0)
 #include "kernel_um.h"
 
-#include <../km/netioddk.h>
+#include <netioddk.h>
 #include <netiodef.h>
 #define STATUS_NOINTERFACE ((NTSTATUS)0xC00002B9L)
 #include "cxplat.h"

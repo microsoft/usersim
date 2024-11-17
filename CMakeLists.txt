@@ -21,9 +21,37 @@ set(CMAKE_SHARED_LINKER_FLAGS_FUZZERDEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_FUZZERDEBUG "${CMAKE_C_FLAGS_DEBUG} /fsanitize-coverage=inline-bool-flag /fsanitize-coverage=edge /fsanitize-coverage=trace-cmp /fsanitize-coverage=trace-div /ZH:SHA_256")
 set(CMAKE_CXX_FLAGS_FUZZERDEBUG "${CMAKE_CXX_FLAGS_DEBUG} /fsanitize-coverage=inline-bool-flag /fsanitize-coverage=edge /fsanitize-coverage=trace-cmp /fsanitize-coverage=trace-div /ZH:SHA_256")
 
-# Find and use the WDK for headers
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/FindWDK/cmake")
-find_package(WDK REQUIRED)
+# # Find and use the WDK for headers
+# list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/FindWDK/cmake")
+# find_package(WDK REQUIRED)
+
+set(NUGET_PACKAGES 
+"Microsoft.Windows.SDK.CPP"
+"Microsoft.Windows.SDK.CPP.arm64"
+"Microsoft.Windows.SDK.CPP.x64"
+"Microsoft.Windows.WDK.ARM64"
+"Microsoft.Windows.WDK.x64"
+)
+
+
+find_program(NUGET nuget)
+if(NOT NUGET)
+  message("ERROR: You must first install nuget.exe from https://www.nuget.org/downloads")
+else()
+  foreach(PACKAGE ${NUGET_PACKAGES})
+    execute_process(COMMAND ${NUGET} install ${PACKAGE} -ExcludeVersion -OutputDirectory ${PROJECT_BINARY_DIR}/packages)
+  endforeach()
+endif()
+
+# Set WDK_ROOT based on the platform (arm64 or x64)
+if (TARGET_PLATFORM STREQUAL "arm64")
+  set(WDK_ROOT "${PROJECT_BINARY_DIR}/packages/Microsoft.Windows.WDK.ARM64/c")
+  set(WDK_VERSION "10.0.26100.0")
+else ()
+set(WDK_ROOT "${PROJECT_BINARY_DIR}/packages/Microsoft.Windows.WDK.x64/c")
+set(WDK_VERSION "10.0.26100.0")
+endif ()
+
 
 # Configure output directories
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${TARGET_PLATFORM}/lib)
