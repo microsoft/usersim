@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright (c) Microsoft Corporation
+  SPDX-License-Identifier: MIT
+-->
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\..\wdk.props" />
+  <ItemGroup>
+    <ClCompile Include="..\memory.c" />
+    <ClCompile Include="cxplat_winkernel.c" />
+    <ClCompile Include="memory_winkernel.c" />
+    <ClCompile Include="processor_winkernel.c" />
+    <ClCompile Include="rundown_winkernel.c" />
+    <ClCompile Include="size_winkernel.c" />
+    <ClCompile Include="time_winkernel.c" />
+    <ClCompile Include="workitem_winkernel.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\inc\cxplat.h" />
+    <ClInclude Include="..\..\inc\cxplat_common.h" />
+    <ClInclude Include="..\..\inc\cxplat_memory.h" />
+    <ClInclude Include="..\..\inc\cxplat_processor.h" />
+    <ClInclude Include="..\..\inc\cxplat_rundown.h" />
+    <ClInclude Include="..\..\inc\cxplat_size.h" />
+    <ClInclude Include="..\..\inc\cxplat_workitem.h" />
+    <ClInclude Include="..\..\inc\winkernel\cxplat_platform.h" />
+    <ClInclude Include="..\..\inc\winkernel\cxplat_winkernel.h" />
+    <ClInclude Include="..\tags.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{1ebe3966-7dc4-49b4-b840-3d33d63415ec}</ProjectGuid>
+    <TemplateGuid>{0a049372-4c4d-4ea0-a64e-dc6ad88ceca1}</TemplateGuid>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
+    <Configuration>Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">Win32</Platform>
+    <RootNamespace>cxplatwinkernel</RootNamespace>
+    <DriverType>KMDF</DriverType>
+    <ProjectName>cxplat_winkernel</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <CharacterSet>Unicode</CharacterSet>
+    <Driver_SpectreMitigation>Spectre</Driver_SpectreMitigation>
+    <EnableASAN>false</EnableASAN>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='FuzzerDebug'" Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <CharacterSet>Unicode</CharacterSet>
+    <Driver_SpectreMitigation>Spectre</Driver_SpectreMitigation>
+    <EnableASAN>false</EnableASAN>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <CharacterSet>Unicode</CharacterSet>
+    <EnableASAN>false</EnableASAN>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP;WINAPI_PARTITION_DESKTOP=1;WINAPI_PARTITION_SYSTEM=1;WINAPI_PARTITION_APP=1;WINAPI_PARTITION_PC_APP=1;_KRPCENV_;_NO_CRT_STDIO_INLINE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../inc;$(ProjectDir)../../inc/winkernel</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Midl>
+      <PreprocessorDefinitions>_KRPCENV_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(ConfigurationName)\</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='FuzzerDebug'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP;WINAPI_PARTITION_DESKTOP=1;WINAPI_PARTITION_SYSTEM=1;WINAPI_PARTITION_APP=1;WINAPI_PARTITION_PC_APP=1;_KRPCENV_;_NO_CRT_STDIO_INLINE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../inc;$(ProjectDir)../../inc/winkernel</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Midl>
+      <PreprocessorDefinitions>_KRPCENV_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(ConfigurationName)\</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <PreprocessorDefinitions>WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP;WINAPI_PARTITION_DESKTOP=1;WINAPI_PARTITION_SYSTEM=1;WINAPI_PARTITION_APP=1;WINAPI_PARTITION_PC_APP=1;_KRPCENV_;_NO_CRT_STDIO_INLINE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)../../inc;$(ProjectDir)../../inc/winkernel</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Midl>
+      <PreprocessorDefinitions>_KRPCENV_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(ConfigurationName)\</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
