@@ -10,5 +10,5 @@ target_include_directories(usersim_dll_skeleton PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/../cxplat/inc"
   "${CMAKE_CURRENT_SOURCE_DIR}/../cxplat/inc/winuser"
   "${WDK_ROOT}/include/${WDK_VERSION}/km"
-  "${WindowsSdkDir}include/10.0.22621.0"
+  "${WindowsSdkDir}include/10.0.26100.0"
 )
