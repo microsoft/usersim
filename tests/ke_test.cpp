@@ -177,11 +177,12 @@ TEST_CASE("threads", "[ke]")
 
     KAFFINITY new_affinity = ((ULONG_PTR)1 << processor_count) - 1;
     KAFFINITY old_affinity = KeSetSystemAffinityThreadEx(new_affinity);
-    REQUIRE(old_affinity != 0);
+    // No old affinity was set.
+    REQUIRE(old_affinity == 0);
 
     KeRevertToUserAffinityThreadEx(old_affinity);
 
-     for (ULONG i = 0; i < processor_count; i++) {
+    for (ULONG i = 0; i < processor_count; i++) {
         PROCESSOR_NUMBER processor_number = {};
         GROUP_AFFINITY old_group_affinity = {};
         GROUP_AFFINITY new_group_affinity = {};
