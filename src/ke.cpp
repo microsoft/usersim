@@ -125,21 +125,20 @@ usersim_clean_up_irql()
 bool
 usersim_set_current_thread_priority(int priority, int* old_priority)
 {
+    bool result;
     if (_usersim_thread_priority_cache == priority) {
+        result = true;
+    } else {
+        result = SetThreadPriority(GetCurrentThread(), priority);
+    }
+
+    if (result) {
         if (old_priority != nullptr) {
             *old_priority = _usersim_thread_priority_cache;
         }
-        return true;
-    } else {
-        bool result = SetThreadPriority(GetCurrentThread(), priority);
-        if (result) {
-            _usersim_thread_priority_cache = priority;
-            if (old_priority != nullptr) {
-                *old_priority = _usersim_thread_priority_cache;
-            }
-        }
-        return result;
+        _usersim_thread_priority_cache = priority;
     }
+    return result;
 }
 
 /**
@@ -155,19 +154,18 @@ USERSIM_API
 bool
 usersim_set_current_thread_affinity(const GROUP_AFFINITY* new_affinity, GROUP_AFFINITY* old_affinity)
 {
+    bool result;
     if (memcmp(new_affinity, &_usersim_group_affinity_cache, sizeof(*new_affinity)) == 0) {
-        if (old_affinity != nullptr) {
-            *old_affinity = _usersim_group_affinity_cache;
-        }
-        return true;
+        result = true;
+    } else {
+        result = SetThreadGroupAffinity(GetCurrentThread(), new_affinity, old_affinity);
     }
 
-    bool result = SetThreadGroupAffinity(GetCurrentThread(), new_affinity, old_affinity);
     if (result) {
-        _usersim_group_affinity_cache = *new_affinity;
         if (old_affinity != nullptr) {
             *old_affinity = _usersim_group_affinity_cache;
         }
+        _usersim_group_affinity_cache = *new_affinity;
     }
     return result;
 }
@@ -195,6 +193,9 @@ _get_irql_thread_priority(KIRQL irql)
 inline BOOL
 _set_current_thread_priority_by_irql(KIRQL new_irql)
 {
+    if (_usersim_current_irql == new_irql) {
+        return TRUE;
+    }
     if (new_irql >= DISPATCH_LEVEL) {
         return usersim_set_current_thread_priority(
             _get_irql_thread_priority(new_irql), &_usersim_thread_priority_before_raise_irql);
@@ -378,7 +379,7 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VO
 void
 KeSetSystemGroupAffinityThread(_In_ const PGROUP_AFFINITY Affinity, _Out_opt_ PGROUP_AFFINITY PreviousAffinity)
 {
-    if (usersim_set_current_thread_affinity(Affinity, PreviousAffinity)) {
+    if (!usersim_set_current_thread_affinity(Affinity, PreviousAffinity)) {
         DWORD error = GetLastError();
 #if defined(NDEBUG)
         UNREFERENCED_PARAMETER(error);
@@ -653,10 +654,10 @@ class _usersim_emulated_dpc
 
                         l.unlock();
                         _usersim_dispatch_locks[i].lock();
-                        _usersim_current_irql = DISPATCH_LEVEL;
+                        //_usersim_current_irql = DISPATCH_LEVEL;
                         work_item->work_item_routine(work_item, context, parameter_1, parameter_2);
                         _usersim_dispatch_locks[i].unlock();
-                        _usersim_current_irql = PASSIVE_LEVEL;
+                        //_usersim_current_irql = PASSIVE_LEVEL;
                         l.lock();
                     }
                 }
