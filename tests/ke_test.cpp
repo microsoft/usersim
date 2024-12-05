@@ -40,8 +40,6 @@ TEST_CASE("irql", "[ke]")
 
 TEST_CASE("irql_perf_override", "[ke]")
 {
-    usersim_set_affinity_and_priority_override(0);
-
     REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
 
     KIRQL old_irql;
@@ -65,8 +63,6 @@ TEST_CASE("irql_perf_override", "[ke]")
 
     KeLowerIrql(old_irql);
     REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
-
-    usersim_clear_affinity_and_priority_override();
 }
 
 TEST_CASE("KfRaiseIrql", "[ke]")
@@ -181,11 +177,12 @@ TEST_CASE("threads", "[ke]")
 
     KAFFINITY new_affinity = ((ULONG_PTR)1 << processor_count) - 1;
     KAFFINITY old_affinity = KeSetSystemAffinityThreadEx(new_affinity);
-    REQUIRE(old_affinity != 0);
+    // No old affinity was set.
+    REQUIRE(old_affinity == 0);
 
     KeRevertToUserAffinityThreadEx(old_affinity);
 
-     for (ULONG i = 0; i < processor_count; i++) {
+    for (ULONG i = 0; i < processor_count; i++) {
         PROCESSOR_NUMBER processor_number = {};
         GROUP_AFFINITY old_group_affinity = {};
         GROUP_AFFINITY new_group_affinity = {};
