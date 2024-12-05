@@ -165,6 +165,7 @@ _Requires_lock_held_(*spin_lock) _Releases_lock_(*spin_lock) _IRQL_requires_min_
     DISPATCH_LEVEL) void cxplat_release_spin_lock_from_dpc_level(_Inout_ cxplat_spin_lock_t* spin_lock)
 {
     auto lock = reinterpret_cast<SRWLOCK*>(spin_lock);
+    ReleaseSRWLockExclusive(lock);
 }
 
 thread_local cxplat_irql_t _cxplat_current_irql = PASSIVE_LEVEL;
