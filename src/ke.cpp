@@ -363,7 +363,7 @@ KeSetSystemAffinityThreadEx(KAFFINITY affinity)
     } else {
         bool result = usersim_set_current_thread_affinity(&new_affinity, &old_affinity);
         if (result) {
-            return (KAFFINITY)old_affinity.Mask;
+            return old_affinity.Mask;
         } else {
             return 0;
         }
@@ -392,7 +392,12 @@ KeSetSystemGroupAffinityThread(_In_ const PGROUP_AFFINITY Affinity, _Out_opt_ PG
 void
 KeRevertToUserGroupAffinityThread(PGROUP_AFFINITY PreviousAffinity)
 {
-    (void)usersim_set_current_thread_affinity(PreviousAffinity, nullptr);
+    bool result = usersim_set_current_thread_affinity(PreviousAffinity, nullptr);
+#if defined(NDEBUG)
+    UNREFERENCED_PARAMETER(result);
+#else
+    assert(result);
+#endif
 }
 
 PKTHREAD
@@ -654,10 +659,10 @@ class _usersim_emulated_dpc
 
                         l.unlock();
                         _usersim_dispatch_locks[i].lock();
-                        //_usersim_current_irql = DISPATCH_LEVEL;
+                        _usersim_current_irql = DISPATCH_LEVEL;
                         work_item->work_item_routine(work_item, context, parameter_1, parameter_2);
                         _usersim_dispatch_locks[i].unlock();
-                        //_usersim_current_irql = PASSIVE_LEVEL;
+                        _usersim_current_irql = PASSIVE_LEVEL;
                         l.lock();
                     }
                 }
