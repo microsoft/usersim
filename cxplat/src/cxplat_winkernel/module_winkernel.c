@@ -6,12 +6,56 @@
 
 #include <aux_klib.h>
 
+static cxplat_status_t
+cxplat_convert_ansi_to_utf8_string(_In_ ANSI_STRING* ansi_string, _Out_ cxplat_utf8_string_t* utf8)
+{
+    NTSTATUS status;
+    cxplat_status_t cxplat_status;
+    UNICODE_STRING unicode_str = {0};
+    UTF8_STRING utf8_str = {0};
+
+    // First convert the ANSI string to a Unicode string.
+    status = RtlAnsiStringToUnicodeString(&unicode_str, ansi_string, TRUE);
+    if (!NT_SUCCESS(status)) {
+        cxplat_status = CXPLAT_STATUS_NO_MEMORY;
+        goto Exit;
+    }
+
+    // Convert the unicode string to a UTF-8 string.
+    status = RtlUnicodeStringToUTF8String(&utf8_str, &unicode_str, TRUE);
+    if (!NT_SUCCESS(status)) {
+        cxplat_status = CXPLAT_STATUS_NO_MEMORY;
+        goto Exit;
+    }
+
+    // Allocate the UTF-8 string large enough to hold the converted string and a null terminator.
+    utf8->length = utf8_str.Length + 1; // +1 for null terminator
+    utf8->value = cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, utf8->length, CXPLAT_TAG_STRING);
+    if (utf8->value == NULL) {
+        cxplat_status = CXPLAT_STATUS_NO_MEMORY;
+        goto Exit;
+    }
+
+    // Copy the converted string to the output buffer.
+    RtlCopyMemory(utf8->value, utf8_str.Buffer, utf8_str.Length);
+    utf8->value[utf8_str.Length] = '\0'; // Null-terminate the string
+
+    cxplat_status = CXPLAT_STATUS_SUCCESS;
+
+Exit:
+    if (unicode_str.Buffer) {
+        RtlFreeUnicodeString(&unicode_str);
+    }
+
+    if (utf8_str.Buffer) {
+        RtlFreeUTF8String(&utf8_str);
+    }
+
+    return cxplat_status;
+}
+
 cxplat_status_t
-cxplat_get_module_path_from_address(
-    _In_ const void* address,
-    _Out_writes_z_(path_length) char* path,
-    _In_ size_t path_length,
-    _Out_opt_ size_t* path_length_out)
+cxplat_get_module_path_from_address(_In_ const void* address, _Out_ cxplat_utf8_string_t* path)
 {
     NTSTATUS status;
     cxplat_status_t cxplat_status;
@@ -50,18 +94,12 @@ cxplat_get_module_path_from_address(
         uintptr_t module_end = module_base + module_info[i].ImageSize;
         // Found the module that contains the address.
         if ((uintptr_t)address >= module_base && (uintptr_t)address < module_end) {
-            size_t path_length_needed = strlen((const char*)module_info[i].FullPathName) + 1;
+            ANSI_STRING ansi_path;
+            ansi_path.Buffer = (PCHAR)module_info[i].FullPathName;
+            ansi_path.Length = (USHORT)strlen((const char*)module_info[i].FullPathName);
+            ansi_path.MaximumLength = sizeof(module_info[i].FullPathName);
+            cxplat_status = cxplat_convert_ansi_to_utf8_string(&ansi_path, path);
 
-            if (path_length < path_length_needed) {
-                cxplat_status = CXPLAT_STATUS_NO_MEMORY;
-                goto Exit;
-            }
-            RtlCopyMemory(path, module_info[i].FullPathName, path_length_needed);
-            path[path_length_needed - 1] = '\0';
-            if (path_length_out) {
-                *path_length_out = path_length_needed;
-            }
-            cxplat_status = CXPLAT_STATUS_SUCCESS;
             goto Exit;
         }
     }

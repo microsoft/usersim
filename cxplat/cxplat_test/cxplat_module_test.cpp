@@ -10,15 +10,11 @@
 
 TEST_CASE("module_from_address_test", "[module]")
 {
-    char path[MAX_PATH];
-    size_t path_length_out = 0;
-    cxplat_status_t status = cxplat_get_module_path_from_address(
-        (const void*)cxplat_get_module_path_from_address, path, sizeof(path), &path_length_out);
+    cxplat_utf8_string_t path = {0};
+    cxplat_status_t status =
+        cxplat_get_module_path_from_address((const void*)cxplat_get_module_path_from_address, &path);
     REQUIRE(status == CXPLAT_STATUS_SUCCESS);
-    REQUIRE(path_length_out > 0);
-    REQUIRE(path[0] != '\0');
-    REQUIRE(path);
-    std::string path_str(path, path_length_out);
+    std::string path_str(reinterpret_cast<char*>(path.value), path.length - 1); // Exclude null terminator
     std::string expected_path = "cxplat_test";
 
     // Check if the path contains the expected substring
