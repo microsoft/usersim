@@ -4,6 +4,7 @@
 
 #include "cxplat_common.h"
 #include "cxplat_memory.h"
+#include "cxplat_module.h"
 #include "cxplat_processor.h"
 #include "cxplat_rundown.h"
 #include "cxplat_size.h"

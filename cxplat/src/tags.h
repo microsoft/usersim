@@ -8,3 +8,4 @@
 #define CXPLAT_TAG_PREEMPTIBLE_WORK_ITEM 'wpxc'
 #define CXPLAT_TAG_STRING 'tsxc'
 #define CXPLAT_TAG_UTF8_STRING 'suxc'
+#define CXPLAT_TAG_MODULE_INFO 'imxc'
