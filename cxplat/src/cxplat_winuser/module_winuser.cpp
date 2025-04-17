@@ -40,7 +40,7 @@ cxplat_get_module_path_from_address(_In_ const void* address, _Out_ cxplat_utf8_
 
     // Allocate the UTF-8 string large enough to hold the converted string and a null terminator.
     utf8_path->length = utf8_length + 1; // +1 for null terminator
-    utf8_path->value = (uint8_t*)cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, utf8_path->length, CXPLAT_TAG_STRING);
+    utf8_path->value = (uint8_t*)cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, utf8_path->length, CXPLAT_TAG_UTF8_STRING);
     if (utf8_path->value == NULL) {
         status = CXPLAT_STATUS_NO_MEMORY;
         goto Done;

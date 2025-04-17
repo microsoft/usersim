@@ -30,7 +30,7 @@ cxplat_convert_ansi_to_utf8_string(_In_ ANSI_STRING* ansi_string, _Out_ cxplat_u
 
     // Allocate the UTF-8 string large enough to hold the converted string and a null terminator.
     utf8->length = utf8_str.Length + 1; // +1 for null terminator
-    utf8->value = cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, utf8->length, CXPLAT_TAG_STRING);
+    utf8->value = cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, utf8->length, CXPLAT_TAG_UTF8_STRING);
     if (utf8->value == NULL) {
         cxplat_status = CXPLAT_STATUS_NO_MEMORY;
         goto Exit;
