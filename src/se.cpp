@@ -110,6 +110,13 @@ SeUnlockSubjectContext(_In_ PSECURITY_SUBJECT_CONTEXT subject_context)
     }
 }
 
+VOID
+SeReleaseSubjectContext(_In_ PSECURITY_SUBJECT_CONTEXT subject_context)
+{
+    UNREFERENCED_PARAMETER(subject_context);
+    // This function is a no-op in usersim.
+}
+
 _IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API BOOLEAN SeAccessCheck(
     _In_ PSECURITY_DESCRIPTOR security_descriptor,
     _In_ PSECURITY_SUBJECT_CONTEXT subject_security_context,
