@@ -58,6 +58,22 @@ IoAllocateMdl(
 }
 
 void
+IoBuildPartialMdl(
+    _In_ PMDL source_mdl,
+    _Inout_ PMDL target_mdl,
+    _Inout_ PVOID virtual_address,
+    _In_ ULONG length
+    )
+{
+    UNREFERENCED_PARAMETER(source_mdl);
+
+#pragma warning(push)
+#pragma warning(disable : 26451)
+    MmInitializeMdl(target_mdl, virtual_address, length);
+#pragma warning(pop) 
+}
+
+void
 io_work_item_wrapper(_In_ cxplat_preemptible_work_item_t* work_item, _Inout_opt_ void* context)
 {
     UNREFERENCED_PARAMETER(work_item);
