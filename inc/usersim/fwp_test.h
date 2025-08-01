@@ -59,4 +59,7 @@ usersim_fwp_set_sublayer_guids(
 USERSIM_API void
 usersim_fwp_sock_ops_v4_remove_flow_context(uint64_t flow_id);
 
+USERSIM_API void
+usersim_fwp_sock_ops_v6_remove_flow_context(uint64_t flow_id);
+
 CXPLAT_EXTERN_C_END

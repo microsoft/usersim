@@ -238,7 +238,11 @@ typedef class fwp_engine_t
     FWP_ACTION_TYPE
     test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id);
 
-    void test_sock_ops_v4_remove_flow_context(uint64_t flow_id);
+    void 
+    test_sock_ops_v4_remove_flow_context(uint64_t flow_id);
+
+    void 
+    test_sock_ops_v6_remove_flow_context(uint64_t flow_id);
 
     static fwp_engine_t*
     get()

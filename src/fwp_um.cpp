@@ -203,6 +203,11 @@ void fwp_engine_t::test_sock_ops_v4_remove_flow_context(uint64_t flow_id)
     test_remove_flow_context(flow_id, FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V4);
 }
 
+void fwp_engine_t::test_sock_ops_v6_remove_flow_context(uint64_t flow_id)
+{
+    test_remove_flow_context(flow_id, FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6);
+}
+
 _Requires_lock_not_held_(this->lock) void fwp_engine_t::test_remove_flow_context(
     uint64_t flow_id,
     uint16_t layer_id,
@@ -1031,6 +1036,13 @@ usersim_fwp_sock_ops_v4_remove_flow_context(
    uint64_t flow_id)
 {
     fwp_engine_t::get()->test_sock_ops_v4_remove_flow_context(flow_id);
+}
+
+void
+usersim_fwp_sock_ops_v6_remove_flow_context(
+   uint64_t flow_id)
+{
+    fwp_engine_t::get()->test_sock_ops_v6_remove_flow_context(flow_id);
 }
 
 #pragma endregion test_fwp
