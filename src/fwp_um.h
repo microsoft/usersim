@@ -233,10 +233,12 @@ typedef class fwp_engine_t
     test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameters);
 
     FWP_ACTION_TYPE
-    test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters);
+    test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id);
 
     FWP_ACTION_TYPE
-    test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters);
+    test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id);
+
+    void test_sock_ops_v4_remove_flow_context(uint64_t flow_id);
 
     static fwp_engine_t*
     get()
@@ -252,7 +254,13 @@ typedef class fwp_engine_t
         uint16_t layer_id,
         _In_ const GUID& layer_guid,
         _In_ const GUID& sublayer_guid,
-        _In_ FWPS_INCOMING_VALUE0* incoming_value);
+        _In_ FWPS_INCOMING_VALUE0* incoming_value,
+        _Out_opt_ uint64_t* flow_handle);
+
+    _Requires_lock_not_held_(this->lock) void test_remove_flow_context(
+    uint64_t flow_id,
+    uint16_t layer_id,
+    _In_ const GUID& layer_guid);
 
     _Ret_maybenull_ const FWPM_FILTER*
     get_fwpm_filter_with_context_under_lock(_In_ const GUID& layer_guid)
@@ -297,6 +305,17 @@ typedef class fwp_engine_t
             }
         }
         return nullptr;
+    }
+
+    _Ret_maybenull_
+    size_t get_callout_id_from_key_under_lock(_In_ const GUID* callout_key)
+    {
+        for (auto& [first, callout] : fwps_callouts) {
+            if (callout.calloutKey == *callout_key) {
+                return first;
+            }
+        }
+        return 0;
     }
 
     static std::unique_ptr<fwp_engine_t> _engine;

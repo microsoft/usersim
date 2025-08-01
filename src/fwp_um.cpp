@@ -143,14 +143,16 @@ fwp_engine_t::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
         FWPS_LAYER_ALE_RESOURCE_ASSIGNMENT_V4,
         FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V4,
         _default_sublayer,
-        incoming_value);
+        incoming_value,
+        nullptr);
 }
 
 _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
     uint16_t layer_id,
     _In_ const GUID& layer_guid,
     _In_ const GUID& sublayer_guid,
-    _In_ FWPS_INCOMING_VALUE0* incoming_value)
+    _In_ FWPS_INCOMING_VALUE0* incoming_value,
+    _Out_opt_ uint64_t* flow_id)
 {
     FWPS_INCOMING_VALUES incoming_fixed_values = {.layerId = layer_id, .incomingValue = incoming_value};
     FWPS_INCOMING_METADATA_VALUES incoming_metadata_values = {};
@@ -175,7 +177,11 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
             return FWP_ACTION_CALLOUT_UNKNOWN;
         }
 
-        incoming_metadata_values.flowHandle = next_flow_id++;
+        incoming_metadata_values.flowHandle = InterlockedIncrement(&next_flow_id);
+    }
+
+    if (flow_id) {
+        *flow_id = incoming_metadata_values.flowHandle;
     }
 
     FWPS_CLASSIFY_OUT0 result = {};
@@ -190,6 +196,30 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
         &result);
 
     return result.actionType;
+}
+
+void fwp_engine_t::test_sock_ops_v4_remove_flow_context(uint64_t flow_id)
+{
+    test_remove_flow_context(flow_id, FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V4);
+}
+
+_Requires_lock_not_held_(this->lock) void fwp_engine_t::test_remove_flow_context(
+    uint64_t flow_id,
+    uint16_t layer_id,
+    _In_ const GUID& layer_guid)
+{
+    uint32_t callout_id = 0;
+    {
+        shared_lock_t l(lock);
+
+        const GUID* callout_key = get_callout_key_from_layer_guid_under_lock(&layer_guid);
+        if (callout_key != nullptr) {
+            callout_id = static_cast<uint32_t>(get_callout_id_from_key_under_lock(callout_key));
+        }
+    }
+
+    CXPLAT_DEBUG_ASSERT(callout_id != 0);
+    delete_flow_context(flow_id, layer_id, callout_id);
 }
 
 // This is used to test the INET4_RECV_ACCEPT hook.
@@ -213,7 +243,7 @@ fwp_engine_t::test_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* para
     incoming_value[FWPS_FIELD_ALE_AUTH_CONNECT_V4_FLAGS].value.uint32 = parameters->reauthorization_flag;
 
     return test_callout(
-        FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V4, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4, _default_sublayer, incoming_value);
+        FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V4, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4, _default_sublayer, incoming_value, nullptr);
 }
 
 // This is used to test the INET6_RECV_ACCEPT hook.
@@ -235,7 +265,7 @@ fwp_engine_t::test_cgroup_inet6_recv_accept(_In_ fwp_classify_parameters_t* para
     incoming_value[FWPS_FIELD_ALE_AUTH_CONNECT_V6_FLAGS].value.uint32 = parameters->reauthorization_flag;
 
     return test_callout(
-        FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6, _default_sublayer, incoming_value);
+        FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6, _default_sublayer, incoming_value, nullptr);
 }
 
 // This is used to test the INET4_CONNECT hook.
@@ -264,7 +294,7 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
     incoming_value[FWPS_FIELD_ALE_CONNECT_REDIRECT_V4_ALE_USER_ID].value.byteBlob = &parameters->user_id;
 
     action = test_callout(
-        FWPS_LAYER_ALE_CONNECT_REDIRECT_V4, FWPM_LAYER_ALE_CONNECT_REDIRECT_V4, _default_sublayer, incoming_value);
+        FWPS_LAYER_ALE_CONNECT_REDIRECT_V4, FWPM_LAYER_ALE_CONNECT_REDIRECT_V4, _default_sublayer, incoming_value, nullptr);
     CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || action == FWP_ACTION_CONTINUE || fault_injection_enabled);
 
     if (_fwp_um_connect_request != nullptr) {
@@ -286,7 +316,7 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_FLAGS].value.uint32 = parameters->reauthorization_flag;
 
     action = test_callout(
-        FWPS_LAYER_ALE_AUTH_CONNECT_V4, FWPM_LAYER_ALE_AUTH_CONNECT_V4, _default_sublayer, incoming_value2);
+        FWPS_LAYER_ALE_AUTH_CONNECT_V4, FWPM_LAYER_ALE_AUTH_CONNECT_V4, _default_sublayer, incoming_value2, nullptr);
 
     if (redirected) {
         // In case the connection is redirected, AUTH_CONNECT callout will be invoked twice.
@@ -297,7 +327,7 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
             ntohl(*((uint32_t*)redirected_address));
 
         action = test_callout(
-            FWPS_LAYER_ALE_AUTH_CONNECT_V4, FWPM_LAYER_ALE_AUTH_CONNECT_V4, _default_sublayer, incoming_value2);
+            FWPS_LAYER_ALE_AUTH_CONNECT_V4, FWPM_LAYER_ALE_AUTH_CONNECT_V4, _default_sublayer, incoming_value2, nullptr);
     }
 
     _free_connection_request();
@@ -333,7 +363,7 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
 
     // TODO: why does this use _connect_v6_sublayer but test_cgroup_inet4_connect uses _default_sublayer?
     action = test_callout(
-        FWPS_LAYER_ALE_CONNECT_REDIRECT_V6, FWPM_LAYER_ALE_CONNECT_REDIRECT_V6, _connect_v6_sublayer, incoming_value);
+        FWPS_LAYER_ALE_CONNECT_REDIRECT_V6, FWPM_LAYER_ALE_CONNECT_REDIRECT_V6, _connect_v6_sublayer, incoming_value, nullptr);
     CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || action == FWP_ACTION_CONTINUE || fault_injection_enabled);
 
     if (_fwp_um_connect_request != nullptr) {
@@ -356,7 +386,7 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_FLAGS].value.uint32 = parameters->reauthorization_flag;
 
     action = test_callout(
-        FWPS_LAYER_ALE_AUTH_CONNECT_V6, FWPM_LAYER_ALE_AUTH_CONNECT_V6, _default_sublayer, incoming_value2);
+        FWPS_LAYER_ALE_AUTH_CONNECT_V6, FWPM_LAYER_ALE_AUTH_CONNECT_V6, _default_sublayer, incoming_value2, nullptr);
 
     if (redirected) {
         // In case the connection is redirected, AUTH_CONNECT callout will be invoked twice.
@@ -369,7 +399,7 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
         incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS].value.byteArray16 = &destination_ip;
 
         action = test_callout(
-            FWPS_LAYER_ALE_AUTH_CONNECT_V6, FWPM_LAYER_ALE_AUTH_CONNECT_V6, _default_sublayer, incoming_value2);
+            FWPS_LAYER_ALE_AUTH_CONNECT_V6, FWPM_LAYER_ALE_AUTH_CONNECT_V6, _default_sublayer, incoming_value2, nullptr);
     }
 
     _free_connection_request();
@@ -379,7 +409,7 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
 
 // This is used to test the SOCK_OPS hook for IPv4 traffic.
 FWP_ACTION_TYPE
-fwp_engine_t::test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS].value.uint32 =
@@ -393,12 +423,12 @@ fwp_engine_t::test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters)
     incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID].value.byteBlob = &parameters->app_id;
 
     return test_callout(
-        FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V4, _default_sublayer, incoming_value);
+        FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V4, _default_sublayer, incoming_value, flow_id);
 }
 
 // This is used to test the SOCK_OPS hook for IPv6 traffic.
 FWP_ACTION_TYPE
-fwp_engine_t::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_IP_LOCAL_ADDRESS].value.byteArray16 =
@@ -413,10 +443,9 @@ fwp_engine_t::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
     incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_ALE_APP_ID].value.byteBlob = &parameters->app_id;
 
     return test_callout(
-        FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6, _default_sublayer, incoming_value);
+        FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6, _default_sublayer, incoming_value, flow_id);
 }
 
-#pragma endregion fwp_engine_t
 
 #pragma region fwpm_apis
 
@@ -979,15 +1008,15 @@ usersim_fwp_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameters)
 }
 
 FWP_ACTION_TYPE
-usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters)
+usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id)
 {
-    return fwp_engine_t::get()->test_sock_ops_v4(parameters);
+    return fwp_engine_t::get()->test_sock_ops_v4(parameters, flow_id);
 }
 
 FWP_ACTION_TYPE
-usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters)
+usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id)
 {
-    return fwp_engine_t::get()->test_sock_ops_v6(parameters);
+    return fwp_engine_t::get()->test_sock_ops_v6(parameters, flow_id);
 }
 
 void
@@ -995,6 +1024,13 @@ usersim_fwp_set_sublayer_guids(
     _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer)
 {
     fwp_engine_t::get()->set_sublayer_guids(default_sublayer, connect_v4_sublayer, connect_v6_sublayer);
+}
+
+void
+usersim_fwp_sock_ops_v4_remove_flow_context(
+   uint64_t flow_id)
+{
+    fwp_engine_t::get()->test_sock_ops_v4_remove_flow_context(flow_id);
 }
 
 #pragma endregion test_fwp

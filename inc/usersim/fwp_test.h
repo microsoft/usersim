@@ -47,13 +47,16 @@ USERSIM_API FWP_ACTION_TYPE
 usersim_fwp_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameters);
 
 USERSIM_API FWP_ACTION_TYPE
-usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters);
+usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id);
 
 USERSIM_API FWP_ACTION_TYPE
-usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters);
+usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id);
 
 USERSIM_API void
 usersim_fwp_set_sublayer_guids(
     _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer);
+
+USERSIM_API void
+usersim_fwp_sock_ops_v4_remove_flow_context(uint64_t flow_id);
 
 CXPLAT_EXTERN_C_END
