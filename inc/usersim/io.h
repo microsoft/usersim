@@ -42,6 +42,14 @@ IoAllocateMdl(
     _Inout_opt_ IRP* irp);
 
 USERSIM_API
+void
+IoBuildPartialMdl(
+    _In_ PMDL source_mdl,
+    _Inout_ PMDL target_mdl,
+    _Inout_ PVOID virtual_address,
+    _In_ ULONG length);
+
+USERSIM_API
 PIO_WORKITEM
 IoAllocateWorkItem(_In_ DEVICE_OBJECT* device_object);
 
