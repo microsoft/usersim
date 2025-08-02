@@ -13,7 +13,7 @@ typedef unsigned long PFN_NUMBER;
 #define PAGE_ALIGN(Va) ((void*)((ULONG_PTR)(Va) & ~(PAGE_SIZE - 1)))
 #define BYTE_OFFSET(Va) ((unsigned long)((LONG_PTR)(Va) & (PAGE_SIZE - 1)))
 #define ADDRESS_AND_SIZE_TO_SPAN_PAGES(Va, size)                                                                \
-    (((((size)-1) >> PAGE_SHIFT) +                                                                              \
+    (((((size) - 1) >> PAGE_SHIFT) +                                                                            \
       (((((unsigned long)(size - 1) & (PAGE_SIZE - 1)) + (PtrToUlong(Va) & (PAGE_SIZE - 1)))) >> PAGE_SHIFT)) + \
      1L)
 
@@ -120,4 +120,12 @@ _IRQL_requires_max_(DISPATCH_LEVEL) VOID IofCompleteRequest(_In_ PIRP irp, _In_ 
 {
     UNREFERENCED_PARAMETER(irp);
     UNREFERENCED_PARAMETER(priority_boost);
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL) void IoBuildPartialMdl(
+    _In_ PMDL SourceMdl, _Inout_ PMDL TargetMdl, _In_ PVOID VirtualAddress, _In_ ULONG Length)
+{
+    UNREFERENCED_PARAMETER(SourceMdl);
+
+    MmInitializeMdl(TargetMdl, VirtualAddress, Length);
 }
