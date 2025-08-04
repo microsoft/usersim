@@ -5,6 +5,8 @@
 
 LIBRARY
 EXPORTS
+    ExEventObjectType
+
     FwpmCalloutAdd0
     FwpmCalloutDeleteByKey0
     FwpmEngineClose0
