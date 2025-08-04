@@ -19,4 +19,8 @@ TEST_CASE("ObfReferenceObject", "[ob]")
     REQUIRE(ObfReferenceObject(&x) == 3);
     REQUIRE(ObCloseHandle(handle, 0) == STATUS_SUCCESS);
     REQUIRE(ObfDereferenceObject(&x) == 1);
+
+    object = nullptr;
+    REQUIRE(ObReferenceObjectByHandle(handle, 0, *ExEventObjectType, 0, &object, nullptr) == STATUS_SUCCESS);
+    REQUIRE(object == &x);
 }
