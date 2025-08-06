@@ -198,19 +198,19 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
     return result.actionType;
 }
 
-void fwp_engine_t::test_sock_ops_v4_remove_flow_context(uint64_t flow_id)
+void fwp_engine_t::test_sock_ops_v4_remove_flow_context(_In_ uint64_t flow_id)
 {
     test_remove_flow_context(flow_id, FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V4);
 }
 
-void fwp_engine_t::test_sock_ops_v6_remove_flow_context(uint64_t flow_id)
+void fwp_engine_t::test_sock_ops_v6_remove_flow_context(_In_ uint64_t flow_id)
 {
     test_remove_flow_context(flow_id, FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6);
 }
 
 _Requires_lock_not_held_(this->lock) void fwp_engine_t::test_remove_flow_context(
-    uint64_t flow_id,
-    uint16_t layer_id,
+    _In_ uint64_t flow_id,
+    _In_ uint16_t layer_id,
     _In_ const GUID& layer_guid)
 {
     uint32_t callout_id = 0;
@@ -414,7 +414,7 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
 
 // This is used to test the SOCK_OPS hook for IPv4 traffic.
 FWP_ACTION_TYPE
-fwp_engine_t::test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id)
+fwp_engine_t::test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ uint64_t* flow_id)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS].value.uint32 =
@@ -433,7 +433,7 @@ fwp_engine_t::test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_
 
 // This is used to test the SOCK_OPS hook for IPv6 traffic.
 FWP_ACTION_TYPE
-fwp_engine_t::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id)
+fwp_engine_t::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ uint64_t* flow_id)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_IP_LOCAL_ADDRESS].value.byteArray16 =
@@ -1013,13 +1013,13 @@ usersim_fwp_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* parameters)
 }
 
 FWP_ACTION_TYPE
-usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id)
+usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ uint64_t* flow_id)
 {
     return fwp_engine_t::get()->test_sock_ops_v4(parameters, flow_id);
 }
 
 FWP_ACTION_TYPE
-usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_ uint64_t* flow_id)
+usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ uint64_t* flow_id)
 {
     return fwp_engine_t::get()->test_sock_ops_v6(parameters, flow_id);
 }
@@ -1033,14 +1033,14 @@ usersim_fwp_set_sublayer_guids(
 
 void
 usersim_fwp_sock_ops_v4_remove_flow_context(
-   uint64_t flow_id)
+    _In_ uint64_t flow_id)
 {
     fwp_engine_t::get()->test_sock_ops_v4_remove_flow_context(flow_id);
 }
 
 void
 usersim_fwp_sock_ops_v6_remove_flow_context(
-   uint64_t flow_id)
+   _In_ uint64_t flow_id)
 {
     fwp_engine_t::get()->test_sock_ops_v6_remove_flow_context(flow_id);
 }
