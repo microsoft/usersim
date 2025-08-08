@@ -8,6 +8,9 @@
 
 static std::map<PVOID, ULONG> _object_references;
 
+static POBJECT_TYPE _ExEventObjectType = nullptr;
+USERSIM_API __declspec(align(8)) POBJECT_TYPE* ExEventObjectType = &_ExEventObjectType;
+
 _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API LONG_PTR
 ObfReferenceObject(_In_ PVOID object)
 {

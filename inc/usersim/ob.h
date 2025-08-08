@@ -11,6 +11,8 @@ _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API LONG_PTR ObfDereferenceObject(_I
 
 typedef struct _OBJECT_TYPE* POBJECT_TYPE;
 
+USERSIM_API extern POBJECT_TYPE* ExEventObjectType;
+
 typedef struct _OBJECT_HANDLE_INFORMATION
 {
     ULONG HandleAttributes;

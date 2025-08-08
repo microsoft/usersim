@@ -73,4 +73,8 @@ typedef struct _IRP* PIRP;
 USERSIM_API
 _IRQL_requires_max_(DISPATCH_LEVEL) VOID IofCompleteRequest(_In_ PIRP irp, _In_ CCHAR priority_boost);
 
+USERSIM_API
+_IRQL_requires_max_(DISPATCH_LEVEL) void IoBuildPartialMdl(
+    _In_ PMDL SourceMdl, _Inout_ PMDL TargetMdl, _In_ PVOID VirtualAddress, _In_ ULONG Length);
+
 CXPLAT_EXTERN_C_END
