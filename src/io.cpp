@@ -121,3 +121,31 @@ _IRQL_requires_max_(DISPATCH_LEVEL) VOID IofCompleteRequest(_In_ PIRP irp, _In_ 
     UNREFERENCED_PARAMETER(irp);
     UNREFERENCED_PARAMETER(priority_boost);
 }
+
+void
+IoBuildPartialMdl(
+    _In_ PMDL SourceMdl,
+    _Inout_ PMDL TargetMdl,
+    _Inout_ PVOID VirtualAddress,
+    _In_ ULONG Length)
+{
+    ULONG Offset;
+
+    // Calculate the offset from the source MDL's starting address to the virtual address.
+    Offset = (ULONG)((ULONG_PTR)VirtualAddress - (ULONG_PTR)SourceMdl->start_va) - SourceMdl->byte_offset;
+
+    // If no length specified, calculate remaining bytes from the source MDL.
+    if (!Length)
+        Length = SourceMdl->byte_count - Offset;
+
+    // Set up the target MDL fields.
+    TargetMdl->start_va = PAGE_ALIGN(VirtualAddress);
+    TargetMdl->byte_count = Length;
+    TargetMdl->byte_offset = BYTE_OFFSET(VirtualAddress);
+
+    // Copy relevant flags from source MDL.
+    TargetMdl->flags = SourceMdl->flags;
+
+    // We currently don't allocate space for the PFN array, so nothing to copy
+    // here.
+}
