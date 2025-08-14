@@ -481,7 +481,7 @@ fwp_engine_t::test_sock_ops_listen_v4(_In_ fwp_classify_parameters_t* parameters
     incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_ALE_APP_ID].value.byteBlob = &parameters->app_id;
 
     return test_callout(
-        FWPS_LAYER_ALE_AUTH_LISTEN_V4, FWPM_LAYER_ALE_AUTH_LISTEN_V4, _default_sublayer, incoming_value);
+        FWPS_LAYER_ALE_AUTH_LISTEN_V4, FWPM_LAYER_ALE_AUTH_LISTEN_V4, _default_sublayer, incoming_value, nullptr);
 }
 
 // This is used to test the SOCK_OPS listen hook for IPv6 traffic.
@@ -497,7 +497,7 @@ fwp_engine_t::test_sock_ops_listen_v6(_In_ fwp_classify_parameters_t* parameters
     incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_ALE_APP_ID].value.byteBlob = &parameters->app_id;
 
     return test_callout(
-        FWPS_LAYER_ALE_AUTH_LISTEN_V6, FWPM_LAYER_ALE_AUTH_LISTEN_V6, _default_sublayer, incoming_value);
+        FWPS_LAYER_ALE_AUTH_LISTEN_V6, FWPM_LAYER_ALE_AUTH_LISTEN_V6, _default_sublayer, incoming_value, nullptr);
 }
 
 #pragma endregion fwp_engine_t
