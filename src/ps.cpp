@@ -15,6 +15,78 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE PsGetCurrentThreadId()
     return (HANDLE)(uintptr_t)GetCurrentThreadId();
 }
 
+USERSIM_API
+LONGLONG
+PsGetThreadCreateTime(_In_ HANDLE)
+{
+    FILETIME creation, exit, kernel, user;
+
+    if (GetThreadTimes(GetCurrentThread(), &creation, &exit, &kernel, &user )) {
+        return (LONGLONG)creation.dwLowDateTime | ((LONGLONG)creation.dwHighDateTime << 32);
+    }
+    return 0;
+}
+
+typedef struct _PROCESS_TELEMETRY_ID_INFORMATION
+{
+    ULONG HeaderSize;
+    ULONG ProcessId;
+    ULONG64 ProcessStartKey;
+    ULONG64 CreateTime;
+    ULONG64 CreateInterruptTime;
+    ULONG64 CreateUnbiasedInterruptTime;
+    ULONG64 ProcessSequenceNumber;
+    ULONG64 SessionCreateTime;
+    ULONG SessionId;
+    ULONG BootId;
+    ULONG ImageChecksum;
+    ULONG ImageTimeDateStamp;
+    ULONG UserSidOffset;
+    ULONG ImagePathOffset;
+    ULONG PackageNameOffset;
+    ULONG RelativeAppNameOffset;
+    ULONG CommandLineOffset;
+} PROCESS_TELEMETRY_ID_INFORMATION, *PPROCESS_TELEMETRY_ID_INFORMATION;
+
+typedef enum _PROCESSINFOCLASS
+{
+    ProcessBasicInformation = 0,
+    ProcessDebugPort = 7,
+    ProcessWow64Information = 26,
+    ProcessImageFileName = 27,
+    ProcessBreakOnTermination = 29,
+    ProcessTelemetryIdInformation = 64,
+    ProcessSubsystemInformation = 75
+} PROCESSINFOCLASS;
+
+typedef NTSTATUS (NTAPI *NtQueryInformationProcess_t)(
+    _In_ HANDLE ProcessHandle,
+    _In_ PROCESSINFOCLASS ProcessInformationClass,
+    _Out_writes_bytes_(ProcessInformationLength) PVOID ProcessInformation,
+    _In_ ULONG ProcessInformationLength,
+    _Out_opt_ PULONG ReturnLength);
+
+USERSIM_API
+ULONGLONG
+PsGetProcessStartKey(_In_ PEPROCESS)
+{
+    PROCESS_TELEMETRY_ID_INFORMATION telemetryId{};
+    NtQueryInformationProcess_t NtQueryInformationProcess = reinterpret_cast<NtQueryInformationProcess_t>(
+        GetProcAddress(GetModuleHandle(L"ntdll.dll"),
+        "NtQueryInformationProcess"));
+    NTSTATUS status = NtQueryInformationProcess(
+        GetCurrentProcess(),
+        ProcessTelemetryIdInformation,
+        &telemetryId,
+        sizeof(telemetryId),
+        nullptr);
+
+    if (NT_SUCCESS(status)) {
+        return telemetryId.ProcessStartKey;
+    }
+    return 0;
+}
+
 static PGETPROCESSEXITSTATUS _usersim_get_process_exit_status_callback = NULL;
 
 USERSIM_API
