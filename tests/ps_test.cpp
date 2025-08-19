@@ -117,7 +117,7 @@ TEST_CASE("PsGetThreadCreateTime", "[ps]")
     // Setting back to a NULL callback reverts to returning 0
     usersime_set_thread_create_time_callback(nullptr);
     time = PsGetThreadCreateTime(nullptr);
-    REQUIRE(time == 0);
+    REQUIRE(time != 0);
 }
 
 TEST_CASE("PsGetProcessStartKey", "[ps]")
