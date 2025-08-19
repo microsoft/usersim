@@ -102,9 +102,9 @@ TEST_CASE("PsGetProcessExitTime", "[ps]")
 
 TEST_CASE("PsGetThreadCreateTime", "[ps]")
 {
-    // If no callback is installed, we default to 0
+    // If no callback is installed, we default to real thread create time, or 0 if that fails
     auto time = PsGetThreadCreateTime(nullptr);
-    REQUIRE(time == 0);
+    REQUIRE(time != 0);
 
     usersime_set_thread_create_time_callback([](HANDLE proc) -> LONGLONG { return (int)proc + 1; });
 
