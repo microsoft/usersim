@@ -15,18 +15,6 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTKERNELAPI HANDLE PsGetCurrentThreadId()
     return (HANDLE)(uintptr_t)GetCurrentThreadId();
 }
 
-USERSIM_API
-LONGLONG
-PsGetThreadCreateTime(_In_ HANDLE)
-{
-    FILETIME creation, exit, kernel, user;
-
-    if (GetThreadTimes(GetCurrentThread(), &creation, &exit, &kernel, &user )) {
-        return (LONGLONG)creation.dwLowDateTime | ((LONGLONG)creation.dwHighDateTime << 32);
-    }
-    return 0;
-}
-
 typedef struct _PROCESS_TELEMETRY_ID_INFORMATION
 {
     ULONG HeaderSize;
@@ -66,10 +54,23 @@ typedef NTSTATUS (NTAPI *NtQueryInformationProcess_t)(
     _In_ ULONG ProcessInformationLength,
     _Out_opt_ PULONG ReturnLength);
 
+static PGETPROCESSSTARTKEY _usersim_get_process_start_key_callback = nullptr;
+USERSIM_API
+void
+usersime_set_process_start_key_callback(_In_ PGETPROCESSSTARTKEY callback)
+{
+    _usersim_get_process_start_key_callback = callback;
+}
+
 USERSIM_API
 ULONGLONG
-PsGetProcessStartKey(_In_ PEPROCESS)
+PsGetProcessStartKey(_In_ PEPROCESS process)
 {
+
+    if (_usersim_get_process_start_key_callback != nullptr) {
+        return _usersim_get_process_start_key_callback(process);
+    }
+
     PROCESS_TELEMETRY_ID_INFORMATION telemetryId{};
     NtQueryInformationProcess_t NtQueryInformationProcess = reinterpret_cast<NtQueryInformationProcess_t>(
         GetProcAddress(GetModuleHandle(L"ntdll.dll"),
@@ -116,6 +117,33 @@ PsGetProcessCreateTimeQuadPart(_In_ PEPROCESS Process)
 {
     if (_usersim_get_process_create_time_quadpart_callback != NULL) {
         return _usersim_get_process_create_time_quadpart_callback(Process);
+    }
+
+    // Fall back to the beginning of time
+    return 0;
+}
+
+static PGETTHREADCREATETIME _usersim_get_thread_start_time_callback = nullptr;
+
+USERSIM_API
+void
+usersime_set_thread_create_time_callback(_In_ PGETTHREADCREATETIME callback)
+{
+    _usersim_get_thread_start_time_callback = callback;
+}
+
+USERSIM_API
+LONGLONG
+PsGetThreadCreateTime(_In_ HANDLE thread)
+{
+    FILETIME creation, exit, kernel, user;
+
+    if (_usersim_get_thread_start_time_callback != nullptr) {
+        return _usersim_get_thread_start_time_callback(thread);
+    }
+
+    if (GetThreadTimes(GetCurrentThread(), &creation, &exit, &kernel, &user)) {
+        return static_cast<LONGLONG>(creation.dwLowDateTime) | (static_cast<LONGLONG>(creation.dwHighDateTime) << 32);
     }
 
     // Fall back to the beginning of time
