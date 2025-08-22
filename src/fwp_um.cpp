@@ -208,6 +208,7 @@ void fwp_engine_t::test_sock_ops_v6_remove_flow_context(_In_ uint64_t flow_id)
     test_remove_flow_context(flow_id, FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6);
 }
 
+// This will delete the flow context for the given flow_id only if the flow context exists.
 _Requires_lock_not_held_(this->lock) void fwp_engine_t::test_remove_flow_context(
     _In_ uint64_t flow_id,
     _In_ uint16_t layer_id,
@@ -221,9 +222,12 @@ _Requires_lock_not_held_(this->lock) void fwp_engine_t::test_remove_flow_context
         if (callout_key != nullptr) {
             callout_id = static_cast<uint32_t>(get_callout_id_from_key_under_lock(callout_key));
         }
+        CXPLAT_DEBUG_ASSERT(callout_id != 0);
+        if (fwpm_flow_contexts.find(flow_id) == fwpm_flow_contexts.end()) {
+            return;
+        }
     }
 
-    CXPLAT_DEBUG_ASSERT(callout_id != 0);
     delete_flow_context(flow_id, layer_id, callout_id);
 }
 
