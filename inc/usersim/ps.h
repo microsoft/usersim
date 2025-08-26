@@ -17,6 +17,26 @@ PsGetCurrentProcessId();
 typedef NTSTATUS (*PGETPROCESSEXITSTATUS)(_In_ PEPROCESS process);
 
 USERSIM_API
+LONGLONG
+PsGetThreadCreateTime(_In_ HANDLE thread);
+
+typedef LONGLONG (*PGETTHREADCREATETIME)(_In_ HANDLE thread);
+
+USERSIM_API
+void
+usersime_set_thread_create_time_callback(_In_ PGETTHREADCREATETIME callback);
+
+USERSIM_API
+ULONGLONG
+PsGetProcessStartKey(_In_ PEPROCESS process);
+
+typedef ULONGLONG (*PGETPROCESSSTARTKEY)(_In_ PEPROCESS process);
+
+USERSIM_API
+void
+usersime_set_process_start_key_callback(_In_ PGETPROCESSSTARTKEY callback);
+
+USERSIM_API
 _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI NTSTATUS PsGetProcessExitStatus(_In_ PEPROCESS Process);
 
 USERSIM_API
