@@ -323,6 +323,14 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_ALE_USER_ID].value.byteBlob = &parameters->user_id;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_INTERFACE].value.uint64 = &parameters->interface_luid;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_FLAGS].value.uint32 = parameters->reauthorization_flag;
+    
+    // Add fields for new helper functions
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_INTERFACE_TYPE].value.uint32 =
+        IF_TYPE_ETHERNET_CSMACD;                                                                 // Default to Ethernet
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_TUNNEL_TYPE].value.uint32 = TUNNEL_TYPE_NONE; // Default to no tunnel
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_NEXTHOP_INTERFACE].value.uint64 =
+        &parameters->interface_luid;                                                      // Use same as local interface
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_SUB_INTERFACE_INDEX].value.uint32 = 0; // Default sub-interface index
 
     action = test_callout(
         FWPS_LAYER_ALE_AUTH_CONNECT_V4, FWPM_LAYER_ALE_AUTH_CONNECT_V4, _default_sublayer, incoming_value2, nullptr);
@@ -393,6 +401,12 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_ALE_USER_ID].value.byteBlob = &parameters->user_id;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_LOCAL_INTERFACE].value.uint64 = &parameters->interface_luid;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_FLAGS].value.uint32 = parameters->reauthorization_flag;
+    
+    // Add fields for new helper functions
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_INTERFACE_TYPE].value.uint32 = IF_TYPE_ETHERNET_CSMACD; // Default to Ethernet
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_TUNNEL_TYPE].value.uint32 = TUNNEL_TYPE_NONE; // Default to no tunnel
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_NEXTHOP_INTERFACE].value.uint64 = &parameters->interface_luid; // Use same as local interface
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_SUB_INTERFACE_INDEX].value.uint32 = 0; // Default sub-interface index
 
     action = test_callout(
         FWPS_LAYER_ALE_AUTH_CONNECT_V6, FWPM_LAYER_ALE_AUTH_CONNECT_V6, _default_sublayer, incoming_value2, nullptr);
