@@ -97,5 +97,45 @@ TEST_CASE("PsGetProcessExitTime", "[ps]")
     // Setting back to a NULL callback reverts to returning 0
     usersime_set_process_exit_time_callback(NULL);
     time = PsGetProcessExitTime();
-    REQUIRE(time.QuadPart == 0);
+    REQUIRE(time.QuadPart == 0);    
+}
+
+TEST_CASE("PsGetThreadCreateTime", "[ps]")
+{
+    // If no callback is installed, we default to real thread create time, or 0 if that fails
+    auto time = PsGetThreadCreateTime(nullptr);
+    REQUIRE(time != 0);
+
+    usersime_set_thread_create_time_callback([](HANDLE proc) -> LONGLONG { return (int)proc + 1; });
+
+    time = PsGetThreadCreateTime(nullptr);
+    REQUIRE(time == 1);
+
+    time = PsGetThreadCreateTime(reinterpret_cast<HANDLE>(1234));
+    REQUIRE(time == 1235);
+
+    // Setting back to a NULL callback reverts to returning 0
+    usersime_set_thread_create_time_callback(nullptr);
+    time = PsGetThreadCreateTime(nullptr);
+    REQUIRE(time != 0);
+}
+
+TEST_CASE("PsGetProcessStartKey", "[ps]")
+{
+    // If no callback is installed, we default to 0
+    auto key = PsGetProcessStartKey(nullptr);
+    REQUIRE(key == 0);
+
+    usersime_set_process_start_key_callback([](PEPROCESS proc) -> ULONGLONG {return (int)proc + 42; });
+
+    key = PsGetProcessStartKey(nullptr);
+    REQUIRE(key == 42);
+
+    key = PsGetProcessStartKey(reinterpret_cast<PEPROCESS>(1234));
+    REQUIRE(key == 1276);
+
+    // Setting back to a NULL callback reverts to returning 0
+    usersime_set_process_start_key_callback(nullptr);
+    key = PsGetProcessStartKey(nullptr);
+    REQUIRE(key == 0);
 }

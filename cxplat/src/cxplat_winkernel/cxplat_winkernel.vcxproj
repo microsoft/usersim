@@ -4,19 +4,23 @@
   SPDX-License-Identifier: MIT
 -->
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\..\wdk.props" />
   <ItemGroup>
     <ClCompile Include="..\memory.c" />
     <ClCompile Include="cxplat_winkernel.c" />
     <ClCompile Include="memory_winkernel.c" />
+    <ClCompile Include="module_winkernel.c" />
     <ClCompile Include="processor_winkernel.c" />
     <ClCompile Include="rundown_winkernel.c" />
     <ClCompile Include="size_winkernel.c" />
+    <ClCompile Include="time_winkernel.c" />
     <ClCompile Include="workitem_winkernel.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\inc\cxplat.h" />
     <ClInclude Include="..\..\inc\cxplat_common.h" />
     <ClInclude Include="..\..\inc\cxplat_memory.h" />
+    <ClInclude Include="..\..\inc\cxplat_module.h" />
     <ClInclude Include="..\..\inc\cxplat_processor.h" />
     <ClInclude Include="..\..\inc\cxplat_rundown.h" />
     <ClInclude Include="..\..\inc\cxplat_size.h" />
@@ -35,7 +39,7 @@
     <RootNamespace>cxplatwinkernel</RootNamespace>
     <DriverType>KMDF</DriverType>
     <ProjectName>cxplat_winkernel</ProjectName>
-    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">

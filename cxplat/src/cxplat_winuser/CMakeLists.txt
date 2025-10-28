@@ -16,11 +16,13 @@ add_library(cxplat_winuser STATIC
   $<$<CONFIG:Debug>:leak_detector.h>
   ../memory.c
   memory_winuser.cpp
+  module_winuser.cpp
   processor_winuser.cpp
   rundown_winuser.cpp
   size_winuser.c
   workitem_winuser.cpp
   symbol_decoder.h
+  time_winuser.cpp
   winuser_internal.h
 )
 
@@ -29,6 +31,7 @@ target_include_directories(cxplat_winuser PRIVATE
   "../../inc"
   "../../inc/winuser"
   "${WindowsSdkDir}include/10.0.22621.0"
+  "${WindowsSdkDir}include/10.0.26100.0"
 )
 
 set(defs UNICODE _UNICODE CXPLAT_SOURCE)

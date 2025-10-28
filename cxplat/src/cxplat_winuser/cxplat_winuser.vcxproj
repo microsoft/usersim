@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\..\wdk.props" />
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{f2ca70ab-af9a-47d1-9da9-94d5ab573ac2}</ProjectGuid>
     <RootNamespace>cxplatwinuser</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
@@ -92,6 +93,7 @@
     <ClInclude Include="..\..\inc\cxplat.h" />
     <ClInclude Include="..\..\inc\cxplat_common.h" />
     <ClInclude Include="..\..\inc\cxplat_memory.h" />
+    <ClInclude Include="..\..\inc\cxplat_module.h" />
     <ClInclude Include="..\..\inc\cxplat_processor.h" />
     <ClInclude Include="..\..\inc\cxplat_rundown.h" />
     <ClInclude Include="..\..\inc\cxplat_size.h" />
@@ -115,9 +117,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)'=='Release'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="memory_winuser.cpp" />
+    <ClCompile Include="module_winuser.cpp" />
     <ClCompile Include="processor_winuser.cpp" />
     <ClCompile Include="rundown_winuser.cpp" />
     <ClCompile Include="size_winuser.c" />
+    <ClCompile Include="time_winuser.cpp" />
     <ClCompile Include="workitem_winuser.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -426,12 +426,6 @@ usersim_random_uint32();
 uint64_t
 usersim_query_time_since_boot(bool include_suspended_time);
 
-_Must_inspect_result_ usersim_result_t
-usersim_set_current_thread_affinity(uintptr_t new_thread_affinity_mask, _Out_ uintptr_t* old_thread_affinity_mask);
-
-void
-usersim_restore_current_thread_affinity(uintptr_t old_thread_affinity_mask);
-
 typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
 
 /**

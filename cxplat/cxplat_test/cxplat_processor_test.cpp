@@ -21,3 +21,45 @@ TEST_CASE("processor", "[processor]")
     REQUIRE(current < maximum);
     cxplat_cleanup();
 }
+
+TEST_CASE("queued_spin_lock", "[processor]")
+{
+    REQUIRE(cxplat_initialize() == CXPLAT_STATUS_SUCCESS);
+    cxplat_queue_spin_lock_t lock;
+    cxplat_lock_queue_handle_t handle;
+    cxplat_acquire_in_stack_queued_spin_lock(&lock, &handle);
+    cxplat_release_in_stack_queued_spin_lock(&handle);
+    cxplat_cleanup();
+}
+
+#if !defined(PASSIVE_LEVEL)
+#define PASSIVE_LEVEL 0
+#endif
+
+#if !defined(DISPATCH_LEVEL)
+#define DISPATCH_LEVEL 2
+#endif
+
+TEST_CASE("spin_lock", "[processor]")
+{
+    REQUIRE(cxplat_initialize() == CXPLAT_STATUS_SUCCESS);
+    cxplat_irql_t irql;
+    cxplat_spin_lock_t lock;
+    REQUIRE(cxplat_get_current_irql() == PASSIVE_LEVEL);
+    irql = cxplat_acquire_spin_lock(&lock);
+    REQUIRE(cxplat_get_current_irql() == DISPATCH_LEVEL);
+    cxplat_release_spin_lock(&lock, irql);
+    REQUIRE(cxplat_get_current_irql() == PASSIVE_LEVEL);
+
+    irql = cxplat_raise_irql(DISPATCH_LEVEL);
+    REQUIRE(cxplat_get_current_irql() == DISPATCH_LEVEL);
+    REQUIRE(irql == PASSIVE_LEVEL);
+    cxplat_acquire_spin_lock_at_dpc_level(&lock);
+
+    cxplat_release_spin_lock_from_dpc_level(&lock);
+
+    cxplat_lower_irql(irql);
+    REQUIRE(cxplat_get_current_irql() == PASSIVE_LEVEL);
+
+    cxplat_cleanup();
+}

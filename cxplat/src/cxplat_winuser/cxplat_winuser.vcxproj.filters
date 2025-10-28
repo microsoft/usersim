@@ -60,6 +60,9 @@
     <ClInclude Include="..\..\inc\cxplat_processor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\inc\cxplat_module.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="fault_injection.cpp">
@@ -87,6 +90,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="processor_winuser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="time_winuser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="module_winuser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

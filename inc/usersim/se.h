@@ -140,6 +140,10 @@ SeCaptureSubjectContext(_Out_ PSECURITY_SUBJECT_CONTEXT subject_context);
 
 USERSIM_API
 VOID
+SeReleaseSubjectContext(_Inout_ PSECURITY_SUBJECT_CONTEXT SubjectContext);
+
+USERSIM_API
+VOID
 SeLockSubjectContext(_In_ PSECURITY_SUBJECT_CONTEXT subject_context);
 
 USERSIM_API
