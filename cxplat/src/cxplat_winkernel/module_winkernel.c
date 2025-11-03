@@ -15,6 +15,9 @@ cxplat_convert_ansi_to_utf8_string(_In_ ANSI_STRING* ansi_string, _Out_ cxplat_u
     ULONG utf8_bytes_written = 0;
     ULONG utf8_buffer_size = 0;
 
+    utf8->value = NULL;
+    utf8->length = 0;
+
     // First convert the ANSI string to a Unicode string.
     status = RtlAnsiStringToUnicodeString(&unicode_str, ansi_string, TRUE);
     if (!NT_SUCCESS(status)) {
@@ -30,6 +33,9 @@ cxplat_convert_ansi_to_utf8_string(_In_ ANSI_STRING* ansi_string, _Out_ cxplat_u
     }
 
     // Allocate the UTF-8 string large enough to hold the converted string and a null terminator.
+    // Note: This diffres from the declared length in cxplat_utf8_string_t which does not include the null terminator.
+    // This is because there is code in the callers that expects space for the null terminator. Once they are fixed,
+    // we can change this to utf8->length = utf8_buffer_size;
     utf8->length = utf8_buffer_size + 1; // +1 for null terminator
     utf8->value = cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, utf8->length, CXPLAT_TAG_UTF8_STRING);
     if (utf8->value == NULL) {
