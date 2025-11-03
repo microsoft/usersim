@@ -12,7 +12,8 @@ cxplat_convert_ansi_to_utf8_string(_In_ ANSI_STRING* ansi_string, _Out_ cxplat_u
     NTSTATUS status;
     cxplat_status_t cxplat_status;
     UNICODE_STRING unicode_str = {0};
-    UTF8_STRING utf8_str = {0};
+    ULONG utf8_bytes_written = 0;
+    ULONG utf8_buffer_size = 0;
 
     // First convert the ANSI string to a Unicode string.
     status = RtlAnsiStringToUnicodeString(&unicode_str, ansi_string, TRUE);
@@ -21,34 +22,43 @@ cxplat_convert_ansi_to_utf8_string(_In_ ANSI_STRING* ansi_string, _Out_ cxplat_u
         goto Exit;
     }
 
-    // Convert the unicode string to a UTF-8 string.
-    status = RtlUnicodeStringToUTF8String(&utf8_str, &unicode_str, TRUE);
+    // Calculate the required UTF-8 buffer size by calling RtlUnicodeToUTF8N with NULL buffer
+    status = RtlUnicodeToUTF8N(NULL, 0, &utf8_buffer_size, unicode_str.Buffer, unicode_str.Length);
     if (!NT_SUCCESS(status)) {
         cxplat_status = CXPLAT_STATUS_NO_MEMORY;
         goto Exit;
     }
 
     // Allocate the UTF-8 string large enough to hold the converted string and a null terminator.
-    utf8->length = utf8_str.Length + 1; // +1 for null terminator
+    utf8->length = utf8_buffer_size + 1; // +1 for null terminator
     utf8->value = cxplat_allocate(CXPLAT_POOL_FLAG_NON_PAGED, utf8->length, CXPLAT_TAG_UTF8_STRING);
     if (utf8->value == NULL) {
         cxplat_status = CXPLAT_STATUS_NO_MEMORY;
         goto Exit;
     }
 
-    // Copy the converted string to the output buffer.
-    RtlCopyMemory(utf8->value, utf8_str.Buffer, utf8_str.Length);
-    utf8->value[utf8_str.Length] = '\0'; // Null-terminate the string
+    // Convert the unicode string to UTF-8.
+    status = RtlUnicodeToUTF8N(
+        (PCHAR)utf8->value, utf8_buffer_size, &utf8_bytes_written, unicode_str.Buffer, unicode_str.Length);
+    if (!NT_SUCCESS(status)) {
+        cxplat_status = CXPLAT_STATUS_NO_MEMORY;
+        goto Exit;
+    }
 
+    utf8->value[utf8_bytes_written] = '\0'; // Null-terminate the string
     cxplat_status = CXPLAT_STATUS_SUCCESS;
 
 Exit:
-    if (unicode_str.Buffer) {
-        RtlFreeUnicodeString(&unicode_str);
+    if (cxplat_status != CXPLAT_STATUS_SUCCESS) {
+        if (utf8->value) {
+            cxplat_free(utf8->value, CXPLAT_POOL_FLAG_NON_PAGED, CXPLAT_TAG_UTF8_STRING);
+            utf8->value = NULL;
+            utf8->length = 0;
+        }
     }
 
-    if (utf8_str.Buffer) {
-        RtlFreeUTF8String(&utf8_str);
+    if (unicode_str.Buffer) {
+        RtlFreeUnicodeString(&unicode_str);
     }
 
     return cxplat_status;
