@@ -250,3 +250,37 @@ SeQueryAuthenticationIdToken(_In_ PACCESS_TOKEN token, _Out_ PLUID authenticatio
     usersim_convert_sid_to_luid(((PTOKEN_OWNER)token_owner_buffer)->Owner, authentication_id);
     return STATUS_SUCCESS;
 }
+
+NTSTATUS
+SeQueryInformationToken(_In_ PACCESS_TOKEN token, _In_ TOKEN_INFORMATION_CLASS token_information_class, _Out_ PVOID* token_information)
+{
+    *token_information = nullptr;
+
+    if (cxplat_fault_injection_inject_fault()) {
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    HANDLE token_handle = (HANDLE)token;
+    DWORD needed = 0;
+
+    // Get required buffer size.
+    (void)GetTokenInformation(token_handle, token_information_class, nullptr, 0, &needed);
+    DWORD error = GetLastError();
+    if (error != ERROR_INSUFFICIENT_BUFFER || needed == 0) {
+        return win32_error_to_usersim_error(error);
+    }
+
+    // Allocate buffer (caller frees with ExFreePool).
+    void* buffer = ExAllocatePoolUninitialized(NonPagedPoolNx, needed, USERSIM_TAG_TOKEN_ACCESS_INFORMATION);
+    if (buffer == nullptr) {
+        return STATUS_NO_MEMORY;
+    }
+
+    if (!GetTokenInformation(token_handle, token_information_class, buffer, needed, &needed)) {
+        ExFreePool(buffer);
+        return win32_error_to_usersim_error(GetLastError());
+    }
+
+    *token_information = buffer;
+    return STATUS_SUCCESS;
+}

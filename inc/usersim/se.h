@@ -180,6 +180,10 @@ USERSIM_API
 NTSTATUS
 SeQueryAuthenticationIdToken(_In_ PACCESS_TOKEN token, _Out_ PLUID authentication_id);
 
+USERSIM_API
+NTSTATUS
+SeQueryInformationToken(_In_ PACCESS_TOKEN token, _In_ TOKEN_INFORMATION_CLASS token_information_class, _Out_ PVOID* token_information);
+
 void
 usersim_initialize_se();
 
