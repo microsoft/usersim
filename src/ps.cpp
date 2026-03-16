@@ -213,3 +213,18 @@ usersime_invoke_process_creation_notify_routine(
         _usersim_process_creation_notify_routine(process, process_id, create_info);
     }
 }
+
+PACCESS_TOKEN
+PsReferencePrimaryToken(_In_ PEPROCESS process)
+{
+    UNREFERENCED_PARAMETER(process);
+    // In user mode, return the current process token handle as a pseudo-token.
+    return (PACCESS_TOKEN)GetCurrentProcessToken();
+}
+
+VOID
+PsDereferencePrimaryToken(_In_ PACCESS_TOKEN token)
+{
+    UNREFERENCED_PARAMETER(token);
+    // No-op in user mode; GetCurrentProcessToken() returns a pseudo-handle.
+}
