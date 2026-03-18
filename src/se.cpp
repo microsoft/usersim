@@ -284,3 +284,98 @@ SeQueryInformationToken(_In_ PACCESS_TOKEN token, _In_ TOKEN_INFORMATION_CLASS t
     *token_information = buffer;
     return STATUS_SUCCESS;
 }
+
+NTSTATUS
+SecLookupAccountSid(
+    _In_ PSID Sid,
+    _Inout_ PULONG NameSize,
+    _Out_opt_ PUNICODE_STRING Name,
+    _Inout_ PULONG DomainSize,
+    _Out_opt_ PUNICODE_STRING Domain,
+    _Out_ PSID_NAME_USE SidNameUse)
+{
+    if (cxplat_fault_injection_inject_fault()) {
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    if (Sid == nullptr || NameSize == nullptr || DomainSize == nullptr || SidNameUse == nullptr) {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    // Use LookupAccountSidW to resolve the SID in user mode.
+    DWORD name_chars = 0;
+    DWORD domain_chars = 0;
+    SID_NAME_USE name_use;
+
+    // First call to get required buffer sizes (in characters including null terminator).
+    (void)LookupAccountSidW(nullptr, Sid, nullptr, &name_chars, nullptr, &domain_chars, &name_use);
+    DWORD error = GetLastError();
+    if (error != ERROR_INSUFFICIENT_BUFFER) {
+        return win32_error_to_usersim_error(error);
+    }
+
+    // If caller just wants sizes (Name and Domain are NULL), return sizes in bytes.
+    if (Name == nullptr && Domain == nullptr) {
+        // Return sizes as byte counts (without null terminator) to match kernel SecLookupAccountSid behavior.
+        *NameSize = (name_chars > 0) ? (ULONG)((name_chars - 1) * sizeof(WCHAR)) : 0;
+        *DomainSize = (domain_chars > 0) ? (ULONG)((domain_chars - 1) * sizeof(WCHAR)) : 0;
+        *SidNameUse = name_use;
+        return STATUS_BUFFER_TOO_SMALL;
+    }
+
+    // Allocate temporary buffers for the LookupAccountSidW call.
+    WCHAR* name_buf = nullptr;
+    WCHAR* domain_buf = nullptr;
+
+    if (name_chars > 0) {
+        name_buf = (WCHAR*)malloc(name_chars * sizeof(WCHAR));
+        if (name_buf == nullptr) {
+            return STATUS_NO_MEMORY;
+        }
+    }
+    if (domain_chars > 0) {
+        domain_buf = (WCHAR*)malloc(domain_chars * sizeof(WCHAR));
+        if (domain_buf == nullptr) {
+            free(name_buf);
+            return STATUS_NO_MEMORY;
+        }
+    }
+
+    if (!LookupAccountSidW(nullptr, Sid, name_buf, &name_chars, domain_buf, &domain_chars, &name_use)) {
+        free(name_buf);
+        free(domain_buf);
+        return win32_error_to_usersim_error(GetLastError());
+    }
+
+    // Copy results into caller-provided UNICODE_STRING buffers.
+    // The kernel SecLookupAccountSid returns Length in bytes (without null terminator).
+    if (Name != nullptr && Name->Buffer != nullptr && name_chars > 0) {
+        USHORT byte_len = (USHORT)((name_chars) * sizeof(WCHAR));
+        if (byte_len > Name->MaximumLength) {
+            byte_len = Name->MaximumLength;
+        }
+        memcpy(Name->Buffer, name_buf, byte_len);
+        Name->Length = byte_len;
+        *NameSize = byte_len;
+    } else {
+        *NameSize = 0;
+    }
+
+    if (Domain != nullptr && Domain->Buffer != nullptr && domain_chars > 0) {
+        USHORT byte_len = (USHORT)((domain_chars) * sizeof(WCHAR));
+        if (byte_len > Domain->MaximumLength) {
+            byte_len = Domain->MaximumLength;
+        }
+        memcpy(Domain->Buffer, domain_buf, byte_len);
+        Domain->Length = byte_len;
+        *DomainSize = byte_len;
+    } else {
+        *DomainSize = 0;
+    }
+
+    *SidNameUse = name_use;
+
+    free(name_buf);
+    free(domain_buf);
+    return STATUS_SUCCESS;
+}
