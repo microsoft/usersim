@@ -6,10 +6,33 @@
 #else
 #include <catch2/catch.hpp>
 #endif
+#include "usersim/ex.h"
+#include "usersim/ps.h"
 #include "usersim/rtl.h"
 #include "usersim/se.h"
 
-static void _verify_sid(_In_ PSID sid)
+#include <memory>
+
+struct _ex_pool_free_functor
+{
+    void
+    operator()(void* buffer)
+    {
+        ExFreePool(buffer);
+    }
+};
+
+struct _ps_deref_token_functor
+{
+    void
+    operator()(void* token)
+    {
+        PsDereferencePrimaryToken((PACCESS_TOKEN)token);
+    }
+};
+
+static void
+_verify_sid(_In_ PSID sid)
 {
     REQUIRE(RtlValidSid(sid));
     REQUIRE(RtlLengthSid(sid) > 0);
@@ -119,4 +142,81 @@ TEST_CASE("SeAccessCheck", "[se]")
     REQUIRE(result == TRUE);
     REQUIRE(granted_access == STANDARD_RIGHTS_READ);
     REQUIRE(access_status == STATUS_SUCCESS);
+}
+
+TEST_CASE("SeQueryInformationToken", "[se]")
+{
+    // Get a token handle for the current process.
+    PACCESS_TOKEN token = PsReferencePrimaryToken(nullptr);
+    REQUIRE(token != nullptr);
+    std::unique_ptr<void, _ps_deref_token_functor> token_guard(token);
+
+    // Query TokenUser information.
+    PVOID token_info = nullptr;
+    NTSTATUS status = SeQueryInformationToken(token, TokenUser, &token_info);
+    REQUIRE(status == STATUS_SUCCESS);
+    REQUIRE(token_info != nullptr);
+    std::unique_ptr<void, _ex_pool_free_functor> token_info_guard(token_info);
+
+    // Validate the returned SID.
+    PTOKEN_USER token_user = (PTOKEN_USER)token_info;
+    REQUIRE(RtlValidSid(token_user->User.Sid));
+    REQUIRE(RtlLengthSid(token_user->User.Sid) > 0);
+}
+
+TEST_CASE("SecLookupAccountSid", "[se]")
+{
+    // Get the current process token's user SID.
+    PACCESS_TOKEN token = PsReferencePrimaryToken(nullptr);
+    REQUIRE(token != nullptr);
+    std::unique_ptr<void, _ps_deref_token_functor> token_guard(token);
+
+    PVOID token_info = nullptr;
+    NTSTATUS status = SeQueryInformationToken(token, TokenUser, &token_info);
+    REQUIRE(status == STATUS_SUCCESS);
+    std::unique_ptr<void, _ex_pool_free_functor> token_info_guard(token_info);
+
+    PTOKEN_USER token_user = (PTOKEN_USER)token_info;
+    PSID sid = token_user->User.Sid;
+
+    // First call: sizing query with NULL name/domain buffers.
+    ULONG name_size = 0;
+    ULONG domain_size = 0;
+    SID_NAME_USE name_use;
+    status = SecLookupAccountSid(sid, &name_size, NULL, &domain_size, NULL, &name_use);
+    REQUIRE(status == STATUS_BUFFER_TOO_SMALL);
+    REQUIRE(name_size > 0);
+    REQUIRE(domain_size > 0);
+
+    // Allocate UNICODE_STRING buffers for name and domain.
+    UNICODE_STRING name_str = {0};
+    name_str.Buffer = (PWSTR)ExAllocatePoolUninitialized(NonPagedPoolNx, name_size, 'tset');
+    REQUIRE(name_str.Buffer != nullptr);
+    std::unique_ptr<void, _ex_pool_free_functor> name_buf_guard(name_str.Buffer);
+    name_str.MaximumLength = (USHORT)name_size;
+    name_str.Length = 0;
+
+    UNICODE_STRING domain_str = {0};
+    domain_str.Buffer = (PWSTR)ExAllocatePoolUninitialized(NonPagedPoolNx, domain_size, 'tset');
+    REQUIRE(domain_str.Buffer != nullptr);
+    std::unique_ptr<void, _ex_pool_free_functor> domain_buf_guard(domain_str.Buffer);
+    domain_str.MaximumLength = (USHORT)domain_size;
+    domain_str.Length = 0;
+
+    // Second call: actual lookup.
+    status = SecLookupAccountSid(sid, &name_size, &name_str, &domain_size, &domain_str, &name_use);
+    REQUIRE(status == STATUS_SUCCESS);
+    REQUIRE(name_str.Length > 0);
+    REQUIRE(domain_str.Length > 0);
+}
+
+TEST_CASE("SecLookupAccountSid_invalid_params", "[se]")
+{
+    ULONG name_size = 0;
+    ULONG domain_size = 0;
+    SID_NAME_USE name_use;
+
+    // NULL SID should return STATUS_INVALID_PARAMETER.
+    NTSTATUS status = SecLookupAccountSid(nullptr, &name_size, NULL, &domain_size, NULL, &name_use);
+    REQUIRE(status == STATUS_INVALID_PARAMETER);
 }

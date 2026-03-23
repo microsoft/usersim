@@ -139,3 +139,13 @@ TEST_CASE("PsGetProcessStartKey", "[ps]")
     key = PsGetProcessStartKey(nullptr);
     REQUIRE(key == 0);
 }
+
+TEST_CASE("PsReferencePrimaryToken", "[ps]")
+{
+    // PsReferencePrimaryToken should return a non-null pseudo-token.
+    PACCESS_TOKEN token = PsReferencePrimaryToken(nullptr);
+    REQUIRE(token != nullptr);
+
+    // PsDereferencePrimaryToken is a no-op but should not crash.
+    PsDereferencePrimaryToken(token);
+}

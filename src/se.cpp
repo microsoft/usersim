@@ -252,7 +252,8 @@ SeQueryAuthenticationIdToken(_In_ PACCESS_TOKEN token, _Out_ PLUID authenticatio
 }
 
 NTSTATUS
-SeQueryInformationToken(_In_ PACCESS_TOKEN token, _In_ TOKEN_INFORMATION_CLASS token_information_class, _Out_ PVOID* token_information)
+SeQueryInformationToken(
+    _In_ PACCESS_TOKEN token, _In_ TOKEN_INFORMATION_CLASS token_information_class, _Out_ PVOID* token_information)
 {
     *token_information = nullptr;
 
@@ -270,7 +271,6 @@ SeQueryInformationToken(_In_ PACCESS_TOKEN token, _In_ TOKEN_INFORMATION_CLASS t
         return win32_error_to_usersim_error(error);
     }
 
-    // Allocate buffer (caller frees with ExFreePool).
     void* buffer = ExAllocatePoolUninitialized(NonPagedPoolNx, needed, USERSIM_TAG_TOKEN_ACCESS_INFORMATION);
     if (buffer == nullptr) {
         return STATUS_NO_MEMORY;
@@ -328,22 +328,24 @@ SecLookupAccountSid(
     WCHAR* domain_buf = nullptr;
 
     if (name_chars > 0) {
-        name_buf = (WCHAR*)malloc(name_chars * sizeof(WCHAR));
+        name_buf =
+            (WCHAR*)ExAllocatePoolUninitialized(NonPagedPoolNx, name_chars * sizeof(WCHAR), USERSIM_TAG_ACCOUNT_NAME);
         if (name_buf == nullptr) {
             return STATUS_NO_MEMORY;
         }
     }
     if (domain_chars > 0) {
-        domain_buf = (WCHAR*)malloc(domain_chars * sizeof(WCHAR));
+        domain_buf =
+            (WCHAR*)ExAllocatePoolUninitialized(NonPagedPoolNx, domain_chars * sizeof(WCHAR), USERSIM_TAG_ACCOUNT_NAME);
         if (domain_buf == nullptr) {
-            free(name_buf);
+            ExFreePool(name_buf);
             return STATUS_NO_MEMORY;
         }
     }
 
     if (!LookupAccountSidW(nullptr, Sid, name_buf, &name_chars, domain_buf, &domain_chars, &name_use)) {
-        free(name_buf);
-        free(domain_buf);
+        ExFreePool(name_buf);
+        ExFreePool(domain_buf);
         return win32_error_to_usersim_error(GetLastError());
     }
 
@@ -375,7 +377,7 @@ SecLookupAccountSid(
 
     *SidNameUse = name_use;
 
-    free(name_buf);
-    free(domain_buf);
+    ExFreePool(name_buf);
+    ExFreePool(domain_buf);
     return STATUS_SUCCESS;
 }
