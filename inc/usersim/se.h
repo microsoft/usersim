@@ -5,6 +5,7 @@
 
 #include "..\src\platform.h"
 #include "ke.h"
+#include "rtl.h"
 
 CXPLAT_EXTERN_C_BEGIN
 
@@ -179,6 +180,20 @@ SeAccessCheckFromState(
 USERSIM_API
 NTSTATUS
 SeQueryAuthenticationIdToken(_In_ PACCESS_TOKEN token, _Out_ PLUID authentication_id);
+
+USERSIM_API
+NTSTATUS
+SeQueryInformationToken(_In_ PACCESS_TOKEN token, _In_ TOKEN_INFORMATION_CLASS token_information_class, _Out_ PVOID* token_information);
+
+USERSIM_API
+NTSTATUS
+SecLookupAccountSid(
+    _In_ PSID Sid,
+    _Inout_ PULONG NameSize,
+    _Out_opt_ PUNICODE_STRING Name,
+    _Inout_ PULONG DomainSize,
+    _Out_opt_ PUNICODE_STRING Domain,
+    _Out_ PSID_NAME_USE SidNameUse);
 
 void
 usersim_initialize_se();
