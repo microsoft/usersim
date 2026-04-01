@@ -344,17 +344,24 @@ SecLookupAccountSid(
     }
 
     if (!LookupAccountSidW(nullptr, Sid, name_buf, &name_chars, domain_buf, &domain_chars, &name_use)) {
-        ExFreePool(name_buf);
-        ExFreePool(domain_buf);
+        if (name_buf != nullptr) {
+            ExFreePool(name_buf);
+        }
+        if (domain_buf != nullptr) {
+            ExFreePool(domain_buf);
+        }
         return win32_error_to_usersim_error(GetLastError());
     }
 
     // Copy results into caller-provided UNICODE_STRING buffers.
     // The kernel SecLookupAccountSid returns Length in bytes (without null terminator).
+    BOOLEAN truncated = FALSE;
+
     if (Name != nullptr && Name->Buffer != nullptr && name_chars > 0) {
         USHORT byte_len = (USHORT)((name_chars) * sizeof(WCHAR));
         if (byte_len > Name->MaximumLength) {
             byte_len = Name->MaximumLength;
+            truncated = TRUE;
         }
         memcpy(Name->Buffer, name_buf, byte_len);
         Name->Length = byte_len;
@@ -367,6 +374,7 @@ SecLookupAccountSid(
         USHORT byte_len = (USHORT)((domain_chars) * sizeof(WCHAR));
         if (byte_len > Domain->MaximumLength) {
             byte_len = Domain->MaximumLength;
+            truncated = TRUE;
         }
         memcpy(Domain->Buffer, domain_buf, byte_len);
         Domain->Length = byte_len;
@@ -377,7 +385,12 @@ SecLookupAccountSid(
 
     *SidNameUse = name_use;
 
-    ExFreePool(name_buf);
-    ExFreePool(domain_buf);
-    return STATUS_SUCCESS;
+    if (name_buf != nullptr) {
+        ExFreePool(name_buf);
+    }
+    if (domain_buf != nullptr) {
+        ExFreePool(domain_buf);
+    }
+
+    return truncated ? STATUS_BUFFER_TOO_SMALL : STATUS_SUCCESS;
 }
