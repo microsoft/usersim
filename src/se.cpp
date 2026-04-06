@@ -242,6 +242,7 @@ SeQueryAuthenticationIdToken(_In_ PACCESS_TOKEN token, _Out_ PLUID authenticatio
         return STATUS_UNSUCCESSFUL;
     }
 
+
     if (!GetTokenInformation(
             token_handle, TokenOwner, token_owner_buffer, sizeof(token_owner_buffer), &return_length)) {
         return win32_error_to_usersim_error(GetLastError());
