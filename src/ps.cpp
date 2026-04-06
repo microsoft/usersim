@@ -5,7 +5,11 @@
 #include "platform.h"
 #include "usersim/ps.h"
 
+#include <assert.h>
+
 // Ps* functions.
+
+static ULONG _primary_token_ref_count = 0;
 
 HANDLE
 PsGetCurrentProcessId() { return (HANDLE)(uintptr_t)GetCurrentProcessId(); }
@@ -218,6 +222,7 @@ PACCESS_TOKEN
 PsReferencePrimaryToken(_In_ PEPROCESS process)
 {
     UNREFERENCED_PARAMETER(process);
+    _primary_token_ref_count++;
     // In user mode, return the current process token handle as a pseudo-token.
     return (PACCESS_TOKEN)GetCurrentProcessToken();
 }
@@ -226,5 +231,13 @@ VOID
 PsDereferencePrimaryToken(_In_ PACCESS_TOKEN token)
 {
     UNREFERENCED_PARAMETER(token);
-    // No-op in user mode; GetCurrentProcessToken() returns a pseudo-handle.
+    assert(_primary_token_ref_count > 0);
+    _primary_token_ref_count--;
+}
+
+void
+usersim_clean_up_ps()
+{
+    assert(_primary_token_ref_count == 0);
+    _primary_token_ref_count = 0;
 }

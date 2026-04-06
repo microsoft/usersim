@@ -114,4 +114,8 @@ USERSIM_API
 VOID
 PsDereferencePrimaryToken(_In_ PACCESS_TOKEN token);
 
+USERSIM_API
+void
+usersim_clean_up_ps();
+
 CXPLAT_EXTERN_C_END
