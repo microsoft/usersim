@@ -60,6 +60,19 @@ RtlValidSid(_In_ PSID sid)
 }
 
 NTSTATUS
+RtlCopySid(
+    _In_ ULONG DestinationSidLength, _Out_writes_bytes_(DestinationSidLength) PSID DestinationSid, _In_ PSID SourceSid)
+{
+    ULONG source_sid_length = RtlLengthSid(SourceSid);
+    if (DestinationSidLength < source_sid_length) {
+        return STATUS_BUFFER_TOO_SMALL;
+    }
+
+    memcpy(DestinationSid, SourceSid, source_sid_length);
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
 RtlAddAccessAllowedAce(_Inout_ PACL Acl, _In_ unsigned long AceRevision, _In_ ACCESS_MASK AccessMask, _In_ PSID Sid)
 {
     if (cxplat_fault_injection_inject_fault()) {

@@ -439,3 +439,29 @@ TEST_CASE("RtlNumberGenericTableElementsAvl", "[rtl]")
         REQUIRE(RtlDeleteElementGenericTableAvl(&table, &i));
     }
 }
+
+TEST_CASE("RtlCopySid", "[rtl]")
+{
+    // Build a SID with 1 sub-authority (S-1-5-18, i.e. Local System).
+    SID source_sid = {0};
+    source_sid.Revision = SID_REVISION;
+    source_sid.SubAuthorityCount = 1;
+    source_sid.IdentifierAuthority = SECURITY_NT_AUTHORITY;
+    source_sid.SubAuthority[0] = SECURITY_LOCAL_SYSTEM_RID;
+
+    ULONG sid_length = RtlLengthSid(&source_sid);
+    REQUIRE(sid_length > 0);
+
+    // Successful copy.
+    BYTE destination_buffer[SECURITY_MAX_SID_SIZE] = {0};
+    REQUIRE(NT_SUCCESS(RtlCopySid(sizeof(destination_buffer), (PSID)destination_buffer, &source_sid)));
+    REQUIRE(memcmp(destination_buffer, &source_sid, sid_length) == 0);
+
+    // Buffer too small should fail.
+    REQUIRE(RtlCopySid(sid_length - 1, (PSID)destination_buffer, &source_sid) == STATUS_BUFFER_TOO_SMALL);
+
+    // Exact size should succeed.
+    memset(destination_buffer, 0, sizeof(destination_buffer));
+    REQUIRE(NT_SUCCESS(RtlCopySid(sid_length, (PSID)destination_buffer, &source_sid)));
+    REQUIRE(memcmp(destination_buffer, &source_sid, sid_length) == 0);
+}
