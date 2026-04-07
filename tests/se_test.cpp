@@ -210,6 +210,59 @@ TEST_CASE("SecLookupAccountSid", "[se]")
     REQUIRE(domain_str.Length > 0);
 }
 
+TEST_CASE("SecLookupAccountSid_truncation_via_MaximumLength", "[se]")
+{
+    // Get the current process token's user SID.
+    PACCESS_TOKEN token = PsReferencePrimaryToken(nullptr);
+    REQUIRE(token != nullptr);
+    std::unique_ptr<void, _ps_deref_token_functor> token_guard(token);
+
+    PVOID token_info = nullptr;
+    NTSTATUS status = SeQueryInformationToken(token, TokenUser, &token_info);
+    REQUIRE(status == STATUS_SUCCESS);
+    std::unique_ptr<void, _ex_pool_free_functor> token_info_guard(token_info);
+
+    PTOKEN_USER token_user = (PTOKEN_USER)token_info;
+    PSID sid = token_user->User.Sid;
+
+    // Get required sizes.
+    ULONG required_name_size = 0;
+    ULONG required_domain_size = 0;
+    SID_NAME_USE name_use;
+    status = SecLookupAccountSid(sid, &required_name_size, NULL, &required_domain_size, NULL, &name_use);
+    REQUIRE(status == STATUS_BUFFER_TOO_SMALL);
+    REQUIRE(required_name_size > 0);
+    REQUIRE(required_domain_size > 0);
+
+    // Allocate buffers with a MaximumLength smaller than required to trigger truncation.
+    USHORT small_max = sizeof(WCHAR);
+    UNICODE_STRING name_str = {0};
+    name_str.Buffer = (PWSTR)ExAllocatePoolUninitialized(NonPagedPoolNx, required_name_size, 'tset');
+    REQUIRE(name_str.Buffer != nullptr);
+    std::unique_ptr<void, _ex_pool_free_functor> name_buf_guard(name_str.Buffer);
+    name_str.MaximumLength = small_max;
+    name_str.Length = 0;
+
+    UNICODE_STRING domain_str = {0};
+    domain_str.Buffer = (PWSTR)ExAllocatePoolUninitialized(NonPagedPoolNx, required_domain_size, 'tset');
+    REQUIRE(domain_str.Buffer != nullptr);
+    std::unique_ptr<void, _ex_pool_free_functor> domain_buf_guard(domain_str.Buffer);
+    domain_str.MaximumLength = (USHORT)required_domain_size;
+    domain_str.Length = 0;
+
+    ULONG name_size = 0;
+    ULONG domain_size = 0;
+    status = SecLookupAccountSid(sid, &name_size, &name_str, &domain_size, &domain_str, &name_use);
+    REQUIRE(status == STATUS_BUFFER_TOO_SMALL);
+    // On failure, NameSize should report the required size.
+    REQUIRE(name_size == required_name_size);
+    // Name should have been truncated to MaximumLength.
+    REQUIRE(name_str.Length == small_max);
+    // Domain should be fully populated since its MaximumLength was sufficient.
+    REQUIRE(domain_str.Length > 0);
+    REQUIRE(domain_size == domain_str.Length);
+}
+
 TEST_CASE("SecLookupAccountSid_invalid_params", "[se]")
 {
     ULONG name_size = 0;
