@@ -21,7 +21,7 @@
     <ClCompile Include="memory_winkernel.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="size_winkernel.c">
+    <ClCompile Include="size_winkernel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="rundown_winkernel.c">

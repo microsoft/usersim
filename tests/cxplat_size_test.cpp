@@ -6,18 +6,20 @@
 #else
 #include <catch2/catch.hpp>
 #endif
+
 #include <limits>
+
 #include "cxplat.h"
 
 template <typename T>
 constexpr T
-cxplat_safe_integer_min_for_subtract_failure()
+_cxplat_safe_integer_min_for_subtract_failure()
 {
     return std::numeric_limits<T>::is_signed ? std::numeric_limits<T>::lowest() : static_cast<T>(0);
 }
 
-#define CXPLAT_DEFINE_SAFE_INTEGER_TESTS(type, name, intsafe_name)                                                        \
-    TEST_CASE("cxplat_safe_" #name "_multiply", "[size]")                                                                 \
+#define USERSIM_DEFINE_CXPLAT_SAFE_INTEGER_TESTS(type, name, intsafe_name)                                                \
+    TEST_CASE("usersim cxplat_safe_" #name "_multiply", "[cxplat][size]")                                                 \
     {                                                                                                                      \
         type result;                                                                                                       \
         REQUIRE(cxplat_safe_##name##_multiply(static_cast<type>(3), static_cast<type>(5), &result) ==                    \
@@ -29,7 +31,7 @@ cxplat_safe_integer_min_for_subtract_failure()
             CXPLAT_STATUS_ARITHMETIC_OVERFLOW);                                                                            \
     }                                                                                                                      \
                                                                                                                            \
-    TEST_CASE("cxplat_safe_" #name "_add", "[size]")                                                                      \
+    TEST_CASE("usersim cxplat_safe_" #name "_add", "[cxplat][size]")                                                      \
     {                                                                                                                      \
         type result;                                                                                                       \
         REQUIRE(cxplat_safe_##name##_add(static_cast<type>(3), static_cast<type>(5), &result) ==                         \
@@ -40,18 +42,19 @@ cxplat_safe_integer_min_for_subtract_failure()
                 CXPLAT_STATUS_ARITHMETIC_OVERFLOW);                                                                        \
     }                                                                                                                      \
                                                                                                                            \
-    TEST_CASE("cxplat_safe_" #name "_subtract", "[size]")                                                                 \
+    TEST_CASE("usersim cxplat_safe_" #name "_subtract", "[cxplat][size]")                                                 \
     {                                                                                                                      \
         type result;                                                                                                       \
         REQUIRE(cxplat_safe_##name##_subtract(static_cast<type>(5), static_cast<type>(3), &result) ==                    \
                 CXPLAT_STATUS_SUCCESS);                                                                                    \
         REQUIRE(result == static_cast<type>(2));                                                                           \
                                                                                                                            \
-        REQUIRE(cxplat_safe_##name##_subtract(                                                                             \
-                    cxplat_safe_integer_min_for_subtract_failure<type>(), static_cast<type>(1), &result) ==               \
-                CXPLAT_STATUS_ARITHMETIC_OVERFLOW);                                                                        \
+        REQUIRE(                                                                                                           \
+            cxplat_safe_##name##_subtract(                                                                                 \
+                _cxplat_safe_integer_min_for_subtract_failure<type>(), static_cast<type>(1), &result) ==                 \
+            CXPLAT_STATUS_ARITHMETIC_OVERFLOW);                                                                            \
     }
 
-CXPLAT_SAFE_INTEGER_TYPE_LIST(CXPLAT_DEFINE_SAFE_INTEGER_TESTS)
+CXPLAT_SAFE_INTEGER_TYPE_LIST(USERSIM_DEFINE_CXPLAT_SAFE_INTEGER_TESTS)
 
-#undef CXPLAT_DEFINE_SAFE_INTEGER_TESTS
+#undef USERSIM_DEFINE_CXPLAT_SAFE_INTEGER_TESTS

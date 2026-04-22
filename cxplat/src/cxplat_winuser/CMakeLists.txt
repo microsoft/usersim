@@ -19,7 +19,7 @@ add_library(cxplat_winuser STATIC
   module_winuser.cpp
   processor_winuser.cpp
   rundown_winuser.cpp
-  size_winuser.c
+  size_winuser.cpp
   workitem_winuser.cpp
   symbol_decoder.h
   time_winuser.cpp
