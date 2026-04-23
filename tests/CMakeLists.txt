@@ -12,7 +12,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(usersim_tests
-  cxplat_size_test.cpp
   etw_test.cpp
   ex_test.cpp
   ke_test.cpp
@@ -39,10 +38,9 @@ target_link_directories(usersim_tests PRIVATE
 )
 
 target_link_libraries(usersim_tests PRIVATE
-  "cxplat_winuser.lib"
   "usersim.lib"
   "ntdll.lib"
   Catch2::Catch2WithMain
 )
 
-add_dependencies(usersim_tests usersim cxplat_winuser)
+add_dependencies(usersim_tests usersim)
