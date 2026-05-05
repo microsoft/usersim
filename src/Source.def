@@ -5,8 +5,8 @@
 
 LIBRARY
 EXPORTS
-    ExEventObjectType DATA
-    IoFileObjectType DATA
+    ExEventObjectType
+    IoFileObjectType
 
     FwpmCalloutAdd0
     FwpmCalloutDeleteByKey0
