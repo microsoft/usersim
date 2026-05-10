@@ -157,6 +157,18 @@ usersim_set_current_thread_affinity(const GROUP_AFFINITY* new_affinity, GROUP_AF
     bool result;
     if (memcmp(new_affinity, &_usersim_group_affinity_cache, sizeof(*new_affinity)) == 0) {
         result = true;
+    } else if (new_affinity->Mask == 0) {
+        // Mask=0 means "no affinity override". We can't pass Mask=0 to
+        // SetThreadGroupAffinity (it requires at least one processor bit),
+        // so restore the thread to the process-default affinity instead.
+        DWORD_PTR process_mask = 0;
+        DWORD_PTR system_mask = 0;
+        if (GetProcessAffinityMask(GetCurrentProcess(), &process_mask, &system_mask) && process_mask != 0) {
+            GROUP_AFFINITY default_affinity = {};
+            default_affinity.Mask = process_mask;
+            SetThreadGroupAffinity(GetCurrentThread(), &default_affinity, nullptr);
+        }
+        result = true;
     } else {
         result = SetThreadGroupAffinity(GetCurrentThread(), new_affinity, old_affinity);
     }
