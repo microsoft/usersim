@@ -469,9 +469,9 @@ fwp_engine_t::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_
         FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6, _default_sublayer, incoming_value, flow_id);
 }
 
-// This is used to test the SOCK_OPS listen hook for IPv4 traffic.
+// This is used to test the sock_addr listen hook for IPv4 traffic.
 FWP_ACTION_TYPE
-fwp_engine_t::test_sock_ops_listen_v4(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_cgroup_inet4_listen(_In_ fwp_classify_parameters_t* parameters)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_IP_LOCAL_ADDRESS].value.uint32 = parameters->destination_ipv4_address;
@@ -484,9 +484,9 @@ fwp_engine_t::test_sock_ops_listen_v4(_In_ fwp_classify_parameters_t* parameters
         FWPS_LAYER_ALE_AUTH_LISTEN_V4, FWPM_LAYER_ALE_AUTH_LISTEN_V4, _default_sublayer, incoming_value, nullptr);
 }
 
-// This is used to test the SOCK_OPS listen hook for IPv6 traffic.
+// This is used to test the sock_addr listen hook for IPv6 traffic.
 FWP_ACTION_TYPE
-fwp_engine_t::test_sock_ops_listen_v6(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_cgroup_inet6_listen(_In_ fwp_classify_parameters_t* parameters)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_IP_LOCAL_ADDRESS].value.byteArray16 =
@@ -1075,15 +1075,15 @@ usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ ui
 }
 
 FWP_ACTION_TYPE
-usersim_fwp_sock_ops_listen_v4(_In_ fwp_classify_parameters_t* parameters)
+usersim_fwp_cgroup_inet4_listen(_In_ fwp_classify_parameters_t* parameters)
 {
-    return fwp_engine_t::get()->test_sock_ops_listen_v4(parameters);
+    return fwp_engine_t::get()->test_cgroup_inet4_listen(parameters);
 }
 
 FWP_ACTION_TYPE
-usersim_fwp_sock_ops_listen_v6(_In_ fwp_classify_parameters_t* parameters)
+usersim_fwp_cgroup_inet6_listen(_In_ fwp_classify_parameters_t* parameters)
 {
-    return fwp_engine_t::get()->test_sock_ops_listen_v6(parameters);
+    return fwp_engine_t::get()->test_cgroup_inet6_listen(parameters);
 }
 
 void

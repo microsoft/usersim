@@ -53,10 +53,10 @@ USERSIM_API FWP_ACTION_TYPE
 usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ uint64_t* flow_id);
 
 USERSIM_API FWP_ACTION_TYPE
-usersim_fwp_sock_ops_listen_v4(_In_ fwp_classify_parameters_t* parameters);
+usersim_fwp_cgroup_inet4_listen(_In_ fwp_classify_parameters_t* parameters);
 
 USERSIM_API FWP_ACTION_TYPE
-usersim_fwp_sock_ops_listen_v6(_In_ fwp_classify_parameters_t* parameters);
+usersim_fwp_cgroup_inet6_listen(_In_ fwp_classify_parameters_t* parameters);
 
 USERSIM_API void
 usersim_fwp_set_sublayer_guids(
