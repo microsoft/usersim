@@ -469,6 +469,38 @@ fwp_engine_t::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_
         FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6, _default_sublayer, incoming_value, flow_id);
 }
 
+// This is used to test the sock_addr listen hook for IPv4 traffic.
+FWP_ACTION_TYPE
+fwp_engine_t::test_cgroup_inet4_listen(_In_ fwp_classify_parameters_t* parameters)
+{
+    FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_MAX] = {};
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_IP_LOCAL_ADDRESS].value.uint32 = parameters->destination_ipv4_address;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_IP_LOCAL_PORT].value.uint16 = parameters->destination_port;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_COMPARTMENT_ID].value.uint32 = parameters->compartment_id;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_IP_LOCAL_INTERFACE].value.uint64 = &parameters->interface_luid;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_ALE_APP_ID].value.byteBlob = &parameters->app_id;
+
+    return test_callout(
+        FWPS_LAYER_ALE_AUTH_LISTEN_V4, FWPM_LAYER_ALE_AUTH_LISTEN_V4, _default_sublayer, incoming_value, nullptr);
+}
+
+// This is used to test the sock_addr listen hook for IPv6 traffic.
+FWP_ACTION_TYPE
+fwp_engine_t::test_cgroup_inet6_listen(_In_ fwp_classify_parameters_t* parameters)
+{
+    FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_MAX] = {};
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_IP_LOCAL_ADDRESS].value.byteArray16 =
+        &parameters->destination_ipv6_address;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_IP_LOCAL_PORT].value.uint16 = parameters->destination_port;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_COMPARTMENT_ID].value.uint32 = parameters->compartment_id;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_IP_LOCAL_INTERFACE].value.uint64 = &parameters->interface_luid;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_ALE_APP_ID].value.byteBlob = &parameters->app_id;
+
+    return test_callout(
+        FWPS_LAYER_ALE_AUTH_LISTEN_V6, FWPM_LAYER_ALE_AUTH_LISTEN_V6, _default_sublayer, incoming_value, nullptr);
+}
+
+#pragma endregion fwp_engine_t
 
 #pragma region fwpm_apis
 
@@ -1040,6 +1072,18 @@ FWP_ACTION_TYPE
 usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ uint64_t* flow_id)
 {
     return fwp_engine_t::get()->test_sock_ops_v6(parameters, flow_id);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_cgroup_inet4_listen(_In_ fwp_classify_parameters_t* parameters)
+{
+    return fwp_engine_t::get()->test_cgroup_inet4_listen(parameters);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_cgroup_inet6_listen(_In_ fwp_classify_parameters_t* parameters)
+{
+    return fwp_engine_t::get()->test_cgroup_inet6_listen(parameters);
 }
 
 void
