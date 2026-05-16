@@ -35,6 +35,9 @@ USERSIM_API FWP_ACTION_TYPE
 usersim_fwp_bind_ipv4(_In_ fwp_classify_parameters_t* parameters);
 
 USERSIM_API FWP_ACTION_TYPE
+usersim_fwp_bind_ipv6(_In_ fwp_classify_parameters_t* parameters);
+
+USERSIM_API FWP_ACTION_TYPE
 usersim_fwp_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* parameters);
 
 USERSIM_API FWP_ACTION_TYPE
