@@ -247,6 +247,12 @@ typedef class fwp_engine_t
     void 
     test_sock_ops_v6_remove_flow_context(_In_ uint64_t flow_id);
 
+    FWP_ACTION_TYPE
+    test_cgroup_inet4_listen(_In_ fwp_classify_parameters_t* parameters);
+
+    FWP_ACTION_TYPE
+    test_cgroup_inet6_listen(_In_ fwp_classify_parameters_t* parameters);
+
     static fwp_engine_t*
     get()
     {
