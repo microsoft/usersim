@@ -138,10 +138,37 @@ fwp_engine_t::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
         parameters->destination_ipv4_address;
     incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_IP_PROTOCOL].value.uint8 = parameters->protocol;
     incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_ALE_APP_ID].value.byteBlob = &parameters->app_id;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_COMPARTMENT_ID].value.uint32 = parameters->compartment_id;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_IP_LOCAL_INTERFACE].value.uint64 =
+        const_cast<UINT64*>(&parameters->interface_luid);
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_ALE_USER_ID].value.byteBlob = &parameters->user_id;
 
     return test_callout(
         FWPS_LAYER_ALE_RESOURCE_ASSIGNMENT_V4,
         FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V4,
+        _default_sublayer,
+        incoming_value,
+        nullptr);
+}
+
+// This is used to test the IPv6 bind hook.
+FWP_ACTION_TYPE
+fwp_engine_t::test_bind_ipv6(_In_ fwp_classify_parameters_t* parameters)
+{
+    FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_MAX] = {};
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_IP_LOCAL_PORT].value.uint16 = parameters->destination_port;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_IP_LOCAL_ADDRESS].value.byteArray16 =
+        &parameters->destination_ipv6_address;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_IP_PROTOCOL].value.uint8 = parameters->protocol;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_ALE_APP_ID].value.byteBlob = &parameters->app_id;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_COMPARTMENT_ID].value.uint32 = parameters->compartment_id;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_IP_LOCAL_INTERFACE].value.uint64 =
+        const_cast<UINT64*>(&parameters->interface_luid);
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_ALE_USER_ID].value.byteBlob = &parameters->user_id;
+
+    return test_callout(
+        FWPS_LAYER_ALE_RESOURCE_ASSIGNMENT_V6,
+        FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V6,
         _default_sublayer,
         incoming_value,
         nullptr);
@@ -167,12 +194,10 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
         }
         fwps_filter.context = fwpm_filter->rawContext;
 
-        const GUID* callout_key = get_callout_key_from_layer_guid_under_lock(&layer_guid);
-        if (callout_key == nullptr) {
-            return FWP_ACTION_CALLOUT_UNKNOWN;
-        }
-
-        callout = get_callout_from_key_under_lock(callout_key);
+        // Look up the callout via the filter's calloutKey rather than scanning by layer.
+        // This matches real WFP behavior where each filter is bound to a specific callout
+        // and correctly handles multiple callouts registered at the same WFP layer.
+        callout = get_callout_from_key_under_lock(&fwpm_filter->action.calloutKey);
         if (callout == nullptr) {
             return FWP_ACTION_CALLOUT_UNKNOWN;
         }
@@ -1036,6 +1061,12 @@ FWP_ACTION_TYPE
 usersim_fwp_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
 {
     return fwp_engine_t::get()->test_bind_ipv4(parameters);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_bind_ipv6(_In_ fwp_classify_parameters_t* parameters)
+{
+    return fwp_engine_t::get()->test_bind_ipv6(parameters);
 }
 
 FWP_ACTION_TYPE
