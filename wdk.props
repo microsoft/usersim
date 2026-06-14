@@ -9,22 +9,32 @@
     <TargetFramework>native</TargetFramework>
     <_NuGetTargetFallbackMoniker>$(_NuGetTargetFallbackMoniker);native,Version=v0.0</_NuGetTargetFallbackMoniker>
     <RestorePackages>true</RestorePackages>
+    <!-- Windows SDK target platform version -->
+    <UsersimWindowsTargetPlatformVersion Condition="'$(VisualStudioVersion)' == '18.0'">10.0.28000.0</UsersimWindowsTargetPlatformVersion>
+    <UsersimWindowsTargetPlatformVersion Condition="'$(VisualStudioVersion)' == '17.0'">10.0.26100.0</UsersimWindowsTargetPlatformVersion>
+    <!-- WDK NuGet package version: VS 2026 (MSBuild 18) requires 10.0.28000.1839;
+         VS 2022 (MSBuild 17) uses 10.0.26100.4204. -->
+    <UsersimWDKVersion Condition="'$(VisualStudioVersion)' == '18.0'">10.0.28000.1839</UsersimWDKVersion>
+    <UsersimWDKVersion Condition="'$(VisualStudioVersion)' == '17.0'">10.0.26100.4204</UsersimWDKVersion>
+    <!-- Platform toolset -->
+    <UsersimPlatformToolset Condition="'$(VisualStudioVersion)' == '18.0'">v145</UsersimPlatformToolset>
+    <UsersimPlatformToolset Condition="'$(VisualStudioVersion)' == '17.0'">v143</UsersimPlatformToolset>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Windows.SDK.CPP">
-      <Version>10.0.26100.4204</Version>
+      <Version>$(UsersimWDKVersion)</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Windows.SDK.CPP.x64">
-      <Version>10.0.26100.4204</Version>
+      <Version>$(UsersimWDKVersion)</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Windows.WDK.x64">
-      <Version>10.0.26100.4204</Version>
+      <Version>$(UsersimWDKVersion)</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Windows.SDK.CPP.arm64">
-      <Version>10.0.26100.4204</Version>
+      <Version>$(UsersimWDKVersion)</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Windows.WDK.ARM64">
-      <Version>10.0.26100.4204</Version>
+      <Version>$(UsersimWDKVersion)</Version>
     </PackageReference>
   </ItemGroup>
 </Project>
