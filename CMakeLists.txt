@@ -25,7 +25,15 @@ set(CMAKE_CXX_FLAGS_FUZZERDEBUG "${CMAKE_CXX_FLAGS_DEBUG} /fsanitize-coverage=in
 # list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/FindWDK/cmake")
 # find_package(WDK REQUIRED)
 
-set(NUGET_PACKAGE_VERSION "10.0.26100.4204")
+# Select the Windows SDK/WDK NuGet package versions based on the platform toolset.
+# VS 2026 (toolset v145) requires the 10.0.28000 packages; VS 2022 (v143) uses 10.0.26100.
+if (MSVC_TOOLSET_VERSION GREATER_EQUAL 145)
+  set(NUGET_PACKAGE_VERSION "10.0.28000.1839")
+  set(WDK_VERSION "10.0.28000.0")
+else ()
+  set(NUGET_PACKAGE_VERSION "10.0.26100.4204")
+  set(WDK_VERSION "10.0.26100.0")
+endif ()
 
 set(NUGET_PACKAGES 
 "Microsoft.Windows.SDK.CPP"
@@ -48,10 +56,8 @@ endif()
 # Set WDK_ROOT based on the platform (arm64 or x64)
 if (TARGET_PLATFORM STREQUAL "arm64")
   set(WDK_ROOT "${PROJECT_BINARY_DIR}/packages/Microsoft.Windows.WDK.ARM64/c")
-  set(WDK_VERSION "10.0.26100.0")
 else ()
 set(WDK_ROOT "${PROJECT_BINARY_DIR}/packages/Microsoft.Windows.WDK.x64/c")
-set(WDK_VERSION "10.0.26100.0")
 endif ()
 
 

@@ -31,7 +31,7 @@ target_include_directories(cxplat_winuser PRIVATE
   "../../inc"
   "../../inc/winuser"
   "${WindowsSdkDir}include/10.0.22621.0"
-  "${WindowsSdkDir}include/10.0.26100.0"
+  "${WindowsSdkDir}include/${WDK_VERSION}"
 )
 
 set(defs UNICODE _UNICODE CXPLAT_SOURCE)
