@@ -5,6 +5,7 @@
 #include "usersim/ke.h"
 #include "utilities.h"
 
+#include <algorithm>
 #include <format>
 #include <mutex>
 #include <optional>
@@ -32,12 +33,51 @@ thread_local int
 
 static uint32_t _usersim_original_priority_class;
 static std::vector<std::mutex> _usersim_dispatch_locks;
+static std::mutex _usersim_processor_change_callback_lock;
+static ULONG _usersim_active_processor_count_override = 0;
 
 static TP_POOL* _usersim_threadpool = nullptr;
 static std::optional<TP_CALLBACK_ENVIRON> _usersim_threadpool_callback_environment = std::nullopt;
 
+typedef struct _usersim_processor_change_callback_registration
+{
+    KE_PROCESSOR_CHANGE_CALLBACK callback;
+    void* callback_context;
+} usersim_processor_change_callback_registration_t;
+
+static std::vector<usersim_processor_change_callback_registration_t*> _usersim_processor_change_callbacks;
+
 static NTSTATUS
 _wait_for_kevent(_Inout_ KEVENT* event, _In_opt_ PLARGE_INTEGER timeout);
+
+static _Must_inspect_result_ NTSTATUS
+_usersim_notify_processor_change(_In_ ULONG processor_index, _In_ KE_PROCESSOR_CHANGE_NOTIFY_STATE state)
+{
+    if (processor_index >= KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS)) {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    std::vector<usersim_processor_change_callback_registration_t*> callbacks;
+    {
+        std::lock_guard<std::mutex> lock(_usersim_processor_change_callback_lock);
+        callbacks = _usersim_processor_change_callbacks;
+    }
+
+    KE_PROCESSOR_CHANGE_NOTIFY_CONTEXT change_context = {
+        .State = state,
+        .NtNumber = processor_index,
+    };
+    NTSTATUS operation_status = STATUS_SUCCESS;
+
+    for (auto* registration : callbacks) {
+        registration->callback(registration->callback_context, &change_context, &operation_status);
+        if (!NT_SUCCESS(operation_status)) {
+            break;
+        }
+    }
+
+    return operation_status;
+}
 
 usersim_result_t
 usersim_initialize_irql()
@@ -356,10 +396,105 @@ ULONG
 KeQueryMaximumProcessorCountEx(_In_ USHORT group_number) { return GetMaximumProcessorCount(group_number); }
 
 ULONG
-KeQueryActiveProcessorCount() { return KeQueryMaximumProcessorCount(); }
+KeQueryActiveProcessorCount() { return KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS); }
 
 ULONG
-KeQueryActiveProcessorCountEx(_In_ USHORT group_number) { return KeQueryMaximumProcessorCountEx(group_number); }
+KeQueryActiveProcessorCountEx(_In_ USHORT group_number)
+{
+    if (_usersim_active_processor_count_override == 0) {
+        return KeQueryMaximumProcessorCountEx(group_number);
+    }
+
+    return min(_usersim_active_processor_count_override, KeQueryMaximumProcessorCountEx(group_number));
+}
+
+void*
+KeRegisterProcessorChangeCallback(
+    _In_ KE_PROCESSOR_CHANGE_CALLBACK callback, _In_opt_ void* callback_context, _In_ ULONG flags)
+{
+    auto* registration = new (std::nothrow) usersim_processor_change_callback_registration_t{
+        .callback = callback, .callback_context = callback_context};
+    if (registration == nullptr) {
+        return nullptr;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(_usersim_processor_change_callback_lock);
+        _usersim_processor_change_callbacks.push_back(registration);
+    }
+
+    if ((flags & KE_PROCESSOR_CHANGE_ADD_EXISTING) != 0) {
+        ULONG active_processor_count = KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS);
+        for (ULONG processor_index = 0; processor_index < active_processor_count; processor_index++) {
+            NTSTATUS status = _usersim_notify_processor_change(processor_index, KeProcessorAddStartNotify);
+            if (!NT_SUCCESS(status)) {
+                KeDeregisterProcessorChangeCallback(registration);
+                return nullptr;
+            }
+        }
+    }
+
+    return registration;
+}
+
+void
+KeDeregisterProcessorChangeCallback(_In_ void* callback_handle)
+{
+    auto* registration = reinterpret_cast<usersim_processor_change_callback_registration_t*>(callback_handle);
+    std::lock_guard<std::mutex> lock(_usersim_processor_change_callback_lock);
+    auto iterator = std::find(_usersim_processor_change_callbacks.begin(), _usersim_processor_change_callbacks.end(), registration);
+    if (iterator != _usersim_processor_change_callbacks.end()) {
+        _usersim_processor_change_callbacks.erase(iterator);
+    }
+    delete registration;
+}
+
+_Must_inspect_result_ NTSTATUS
+usersim_set_active_processor_count(_In_ ULONG active_processor_count)
+{
+    ULONG maximum_processor_count = KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS);
+    if (active_processor_count == 0 || active_processor_count > maximum_processor_count) {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    _usersim_active_processor_count_override = active_processor_count;
+    return STATUS_SUCCESS;
+}
+
+void
+usersim_reset_active_processor_count()
+{
+    _usersim_active_processor_count_override = 0;
+}
+
+_Must_inspect_result_ NTSTATUS
+usersim_notify_processor_add_start(_In_ ULONG processor_index)
+{
+    ULONG active_processor_count = KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS);
+    if (processor_index < active_processor_count) {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    return _usersim_notify_processor_change(processor_index, KeProcessorAddStartNotify);
+}
+
+_Must_inspect_result_ NTSTATUS
+usersim_notify_processor_add_complete(_In_ ULONG processor_index)
+{
+    ULONG active_processor_count = KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS);
+    if (processor_index > active_processor_count) {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    _usersim_active_processor_count_override = max(_usersim_active_processor_count_override, processor_index + 1);
+    return _usersim_notify_processor_change(processor_index, KeProcessorAddCompleteNotify);
+}
+
+_Must_inspect_result_ NTSTATUS
+usersim_notify_processor_add_failure(_In_ ULONG processor_index)
+{
+    return _usersim_notify_processor_change(processor_index, KeProcessorAddFailureNotify);
+}
 
 KAFFINITY
 KeSetSystemAffinityThreadEx(KAFFINITY affinity)
