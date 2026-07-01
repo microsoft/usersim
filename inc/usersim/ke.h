@@ -149,6 +149,56 @@ USERSIM_API
 ULONG
 KeQueryActiveProcessorCountEx(_In_ USHORT group_number);
 
+typedef enum _KE_PROCESSOR_CHANGE_NOTIFY_STATE
+{
+    KeProcessorAddStartNotify,
+    KeProcessorAddCompleteNotify,
+    KeProcessorAddFailureNotify,
+} KE_PROCESSOR_CHANGE_NOTIFY_STATE;
+
+typedef struct _KE_PROCESSOR_CHANGE_NOTIFY_CONTEXT
+{
+    KE_PROCESSOR_CHANGE_NOTIFY_STATE State;
+    ULONG NtNumber;
+} KE_PROCESSOR_CHANGE_NOTIFY_CONTEXT;
+typedef KE_PROCESSOR_CHANGE_NOTIFY_CONTEXT* PKE_PROCESSOR_CHANGE_NOTIFY_CONTEXT;
+
+#define KE_PROCESSOR_CHANGE_ADD_EXISTING 0x00000001
+
+typedef VOID (*KE_PROCESSOR_CHANGE_CALLBACK)(
+    _In_ void* callback_context,
+    _In_ PKE_PROCESSOR_CHANGE_NOTIFY_CONTEXT change_context,
+    _Inout_ PNTSTATUS operation_status);
+
+USERSIM_API
+void*
+KeRegisterProcessorChangeCallback(
+    _In_ KE_PROCESSOR_CHANGE_CALLBACK callback, _In_opt_ void* callback_context, _In_ ULONG flags);
+
+USERSIM_API
+void
+KeDeregisterProcessorChangeCallback(_In_ void* callback_handle);
+
+USERSIM_API
+_Must_inspect_result_ NTSTATUS
+usersim_set_active_processor_count(_In_ ULONG active_processor_count);
+
+USERSIM_API
+void
+usersim_reset_active_processor_count();
+
+USERSIM_API
+_Must_inspect_result_ NTSTATUS
+usersim_notify_processor_add_start(_In_ ULONG processor_index);
+
+USERSIM_API
+_Must_inspect_result_ NTSTATUS
+usersim_notify_processor_add_complete(_In_ ULONG processor_index);
+
+USERSIM_API
+_Must_inspect_result_ NTSTATUS
+usersim_notify_processor_add_failure(_In_ ULONG processor_index);
+
 USERSIM_API
 KAFFINITY
 KeSetSystemAffinityThreadEx(KAFFINITY affinity);
