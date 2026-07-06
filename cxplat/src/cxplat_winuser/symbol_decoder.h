@@ -5,6 +5,7 @@
 #include "winuser_internal.h"
 #include <windows.h>
 #include <DbgHelp.h>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
@@ -45,9 +46,14 @@ _cxplat_decode_symbol(
     std::optional<std::string>& file_name)
 {
     try {
+        // DbgHelp APIs are not thread-safe and must be serialized.
+        static std::mutex dbghelp_mutex;
+        std::unique_lock lock(dbghelp_mutex);
+
         std::vector<uint8_t> symbol_buffer(sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR));
         SYMBOL_INFO* symbol = reinterpret_cast<SYMBOL_INFO*>(symbol_buffer.data());
-        IMAGEHLP_LINE64 line;
+        IMAGEHLP_LINE64 line = {};
+        line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
         symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
         symbol->MaxNameLen = MAX_SYM_NAME;
 
