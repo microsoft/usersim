@@ -12,7 +12,6 @@
 
 static bool _symbol_decoder_initialized = false;
 
-
 inline cxplat_status_t
 _cxplat_symbol_decoder_initialize()
 {
