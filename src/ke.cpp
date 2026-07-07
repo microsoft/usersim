@@ -359,6 +359,7 @@ KeSetSystemAffinityThreadEx(KAFFINITY affinity)
 
     if (KeGetCurrentIrql() >= DISPATCH_LEVEL) {
         _usersim_group_affinity_cache = new_affinity;
+        _usersim_group_before_raise_irql = new_affinity;
         return 0;
     } else {
         bool result = usersim_set_current_thread_affinity(&new_affinity, &old_affinity);
