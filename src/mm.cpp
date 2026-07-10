@@ -8,6 +8,7 @@
 #include "usersim/ex.h"
 #include "usersim/ke.h"
 #include "usersim/mm.h"
+#include "utilities.h"
 
 // Mm* functions.
 
@@ -130,6 +131,50 @@ void
 MmUnmapLockedPages(_In_ void* base_address, _In_ MDL* memory_descriptor_list)
 {
     return MmUnmapLockedPagesCPP(base_address, memory_descriptor_list);
+}
+
+void
+MmProbeAndLockPages(
+    _Inout_ MDL* memory_descriptor_list,
+    __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE access_mode,
+    ULONG operation)
+{
+    UNREFERENCED_PARAMETER(memory_descriptor_list);
+    UNREFERENCED_PARAMETER(access_mode);
+    UNREFERENCED_PARAMETER(operation);
+}
+
+void
+MmUnlockPages(_Inout_ MDL* memory_descriptor_list)
+{
+    UNREFERENCED_PARAMETER(memory_descriptor_list);
+}
+
+NTSTATUS
+MmMapViewInSystemSpace(_In_ void* section, _Outptr_ void** mapped_base, _Inout_ SIZE_T* view_size)
+{
+    HANDLE section_handle = (HANDLE)section;
+    void* view;
+
+    view = MapViewOfFile(section_handle, FILE_MAP_ALL_ACCESS, 0, 0, *view_size);
+    if (view == nullptr) {
+        USERSIM_LOG_WIN32_API_FAILURE(USERSIM_TRACELOG_KEYWORD_BASE, MapViewOfFile);
+        return win32_error_to_usersim_error(GetLastError());
+    }
+
+    *mapped_base = view;
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+MmUnmapViewInSystemSpace(_In_ void* mapped_base)
+{
+    if (!UnmapViewOfFile(mapped_base)) {
+        USERSIM_LOG_WIN32_API_FAILURE(USERSIM_TRACELOG_KEYWORD_BASE, UnmapViewOfFile);
+        return win32_error_to_usersim_error(GetLastError());
+    }
+
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS

@@ -28,6 +28,16 @@ _IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API NTSTATUS ObReferenceObjectByHandl
     _Out_ PVOID* object,
     _Out_opt_ POBJECT_HANDLE_INFORMATION handle_information);
 
+_IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API NTSTATUS
+ObOpenObjectByPointer(
+    _In_ PVOID object,
+    _In_ ULONG handle_attributes,
+    _In_opt_ void* passed_access_state,
+    _In_ ACCESS_MASK desired_access,
+    _In_opt_ POBJECT_TYPE object_type,
+    _In_ KPROCESSOR_MODE access_mode,
+    _Out_ HANDLE* handle);
+
 USERSIM_API
 NTSTATUS
 ObCloseHandle(_In_ _Post_ptr_invalid_ HANDLE handle, _In_ KPROCESSOR_MODE previous_mode);
