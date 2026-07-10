@@ -114,6 +114,25 @@ void
 MmUnmapLockedPages(_In_ void* base_address, _In_ MDL* memory_descriptor_list);
 
 USERSIM_API
+void
+MmProbeAndLockPages(
+    _Inout_ MDL* memory_descriptor_list,
+    __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE access_mode,
+    ULONG operation);
+
+USERSIM_API
+void
+MmUnlockPages(_Inout_ MDL* memory_descriptor_list);
+
+USERSIM_API
+NTSTATUS
+MmMapViewInSystemSpace(_In_ void* section, _Outptr_ void** mapped_base, _Inout_ SIZE_T* view_size);
+
+USERSIM_API
+NTSTATUS
+MmUnmapViewInSystemSpace(_In_ void* mapped_base);
+
+USERSIM_API
 NTSTATUS
 MmProtectMdlSystemAddress(_In_ MDL* memory_descriptor_list, ULONG new_protect);
 
