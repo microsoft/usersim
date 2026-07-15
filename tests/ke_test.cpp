@@ -10,6 +10,7 @@
 #include "usersim/mm.h"
 
 #include <thread>
+#include <vector>
 
 TEST_CASE("irql", "[ke]")
 {
@@ -126,6 +127,133 @@ TEST_CASE("processor count", "[ke]")
         REQUIRE(NT_SUCCESS(KeGetProcessorNumberFromIndex(i, &processor_number)));
         REQUIRE(KeGetProcessorIndexFromNumber(&processor_number) == i);
     }
+}
+
+typedef struct _processor_change_notification_record
+{
+    KE_PROCESSOR_CHANGE_NOTIFY_STATE state;
+    ULONG processor_index;
+} processor_change_notification_record_t;
+
+typedef struct _processor_change_callback_context
+{
+    std::vector<processor_change_notification_record_t> notifications;
+    ULONG invocation_count = 0;
+    void* handle_to_deregister = nullptr;
+} processor_change_callback_context_t;
+
+static VOID
+_record_processor_change_callback(
+    _In_ void* callback_context,
+    _In_ PKE_PROCESSOR_CHANGE_NOTIFY_CONTEXT change_context,
+    _Inout_ PNTSTATUS operation_status)
+{
+    UNREFERENCED_PARAMETER(operation_status);
+
+    auto* context = reinterpret_cast<processor_change_callback_context_t*>(callback_context);
+    context->notifications.push_back({change_context->State, change_context->NtNumber});
+    context->invocation_count++;
+}
+
+static VOID
+_deregister_processor_change_callback(
+    _In_ void* callback_context,
+    _In_ PKE_PROCESSOR_CHANGE_NOTIFY_CONTEXT change_context,
+    _Inout_ PNTSTATUS operation_status)
+{
+    UNREFERENCED_PARAMETER(change_context);
+    UNREFERENCED_PARAMETER(operation_status);
+
+    auto* context = reinterpret_cast<processor_change_callback_context_t*>(callback_context);
+    context->invocation_count++;
+    if (context->handle_to_deregister != nullptr) {
+        KeDeregisterProcessorChangeCallback(context->handle_to_deregister);
+    }
+}
+
+TEST_CASE("processor change callback add existing", "[ke]")
+{
+    processor_change_callback_context_t existing_callback_context = {};
+    processor_change_callback_context_t add_existing_callback_context = {};
+    void* existing_handle =
+        KeRegisterProcessorChangeCallback(_record_processor_change_callback, &existing_callback_context, 0);
+    REQUIRE(existing_handle != nullptr);
+
+    void* add_existing_handle = KeRegisterProcessorChangeCallback(
+        _record_processor_change_callback, &add_existing_callback_context, KE_PROCESSOR_CHANGE_ADD_EXISTING);
+    REQUIRE(add_existing_handle != nullptr);
+
+    ULONG active_processor_count = KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS);
+    REQUIRE(existing_callback_context.invocation_count == 0);
+    REQUIRE(add_existing_callback_context.notifications.size() == active_processor_count * 2);
+    for (ULONG processor_index = 0; processor_index < active_processor_count; processor_index++) {
+        const auto& start_notification = add_existing_callback_context.notifications[processor_index];
+        REQUIRE(start_notification.state == KeProcessorAddStartNotify);
+        REQUIRE(start_notification.processor_index == processor_index);
+
+        const auto& complete_notification =
+            add_existing_callback_context.notifications[processor_index + active_processor_count];
+        REQUIRE(complete_notification.state == KeProcessorAddCompleteNotify);
+        REQUIRE(complete_notification.processor_index == processor_index);
+    }
+
+    KeDeregisterProcessorChangeCallback(existing_handle);
+    KeDeregisterProcessorChangeCallback(add_existing_handle);
+}
+
+TEST_CASE("processor change callback deregistration is deferred until notifications finish", "[ke]")
+{
+    if (KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS) < 2) {
+        return;
+    }
+
+    processor_change_callback_context_t deregistering_callback_context = {};
+    processor_change_callback_context_t removed_callback_context = {};
+
+    void* deregistering_handle =
+        KeRegisterProcessorChangeCallback(_deregister_processor_change_callback, &deregistering_callback_context, 0);
+    REQUIRE(deregistering_handle != nullptr);
+
+    void* removed_handle =
+        KeRegisterProcessorChangeCallback(_record_processor_change_callback, &removed_callback_context, 0);
+    REQUIRE(removed_handle != nullptr);
+    deregistering_callback_context.handle_to_deregister = removed_handle;
+
+    REQUIRE(usersim_set_active_processor_count(1) == STATUS_SUCCESS);
+    REQUIRE(usersim_notify_processor_add_start(1) == STATUS_SUCCESS);
+    REQUIRE(deregistering_callback_context.invocation_count == 1);
+    REQUIRE(removed_callback_context.invocation_count == 1);
+
+    REQUIRE(usersim_notify_processor_add_failure(1) == STATUS_SUCCESS);
+    REQUIRE(deregistering_callback_context.invocation_count == 2);
+    REQUIRE(removed_callback_context.invocation_count == 1);
+
+    KeDeregisterProcessorChangeCallback(removed_handle);
+    KeDeregisterProcessorChangeCallback(deregistering_handle);
+    usersim_reset_active_processor_count();
+}
+
+TEST_CASE("processor add notifications are serialized", "[ke]")
+{
+    if (KeQueryMaximumProcessorCountEx(ALL_PROCESSOR_GROUPS) < 2) {
+        return;
+    }
+
+    REQUIRE(usersim_set_active_processor_count(1) == STATUS_SUCCESS);
+
+    REQUIRE(usersim_notify_processor_add_start(2) == STATUS_INVALID_PARAMETER);
+    REQUIRE(usersim_notify_processor_add_start(1) == STATUS_SUCCESS);
+    REQUIRE(usersim_notify_processor_add_start(1) == STATUS_INVALID_PARAMETER);
+    REQUIRE(usersim_notify_processor_add_complete(2) == STATUS_INVALID_PARAMETER);
+    REQUIRE(usersim_notify_processor_add_complete(1) == STATUS_SUCCESS);
+    REQUIRE(KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS) == 2);
+
+    REQUIRE(usersim_notify_processor_add_complete(1) == STATUS_INVALID_PARAMETER);
+    REQUIRE(usersim_notify_processor_add_start(2) == STATUS_SUCCESS);
+    REQUIRE(usersim_notify_processor_add_failure(2) == STATUS_SUCCESS);
+    REQUIRE(KeQueryActiveProcessorCountEx(ALL_PROCESSOR_GROUPS) == 2);
+
+    usersim_reset_active_processor_count();
 }
 
 TEST_CASE("semaphore", "[ke]")
