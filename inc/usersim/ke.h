@@ -187,14 +187,34 @@ USERSIM_API
 void
 usersim_reset_active_processor_count();
 
+/**
+ * @brief Start a simulated processor hot-add for the next inactive processor.
+ *
+ * The test hook models processor additions serially. Callers must start with
+ * the current active processor count and must finish the same processor with
+ * usersim_notify_processor_add_complete() or usersim_notify_processor_add_failure()
+ * before starting another add.
+ */
 USERSIM_API
 _Must_inspect_result_ NTSTATUS
 usersim_notify_processor_add_start(_In_ ULONG processor_index);
 
+/**
+ * @brief Complete a simulated processor hot-add started by usersim_notify_processor_add_start().
+ *
+ * The processor index must match the currently pending add and becomes visible
+ * via KeQueryActiveProcessorCount*() once the completion notification succeeds.
+ */
 USERSIM_API
 _Must_inspect_result_ NTSTATUS
 usersim_notify_processor_add_complete(_In_ ULONG processor_index);
 
+/**
+ * @brief Fail a simulated processor hot-add started by usersim_notify_processor_add_start().
+ *
+ * The processor index must match the currently pending add. Failing an add
+ * leaves the active processor count unchanged.
+ */
 USERSIM_API
 _Must_inspect_result_ NTSTATUS
 usersim_notify_processor_add_failure(_In_ ULONG processor_index);
