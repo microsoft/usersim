@@ -130,7 +130,7 @@ fwp_engine_t::classify_test_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_i
 
 // This is used to test the bind hook.
 FWP_ACTION_TYPE
-fwp_engine_t::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters, _In_opt_ const GUID* callout_key)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_IP_LOCAL_PORT].value.uint16 = parameters->destination_port;
@@ -148,12 +148,13 @@ fwp_engine_t::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
         FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V4,
         _default_sublayer,
         incoming_value,
-        nullptr);
+        nullptr,
+        callout_key);
 }
 
 // This is used to test the IPv6 bind hook.
 FWP_ACTION_TYPE
-fwp_engine_t::test_bind_ipv6(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_bind_ipv6(_In_ fwp_classify_parameters_t* parameters, _In_opt_ const GUID* callout_key)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_IP_LOCAL_PORT].value.uint16 = parameters->destination_port;
@@ -171,7 +172,8 @@ fwp_engine_t::test_bind_ipv6(_In_ fwp_classify_parameters_t* parameters)
         FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V6,
         _default_sublayer,
         incoming_value,
-        nullptr);
+        nullptr,
+        callout_key);
 }
 
 _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
@@ -179,7 +181,8 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
     _In_ const GUID& layer_guid,
     _In_ const GUID& sublayer_guid,
     _In_ FWPS_INCOMING_VALUE0* incoming_value,
-    _Out_opt_ uint64_t* flow_id)
+    _Out_opt_ uint64_t* flow_id,
+    _In_opt_ const GUID* callout_key)
 {
     FWPS_INCOMING_VALUES incoming_fixed_values = {.layerId = layer_id, .incomingValue = incoming_value};
     FWPS_INCOMING_METADATA_VALUES incoming_metadata_values = {};
@@ -188,7 +191,12 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
 
     {
         shared_lock_t l(lock);
-        const FWPM_FILTER* fwpm_filter = get_fwpm_filter_with_context_under_lock(layer_guid, sublayer_guid);
+        // When a specific callout key is requested, select the filter bound to that callout so the
+        // intended callout is exercised even if multiple callouts are registered at this layer and
+        // sublayer. Otherwise fall back to first-match by layer+sublayer.
+        const FWPM_FILTER* fwpm_filter =
+            callout_key ? get_fwpm_filter_by_callout_under_lock(layer_guid, sublayer_guid, *callout_key)
+                        : get_fwpm_filter_with_context_under_lock(layer_guid, sublayer_guid);
         if (!fwpm_filter) {
             return FWP_ACTION_CALLOUT_UNKNOWN;
         }
@@ -1067,6 +1075,30 @@ FWP_ACTION_TYPE
 usersim_fwp_bind_ipv6(_In_ fwp_classify_parameters_t* parameters)
 {
     return fwp_engine_t::get()->test_bind_ipv6(parameters);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_bind_ipv4_by_callout(_In_ fwp_classify_parameters_t* parameters, _In_ const GUID* callout_key)
+{
+    CXPLAT_DEBUG_ASSERT(callout_key != nullptr);
+    if (callout_key == nullptr) {
+        // Guard release builds where the assert is compiled out: without a callout key the engine would
+        // silently fall back to layer+sublayer first-match and could exercise the wrong callout.
+        return FWP_ACTION_CALLOUT_UNKNOWN;
+    }
+    return fwp_engine_t::get()->test_bind_ipv4(parameters, callout_key);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_bind_ipv6_by_callout(_In_ fwp_classify_parameters_t* parameters, _In_ const GUID* callout_key)
+{
+    CXPLAT_DEBUG_ASSERT(callout_key != nullptr);
+    if (callout_key == nullptr) {
+        // Guard release builds where the assert is compiled out: without a callout key the engine would
+        // silently fall back to layer+sublayer first-match and could exercise the wrong callout.
+        return FWP_ACTION_CALLOUT_UNKNOWN;
+    }
+    return fwp_engine_t::get()->test_bind_ipv6(parameters, callout_key);
 }
 
 FWP_ACTION_TYPE
