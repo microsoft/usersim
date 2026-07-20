@@ -37,6 +37,16 @@ usersim_fwp_bind_ipv4(_In_ fwp_classify_parameters_t* parameters);
 USERSIM_API FWP_ACTION_TYPE
 usersim_fwp_bind_ipv6(_In_ fwp_classify_parameters_t* parameters);
 
+// Bind-hook classify variants that select the WFP filter bound to a specific callout key. Use these
+// to target a specific bind callout (e.g., the CGROUP_SOCK_ADDR bind callout) when multiple callouts
+// are registered at the ALE_RESOURCE_ASSIGNMENT layer, instead of relying on layer+sublayer
+// first-match ordering.
+USERSIM_API FWP_ACTION_TYPE
+usersim_fwp_bind_ipv4_by_callout(_In_ fwp_classify_parameters_t* parameters, _In_ const GUID* callout_key);
+
+USERSIM_API FWP_ACTION_TYPE
+usersim_fwp_bind_ipv6_by_callout(_In_ fwp_classify_parameters_t* parameters, _In_ const GUID* callout_key);
+
 USERSIM_API FWP_ACTION_TYPE
 usersim_fwp_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* parameters);
 

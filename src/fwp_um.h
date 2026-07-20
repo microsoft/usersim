@@ -218,10 +218,10 @@ typedef class fwp_engine_t
     classify_test_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_index);
 
     FWP_ACTION_TYPE
-    test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters);
+    test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters, _In_opt_ const GUID* callout_key = nullptr);
 
     FWP_ACTION_TYPE
-    test_bind_ipv6(_In_ fwp_classify_parameters_t* parameters);
+    test_bind_ipv6(_In_ fwp_classify_parameters_t* parameters, _In_opt_ const GUID* callout_key = nullptr);
 
     FWP_ACTION_TYPE
     test_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* parameters);
@@ -268,7 +268,8 @@ typedef class fwp_engine_t
         _In_ const GUID& layer_guid,
         _In_ const GUID& sublayer_guid,
         _In_ FWPS_INCOMING_VALUE0* incoming_value,
-        _Out_opt_ uint64_t* flow_handle);
+        _Out_opt_ uint64_t* flow_handle,
+        _In_opt_ const GUID* callout_key = nullptr);
 
     _Requires_lock_not_held_(this->lock) void test_remove_flow_context(
     uint64_t flow_id,
@@ -292,6 +293,27 @@ typedef class fwp_engine_t
         for (auto& [first, filter] : fwpm_filters) {
             if (memcmp(&filter.layerKey, &layer_guid, sizeof(GUID)) == 0 &&
                 memcmp(&filter.subLayerKey, &sublayer_guid, sizeof(GUID)) == 0 && filter.rawContext != 0) {
+                return &filter;
+            }
+        }
+        return nullptr;
+    }
+
+    // Select a filter by its bound callout key at the given layer and sublayer. This disambiguates the
+    // case where multiple callouts (each with its own filter) are registered at the same WFP layer and
+    // sublayer (e.g., the legacy bind callout and the CGROUP_SOCK_ADDR bind callout both at
+    // ALE_RESOURCE_ASSIGNMENT). Selecting the filter by its callout key lets a test target a specific
+    // callout explicitly instead of relying on layer+sublayer first-match ordering. The sublayer is
+    // still matched (mirroring get_fwpm_filter_with_context_under_lock) so selection stays unambiguous
+    // even if a callout ever owns filters on more than one sublayer.
+    _Ret_maybenull_ const FWPM_FILTER*
+    get_fwpm_filter_by_callout_under_lock(
+        _In_ const GUID& layer_guid, _In_ const GUID& sublayer_guid, _In_ const GUID& callout_key)
+    {
+        for (auto& [first, filter] : fwpm_filters) {
+            if (memcmp(&filter.layerKey, &layer_guid, sizeof(GUID)) == 0 &&
+                memcmp(&filter.subLayerKey, &sublayer_guid, sizeof(GUID)) == 0 &&
+                memcmp(&filter.action.calloutKey, &callout_key, sizeof(GUID)) == 0 && filter.rawContext != 0) {
                 return &filter;
             }
         }
