@@ -531,8 +531,14 @@ fwp_engine_t::test_cgroup_inet6_listen(_In_ fwp_classify_parameters_t* parameter
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmFilterDeleteById0(_In_ HANDLE engine_handle, _In_ uint64_t id)
 {
-    // Skip fault injection for this API because return failure status requires to remove filter from the list.
     auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    // Filter-delete failures are injected with a dedicated, caller-armed counter rather than the generic
+    // cxplat_fault_injection_inject_fault() path, so tests can fail specific deletes deterministically. See
+    // usersim_fwp_set_filter_delete_failure_count (fwp_test.h) for behavior and usage.
+    if (engine.consume_filter_delete_failure()) {
+        return (NTSTATUS)STATUS_UNSUCCESSFUL;
+    }
 
     if (engine.remove_fwpm_filter(id)) {
         return STATUS_SUCCESS;
@@ -1122,6 +1128,24 @@ usersim_fwp_set_sublayer_guids(
     _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer)
 {
     fwp_engine_t::get()->set_sublayer_guids(default_sublayer, connect_v4_sublayer, connect_v6_sublayer);
+}
+
+void
+usersim_fwp_set_filter_delete_failure_count(uint32_t count)
+{
+    fwp_engine_t::get()->set_filter_delete_failure_count(count);
+}
+
+uint32_t
+usersim_fwp_get_fwpm_filter_count()
+{
+    return (uint32_t)fwp_engine_t::get()->get_fwpm_filter_count();
+}
+
+void
+usersim_fwp_clear_fwpm_filters()
+{
+    fwp_engine_t::get()->clear_fwpm_filters();
 }
 
 void

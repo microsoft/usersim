@@ -139,6 +139,7 @@ typedef class fwp_engine_t
 
             callout = get_fwps_callout(&filter->action.calloutKey);
             CXPLAT_DEBUG_ASSERT(callout != nullptr);
+            fwps_filter.filterId = id;
             fwps_filter.context = filter->rawContext;
         }
 
@@ -158,8 +159,10 @@ typedef class fwp_engine_t
             exclusive_lock_t l(lock);
             for (auto& it : fwpm_filters) {
                 if (it.first == id) {
+                    // May be null if the callout function has already been unregistered (e.g., during driver
+                    // unload); in that case WFP delivers no delete notification (handled below).
                     callout = get_fwps_callout(&it.second.action.calloutKey);
-                    CXPLAT_DEBUG_ASSERT(callout != nullptr);
+                    fwps_filter.filterId = id;
                     fwps_filter.context = it.second.rawContext;
                     break;
                 }
@@ -168,12 +171,51 @@ typedef class fwp_engine_t
             return_value = fwpm_filters.erase(id) == 1;
         }
 
-        CXPLAT_DEBUG_ASSERT(callout != nullptr);
-        __analysis_assume(callout != nullptr);
-        // Invoke filter delete notification callback.
-        callout->notifyFn(FWPS_CALLOUT_NOTIFY_DELETE_FILTER, &callout->calloutKey, &fwps_filter);
+        // If the callout function is still registered, deliver the delete notification as real WFP does. Once the
+        // callout has been unregistered (e.g., during driver unload), WFP delivers no delete notification.
+        if (callout != nullptr) {
+            callout->notifyFn(FWPS_CALLOUT_NOTIFY_DELETE_FILTER, &callout->calloutKey, &fwps_filter);
+        }
 
         return return_value;
+    }
+
+    // Test-only: remove any WFP filters left in the engine (used to clean up after fault-injection tests that
+    // intentionally leave filters undeletable). Does not issue notifications.
+    void
+    clear_fwpm_filters()
+    {
+        exclusive_lock_t l(lock);
+        fwpm_filters.clear();
+    }
+
+    // Arms the deterministic FwpmFilterDeleteById failure counter (see usersim_fwp_set_filter_delete_failure_count
+    // in fwp_test.h). Fails the next 'count' deletes; 0 disarms.
+    void
+    set_filter_delete_failure_count(uint32_t count)
+    {
+        exclusive_lock_t l(lock);
+        _filter_delete_failure_count = count;
+    }
+
+    // Returns true (and consumes one) if the next FwpmFilterDeleteById call should be failed for fault injection.
+    bool
+    consume_filter_delete_failure()
+    {
+        exclusive_lock_t l(lock);
+        if (_filter_delete_failure_count > 0) {
+            _filter_delete_failure_count--;
+            return true;
+        }
+        return false;
+    }
+
+    // Test-only: number of WFP filters currently present in the engine.
+    size_t
+    get_fwpm_filter_count()
+    {
+        shared_lock_t l(lock);
+        return fwpm_filters.size();
     }
 
     _Requires_lock_not_held_(this->lock) void add_fwpm_provider(_In_ const FWPM_PROVIDER* provider)
@@ -336,6 +378,7 @@ typedef class fwp_engine_t
     std::shared_mutex lock;
     uint32_t next_id = 1;
     uint32_t next_flow_id = 1;
+    uint32_t _filter_delete_failure_count = 0; // Test-only WFP filter delete fault-injection counter.
     std::unordered_map<size_t, FWPS_CALLOUT3> fwps_callouts;
     std::unordered_map<size_t, FWPM_CALLOUT0> fwpm_callouts;
     std::unordered_map<size_t, FWPM_FILTER0> fwpm_filters;
