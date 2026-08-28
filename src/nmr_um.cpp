@@ -28,11 +28,8 @@ NTSTATUS
 NmrDeregisterProvider(_In_ HANDLE nmr_provider_handle)
 {
     try {
-        if (nmr_t::get().deregister_provider(nmr_provider_handle)) {
-            return STATUS_PENDING;
-        } else {
-            return STATUS_SUCCESS;
-        }
+        nmr_t::get().deregister_provider(nmr_provider_handle);
+        return STATUS_PENDING;
     } catch (std::bad_alloc) {
         return STATUS_NO_MEMORY;
     }
@@ -81,11 +78,8 @@ NTSTATUS
 NmrDeregisterClient(_In_ HANDLE nmr_client_handle)
 {
     try {
-        if (nmr_t::get().deregister_client(nmr_client_handle)) {
-            return STATUS_PENDING;
-        } else {
-            return STATUS_SUCCESS;
-        }
+        nmr_t::get().deregister_client(nmr_client_handle);
+        return STATUS_PENDING;
     } catch (std::bad_alloc) {
         return STATUS_NO_MEMORY;
     }
