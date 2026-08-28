@@ -6,6 +6,8 @@
 #ifndef CXPLAT_DEBUGGING_FEATURES_ENABLED
 #define cxplat_fault_injection_is_enabled() false
 #define cxplat_fault_injection_inject_fault() false
+#define cxplat_fault_injection_suspend() ((void)0)
+#define cxplat_fault_injection_resume() ((void)0)
 #else
 #include <stdbool.h>
 
@@ -49,6 +51,20 @@ cxplat_fault_injection_inject_fault() CXPLAT_NOEXCEPT;
  */
 bool
 cxplat_fault_injection_is_enabled() CXPLAT_NOEXCEPT;
+
+/**
+ * @brief Suspend fault injection. Calls may be nested and must be matched by calls to
+ * cxplat_fault_injection_resume(). This function is thread safe.
+ */
+void
+cxplat_fault_injection_suspend() CXPLAT_NOEXCEPT;
+
+/**
+ * @brief Resume fault injection after a matching call to cxplat_fault_injection_suspend().
+ * This function is thread safe.
+ */
+void
+cxplat_fault_injection_resume() CXPLAT_NOEXCEPT;
 
 /**
  * @brief Reset fault injection. This function is thread safe.
