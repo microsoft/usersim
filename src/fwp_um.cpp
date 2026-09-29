@@ -551,8 +551,192 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmFilterDeleteById0(_In_ HANDLE en
     if (engine.remove_fwpm_filter(id)) {
         return STATUS_SUCCESS;
     } else {
-        return STATUS_INVALID_PARAMETER;
+        // Real WFP reports a missing filter as FWP_E_FILTER_NOT_FOUND. Callers distinguish "already gone"
+        // (benign) from a genuine failure, so returning a generic status here would hide that distinction.
+        return (NTSTATUS)FWP_E_FILTER_NOT_FOUND;
     }
+}
+
+// Enumeration results are returned as a single allocation laid out as [array of N pointers][N objects][N GUIDs],
+// so a caller frees the whole result with one FwpmFreeMemory0 call, as real WFP requires. The trailing GUID slots
+// back the providerKey pointers of the returned objects, which would otherwise dangle once this batch is freed.
+static _Ret_maybenull_ uint8_t*
+_fwpm_enum_allocate_block(size_t count, size_t object_size, _Out_ size_t* object_offset, _Out_ size_t* guid_offset)
+{
+    *object_offset = count * sizeof(void*);
+    *guid_offset = *object_offset + count * object_size;
+
+    return (uint8_t*)cxplat_allocate(
+        CXPLAT_POOL_FLAG_NON_PAGED, *guid_offset + count * sizeof(GUID), USERSIM_TAG_FWPM_ENUM);
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmFilterCreateEnumHandle0(
+    _In_ HANDLE engine_handle,
+    _In_opt_ const FWPM_FILTER_ENUM_TEMPLATE0* enum_template,
+    _Out_ HANDLE* enum_handle)
+{
+    if (cxplat_fault_injection_inject_fault()) {
+        *enum_handle = NULL;
+        return STATUS_NO_MEMORY;
+    }
+
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    *enum_handle = (HANDLE)(uintptr_t)engine.create_fwpm_filter_enum_handle(enum_template);
+    return STATUS_SUCCESS;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmFilterEnum0(
+    _In_ HANDLE engine_handle,
+    _In_ HANDLE enum_handle,
+    _In_ uint32_t num_entries_requested,
+    _Outptr_result_buffer_(*num_entries_returned) FWPM_FILTER0*** entries,
+    _Out_ uint32_t* num_entries_returned)
+{
+    if (cxplat_fault_injection_inject_fault()) {
+        return STATUS_NO_MEMORY;
+    }
+
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    std::vector<fwpm_filter_entry_t> batch;
+    if (!engine.next_fwpm_filter_enum_entries((uint64_t)(uintptr_t)enum_handle, num_entries_requested, batch)) {
+        return STATUS_INVALID_HANDLE;
+    }
+
+    *entries = nullptr;
+    *num_entries_returned = 0;
+    if (batch.empty()) {
+        // Real WFP returns success with zero entries at the end of an enumeration.
+        return STATUS_SUCCESS;
+    }
+
+    size_t object_offset;
+    size_t guid_offset;
+    uint8_t* block = _fwpm_enum_allocate_block(batch.size(), sizeof(FWPM_FILTER0), &object_offset, &guid_offset);
+    if (block == nullptr) {
+        // The entries were already taken from the snapshot, so put the cursor back; otherwise this batch would be
+        // skipped for good and a caller that retried would silently see fewer objects than exist.
+        engine.rewind_fwpm_filter_enum((uint64_t)(uintptr_t)enum_handle, batch.size());
+        return STATUS_NO_MEMORY;
+    }
+
+    auto pointers = (FWPM_FILTER0**)block;
+    auto objects = (FWPM_FILTER0*)(block + object_offset);
+    auto guids = (GUID*)(block + guid_offset);
+
+    for (size_t index = 0; index < batch.size(); index++) {
+        objects[index] = batch[index].filter;
+        guids[index] = batch[index].provider_key;
+        if (objects[index].providerKey != nullptr) {
+            objects[index].providerKey = &guids[index];
+        }
+        pointers[index] = &objects[index];
+    }
+
+    *entries = pointers;
+    *num_entries_returned = (uint32_t)batch.size();
+    return STATUS_SUCCESS;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
+    FwpmFilterDestroyEnumHandle0(_In_ HANDLE engine_handle, _Inout_ HANDLE enum_handle)
+{
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    if (!engine.destroy_fwpm_filter_enum_handle((uint64_t)(uintptr_t)enum_handle)) {
+        return STATUS_INVALID_HANDLE;
+    }
+    return STATUS_SUCCESS;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmCalloutCreateEnumHandle0(
+    _In_ HANDLE engine_handle,
+    _In_opt_ const FWPM_CALLOUT_ENUM_TEMPLATE0* enum_template,
+    _Out_ HANDLE* enum_handle)
+{
+    if (cxplat_fault_injection_inject_fault()) {
+        *enum_handle = NULL;
+        return STATUS_NO_MEMORY;
+    }
+
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    *enum_handle = (HANDLE)(uintptr_t)engine.create_fwpm_callout_enum_handle(enum_template);
+    return STATUS_SUCCESS;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmCalloutEnum0(
+    _In_ HANDLE engine_handle,
+    _In_ HANDLE enum_handle,
+    _In_ uint32_t num_entries_requested,
+    _Outptr_result_buffer_(*num_entries_returned) FWPM_CALLOUT0*** entries,
+    _Out_ uint32_t* num_entries_returned)
+{
+    if (cxplat_fault_injection_inject_fault()) {
+        return STATUS_NO_MEMORY;
+    }
+
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    std::vector<fwpm_callout_entry_t> batch;
+    if (!engine.next_fwpm_callout_enum_entries((uint64_t)(uintptr_t)enum_handle, num_entries_requested, batch)) {
+        return STATUS_INVALID_HANDLE;
+    }
+
+    *entries = nullptr;
+    *num_entries_returned = 0;
+    if (batch.empty()) {
+        return STATUS_SUCCESS;
+    }
+
+    size_t object_offset;
+    size_t guid_offset;
+    uint8_t* block = _fwpm_enum_allocate_block(batch.size(), sizeof(FWPM_CALLOUT0), &object_offset, &guid_offset);
+    if (block == nullptr) {
+        // See the filter case above: the cursor must not advance past a batch the caller never received.
+        engine.rewind_fwpm_callout_enum((uint64_t)(uintptr_t)enum_handle, batch.size());
+        return STATUS_NO_MEMORY;
+    }
+
+    auto pointers = (FWPM_CALLOUT0**)block;
+    auto objects = (FWPM_CALLOUT0*)(block + object_offset);
+    auto guids = (GUID*)(block + guid_offset);
+
+    for (size_t index = 0; index < batch.size(); index++) {
+        objects[index] = batch[index].callout;
+        guids[index] = batch[index].provider_key;
+        if (objects[index].providerKey != nullptr) {
+            objects[index].providerKey = &guids[index];
+        }
+        pointers[index] = &objects[index];
+    }
+
+    *entries = pointers;
+    *num_entries_returned = (uint32_t)batch.size();
+    return STATUS_SUCCESS;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
+    FwpmCalloutDestroyEnumHandle0(_In_ HANDLE engine_handle, _Inout_ HANDLE enum_handle)
+{
+    auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    if (!engine.destroy_fwpm_callout_enum_handle((uint64_t)(uintptr_t)enum_handle)) {
+        return STATUS_INVALID_HANDLE;
+    }
+    return STATUS_SUCCESS;
+}
+
+void NTAPI
+FwpmFreeMemory0(_Inout_ void** p)
+{
+    if (p == nullptr || *p == nullptr) {
+        return;
+    }
+
+    cxplat_free(*p, CXPLAT_POOL_FLAG_NON_PAGED, USERSIM_TAG_FWPM_ENUM);
+    *p = nullptr;
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
@@ -633,10 +817,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmCalloutDeleteByKey0(_In_ HANDLE 
 
     auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
 
-    if (!engine.remove_fwpm_callout(key)) {
-        return STATUS_NOT_FOUND;
-    }
-    return STATUS_SUCCESS;
+    return engine.delete_fwpm_callout(key);
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmEngineOpen0(
@@ -668,7 +849,11 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
 
     auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
 
-    engine.add_fwpm_provider(provider);
+    if (!engine.add_fwpm_provider(provider)) {
+        // A provider with this key already exists. Real WFP reports this rather than silently accepting the add,
+        // and it is how a caller discovers that a previous instance's provider outlived it.
+        return (NTSTATUS)FWP_E_ALREADY_EXISTS;
+    }
 
     UNREFERENCED_PARAMETER(sd);
     return STATUS_SUCCESS;
@@ -682,12 +867,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmProviderDeleteByKey0(_In_ HANDLE
 
     auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
 
-    engine.remove_fwpm_provider(key);
-    if (cxplat_fault_injection_inject_fault()) {
-        return STATUS_NOT_FOUND;
-    }
-
-    return STATUS_SUCCESS;
+    return engine.delete_fwpm_provider(key);
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
@@ -714,10 +894,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS
 
     auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
 
-    if (!engine.remove_fwpm_sub_layer(sub_layer_key)) {
-        return STATUS_NOT_FOUND;
-    }
-    return STATUS_SUCCESS;
+    return engine.delete_fwpm_sub_layer(sub_layer_key);
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmEngineClose0(_Inout_ HANDLE engine_handle)
@@ -776,7 +953,10 @@ _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpsCalloutUnregisterById0(_In_ cons
     if (engine.remove_fwps_callout(callout_id)) {
         return STATUS_SUCCESS;
     } else {
-        return STATUS_INVALID_PARAMETER;
+        // Real WFP reports an unregistered run-time identifier as FWP_E_CALLOUT_NOT_FOUND. Callers unregister
+        // callouts on cleanup paths where some were never registered, and they treat "not found" as success, so a
+        // generic status here would turn a benign no-op into an apparent failure.
+        return (NTSTATUS)FWP_E_CALLOUT_NOT_FOUND;
     }
 }
 

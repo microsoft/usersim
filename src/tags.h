@@ -6,6 +6,7 @@
 #define USERSIM_TAG_ACCOUNT_NAME 'ansu'
 #define USERSIM_TAG_ETW_PROVIDER 'pesu'
 #define USERSIM_TAG_FWPS_CONNECT_REQUEST0 'cfsu'
+#define USERSIM_TAG_FWPM_ENUM 'efsu'
 #define USERSIM_TAG_HANDLE 'ahsu'
 #define USERSIM_TAG_IO_WORK_ITEM 'wisu'
 #define USERSIM_TAG_MDL 'dmsu'
