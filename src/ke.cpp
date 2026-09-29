@@ -748,6 +748,29 @@ KeReadStateSemaphore(_In_ PRKSEMAPHORE semaphore)
 
 #pragma endregion semaphores
 
+_IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI NTSTATUS
+    KeDelayExecutionThread(
+        _In_ __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE wait_mode,
+        _In_ BOOLEAN alertable,
+        _In_ PLARGE_INTEGER interval)
+{
+    UNREFERENCED_PARAMETER(wait_mode);
+    UNREFERENCED_PARAMETER(alertable);
+
+    // Interval is expressed in 100-ns units. A negative value is a delay relative to the current time; a
+    // non-negative value is an absolute expiration time, which the user-mode mock does not track and therefore
+    // treats as no delay.
+    DWORD delay_ms = 0;
+    if (interval->QuadPart < 0) {
+        // Convert the relative 100-ns interval to milliseconds, rounding up so a sub-millisecond request still
+        // yields a non-zero wait.
+        delay_ms = (DWORD)((-interval->QuadPart + 9999) / 10000);
+    }
+
+    Sleep(delay_ms);
+    return STATUS_SUCCESS;
+}
+
 _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI VOID
     KeStackAttachProcess(_Inout_ PRKPROCESS process, _Out_ PRKAPC_STATE apc_state)
 {
