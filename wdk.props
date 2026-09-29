@@ -25,7 +25,8 @@
     <UsersimPlatformToolset Condition="'$(VisualStudioVersion)' == '17.0'">v143</UsersimPlatformToolset>
     <UsersimPlatformToolset Condition="'$(UsersimPlatformToolset)' == ''">v143</UsersimPlatformToolset>
     <_UsersimTargetPackagePlatform Condition="'$(Platform)' != ''">$(Platform.ToLowerInvariant())</_UsersimTargetPackagePlatform>
-    <_UsersimTargetPackagePlatform Condition="'$(Platform)' == 'Win32'">x86</_UsersimTargetPackagePlatform>
+    <_UsersimTargetPackagePlatform Condition="'$(_UsersimTargetPackagePlatform)' == 'amd64'">x64</_UsersimTargetPackagePlatform>
+    <_UsersimTargetPackagePlatform Condition="'$(_UsersimTargetPackagePlatform)' == 'win32'">x86</_UsersimTargetPackagePlatform>
     <_UsersimTargetPackagePlatform Condition="'$(_UsersimTargetPackagePlatform)' == ''">x64</_UsersimTargetPackagePlatform>
     <_UsersimHostPackagePlatform>$(HostPlatform.ToLowerInvariant())</_UsersimHostPackagePlatform>
     <_UsersimHostPackagePlatform Condition="'$(_UsersimHostPackagePlatform)' == 'amd64'">x64</_UsersimHostPackagePlatform>
