@@ -14,6 +14,7 @@ FetchContent_MakeAvailable(Catch2)
 add_executable(usersim_tests
   etw_test.cpp
   ex_test.cpp
+  fault_injection_test.cpp
   ke_test.cpp
   mm_test.cpp
   nmr_test.cpp

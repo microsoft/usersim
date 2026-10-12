@@ -4,12 +4,16 @@
 #include "platform.h"
 #include "kernel_um.h"
 #include "usersim/ob.h"
+#include "utilities.h"
 #include <map>
 
 static std::map<PVOID, ULONG> _object_references;
 
 static POBJECT_TYPE _ExEventObjectType = nullptr;
 USERSIM_API __declspec(align(8)) POBJECT_TYPE* ExEventObjectType = &_ExEventObjectType;
+
+static POBJECT_TYPE _IoFileObjectType = nullptr;
+USERSIM_API __declspec(align(8)) POBJECT_TYPE* IoFileObjectType = &_IoFileObjectType;
 
 _IRQL_requires_max_(DISPATCH_LEVEL) USERSIM_API LONG_PTR
 ObfReferenceObject(_In_ PVOID object)
@@ -50,6 +54,28 @@ ObReferenceObjectByHandle(
         return STATUS_NOT_SUPPORTED;
     }
     ObfReferenceObject(*object);
+    return STATUS_SUCCESS;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL) USERSIM_API NTSTATUS
+ObOpenObjectByPointer(
+    _In_ PVOID object,
+    _In_ ULONG handle_attributes,
+    _In_opt_ void* passed_access_state,
+    _In_ ACCESS_MASK desired_access,
+    _In_opt_ POBJECT_TYPE object_type,
+    _In_ KPROCESSOR_MODE access_mode,
+    _Out_ HANDLE* handle)
+{
+    UNREFERENCED_PARAMETER(handle_attributes);
+    UNREFERENCED_PARAMETER(passed_access_state);
+    UNREFERENCED_PARAMETER(object_type);
+    UNREFERENCED_PARAMETER(access_mode);
+
+    if (!DuplicateHandle(GetCurrentProcess(), (HANDLE)object, GetCurrentProcess(), handle, desired_access, FALSE, 0)) {
+        return win32_error_to_usersim_error(GetLastError());
+    }
+
     return STATUS_SUCCESS;
 }
 

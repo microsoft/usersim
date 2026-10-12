@@ -98,14 +98,14 @@ Above all, if a file happens to differ in style from these guidelines (e.g., pri
 ### Prerequisites
 
 * Windows 10 version 1903 or later, or Windows Server 2019 or later
-* Visual Studio 2022 with C++ development tools
+* Visual Studio 2022 (v143) or Visual Studio 2026 (v145) with C++ development tools
 * Windows SDK version 10.0.22621.0 or later
 * Windows Driver Kit (WDK) version 10.0.22621.0 or later
 * CMake 3.16 or later (optional, for CMake builds)
 
 ### Building with Visual Studio
 
-1. Open `usersim.sln` in Visual Studio 2022
+1. Open `usersim.sln` in Visual Studio 2022 or Visual Studio 2026
 2. Select the desired configuration (Debug/Release) and platform (x64/ARM64)
 3. Build the solution
 

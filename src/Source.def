@@ -5,7 +5,8 @@
 
 LIBRARY
 EXPORTS
-    ExEventObjectType
+    ExEventObjectType DATA
+    IoFileObjectType DATA
 
     FwpmCalloutAdd0
     FwpmCalloutDeleteByKey0
@@ -50,3 +51,6 @@ EXPORTS
     NmrRegisterProvider
     NmrWaitForClientDeregisterComplete
     NmrWaitForProviderDeregisterComplete
+
+    usersim_fault_injection_resume
+    usersim_fault_injection_suspend

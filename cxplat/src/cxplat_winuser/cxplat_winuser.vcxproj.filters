@@ -80,7 +80,7 @@
     <ClCompile Include="..\memory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="size_winuser.c">
+    <ClCompile Include="size_winuser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="rundown_winuser.cpp">

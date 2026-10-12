@@ -35,6 +35,19 @@ USERSIM_API FWP_ACTION_TYPE
 usersim_fwp_bind_ipv4(_In_ fwp_classify_parameters_t* parameters);
 
 USERSIM_API FWP_ACTION_TYPE
+usersim_fwp_bind_ipv6(_In_ fwp_classify_parameters_t* parameters);
+
+// Bind-hook classify variants that select the WFP filter bound to a specific callout key. Use these
+// to target a specific bind callout (e.g., the CGROUP_SOCK_ADDR bind callout) when multiple callouts
+// are registered at the ALE_RESOURCE_ASSIGNMENT layer, instead of relying on layer+sublayer
+// first-match ordering.
+USERSIM_API FWP_ACTION_TYPE
+usersim_fwp_bind_ipv4_by_callout(_In_ fwp_classify_parameters_t* parameters, _In_ const GUID* callout_key);
+
+USERSIM_API FWP_ACTION_TYPE
+usersim_fwp_bind_ipv6_by_callout(_In_ fwp_classify_parameters_t* parameters, _In_ const GUID* callout_key);
+
+USERSIM_API FWP_ACTION_TYPE
 usersim_fwp_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* parameters);
 
 USERSIM_API FWP_ACTION_TYPE
@@ -52,9 +65,37 @@ usersim_fwp_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ ui
 USERSIM_API FWP_ACTION_TYPE
 usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ uint64_t* flow_id);
 
+USERSIM_API FWP_ACTION_TYPE
+usersim_fwp_cgroup_inet4_listen(_In_ fwp_classify_parameters_t* parameters);
+
+USERSIM_API FWP_ACTION_TYPE
+usersim_fwp_cgroup_inet6_listen(_In_ fwp_classify_parameters_t* parameters);
+
 USERSIM_API void
 usersim_fwp_set_sublayer_guids(
     _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer);
+
+// Test hook to simulate WFP filter-delete failures. Arms the mock to fail the next 'count' FwpmFilterDeleteById
+// calls; each returns a failure status while leaving the filter installed and firing no delete notification, so
+// a caller can be exercised against a delete that does not take effect. Pass 0 to disarm.
+//
+// This is deterministic and opt-in, and is separate from the random cxplat fault-injection harness: it stays
+// inert until armed (count > 0), consumes one count per failed delete, and does not depend on the harness being
+// enabled. A test that arms it should skip itself when cxplat_fault_injection_is_enabled() is true, so random
+// injection does not disturb the exact sequence. Example:
+//     usersim_fwp_set_filter_delete_failure_count(1);   // or UINT32_MAX to fail every delete
+//     ... run the code under test ...
+//     usersim_fwp_set_filter_delete_failure_count(0);
+USERSIM_API void
+usersim_fwp_set_filter_delete_failure_count(uint32_t count);
+
+// Test-only: number of WFP filters currently present in the simulated engine.
+USERSIM_API uint32_t
+usersim_fwp_get_fwpm_filter_count();
+
+// Test-only: remove any WFP filters left in the simulated engine (cleanup after fault-injection tests).
+USERSIM_API void
+usersim_fwp_clear_fwpm_filters();
 
 USERSIM_API void
 usersim_fwp_sock_ops_v4_remove_flow_context(_In_ uint64_t flow_id);

@@ -11,6 +11,7 @@
 #include <map>
 #include <mutex>
 #include <psapi.h>
+#include <shared_mutex>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -39,6 +40,12 @@ typedef class _cxplat_fault_injection
 
     bool
     inject_fault();
+
+    void
+    suspend();
+
+    void
+    resume();
 
     /**
      * @brief Reset the fault injection state, both in memory and on disk.
@@ -139,6 +146,9 @@ typedef class _cxplat_fault_injection
      */
     std::mutex _mutex;
 
+    std::shared_mutex _suspension_mutex;
+    _Guarded_by_(_suspension_mutex) size_t _suspension_count = 0;
+
     size_t _stack_depth;
     _Guarded_by_(_mutex) std::vector<std::string> _last_fault_stack;
 
@@ -209,7 +219,28 @@ _cxplat_fault_injection::~_cxplat_fault_injection()
 bool
 _cxplat_fault_injection::inject_fault()
 {
+    std::shared_lock lock(_suspension_mutex);
+    if (_suspension_count > 0) {
+        return false;
+    }
     return is_new_stack();
+}
+
+void
+_cxplat_fault_injection::suspend()
+{
+    std::unique_lock lock(_suspension_mutex);
+    _suspension_count++;
+}
+
+void
+_cxplat_fault_injection::resume()
+{
+    std::unique_lock lock(_suspension_mutex);
+    CXPLAT_RUNTIME_ASSERT(_suspension_count > 0);
+    if (_suspension_count > 0) {
+        _suspension_count--;
+    }
 }
 
 void
@@ -417,6 +448,22 @@ bool
 cxplat_fault_injection_is_enabled() noexcept
 {
     return _cxplat_fault_injection_singleton != nullptr;
+}
+
+void
+cxplat_fault_injection_suspend() noexcept
+{
+    if (_cxplat_fault_injection_singleton) {
+        _cxplat_fault_injection_singleton->suspend();
+    }
+}
+
+void
+cxplat_fault_injection_resume() noexcept
+{
+    if (_cxplat_fault_injection_singleton) {
+        _cxplat_fault_injection_singleton->resume();
+    }
 }
 
 void

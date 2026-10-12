@@ -250,3 +250,151 @@ SeQueryAuthenticationIdToken(_In_ PACCESS_TOKEN token, _Out_ PLUID authenticatio
     usersim_convert_sid_to_luid(((PTOKEN_OWNER)token_owner_buffer)->Owner, authentication_id);
     return STATUS_SUCCESS;
 }
+
+NTSTATUS
+SeQueryInformationToken(
+    _In_ PACCESS_TOKEN token, _In_ TOKEN_INFORMATION_CLASS token_information_class, _Out_ PVOID* token_information)
+{
+    *token_information = nullptr;
+
+    if (cxplat_fault_injection_inject_fault()) {
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    HANDLE token_handle = (HANDLE)token;
+    DWORD needed = 0;
+
+    // Get required buffer size.
+    (void)GetTokenInformation(token_handle, token_information_class, nullptr, 0, &needed);
+    DWORD error = GetLastError();
+    if (error != ERROR_INSUFFICIENT_BUFFER || needed == 0) {
+        return win32_error_to_usersim_error(error);
+    }
+
+    void* buffer = ExAllocatePoolUninitialized(NonPagedPoolNx, needed, USERSIM_TAG_TOKEN_ACCESS_INFORMATION);
+    if (buffer == nullptr) {
+        return STATUS_NO_MEMORY;
+    }
+
+    if (!GetTokenInformation(token_handle, token_information_class, buffer, needed, &needed)) {
+        ExFreePool(buffer);
+        return win32_error_to_usersim_error(GetLastError());
+    }
+
+    *token_information = buffer;
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+SecLookupAccountSid(
+    _In_ PSID Sid,
+    _Out_ PULONG NameSize,
+    _Inout_ PUNICODE_STRING NameBuffer,
+    _Out_ PULONG DomainSize,
+    _Out_opt_ PUNICODE_STRING DomainBuffer,
+    _Out_ PSID_NAME_USE NameUse)
+{
+    if (cxplat_fault_injection_inject_fault()) {
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    if (Sid == nullptr || NameSize == nullptr || DomainSize == nullptr || NameUse == nullptr) {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    // Use LookupAccountSidW to resolve the SID in user mode.
+    DWORD name_chars = 0;
+    DWORD domain_chars = 0;
+    SID_NAME_USE name_use;
+
+    // First call to get required buffer sizes (in characters including null terminator).
+    (void)LookupAccountSidW(nullptr, Sid, nullptr, &name_chars, nullptr, &domain_chars, &name_use);
+    DWORD error = GetLastError();
+    if (error != ERROR_INSUFFICIENT_BUFFER) {
+        return win32_error_to_usersim_error(error);
+    }
+
+    // If caller just wants sizes (NameBuffer and DomainBuffer are NULL), return sizes in bytes.
+    if (NameBuffer == nullptr && DomainBuffer == nullptr) {
+        // Return sizes as byte counts (without null terminator) to match kernel SecLookupAccountSid behavior.
+        *NameSize = (name_chars > 0) ? (ULONG)((name_chars - 1) * sizeof(WCHAR)) : 0;
+        *DomainSize = (domain_chars > 0) ? (ULONG)((domain_chars - 1) * sizeof(WCHAR)) : 0;
+        *NameUse = name_use;
+        return STATUS_BUFFER_TOO_SMALL;
+    }
+
+    // Allocate temporary buffers for the LookupAccountSidW call.
+    WCHAR* name_buf = nullptr;
+    WCHAR* domain_buf = nullptr;
+
+    if (name_chars > 0) {
+        name_buf =
+            (WCHAR*)ExAllocatePoolUninitialized(NonPagedPoolNx, name_chars * sizeof(WCHAR), USERSIM_TAG_ACCOUNT_NAME);
+        if (name_buf == nullptr) {
+            return STATUS_NO_MEMORY;
+        }
+    }
+    if (domain_chars > 0) {
+        domain_buf =
+            (WCHAR*)ExAllocatePoolUninitialized(NonPagedPoolNx, domain_chars * sizeof(WCHAR), USERSIM_TAG_ACCOUNT_NAME);
+        if (domain_buf == nullptr) {
+            ExFreePool(name_buf);
+            return STATUS_NO_MEMORY;
+        }
+    }
+
+    if (!LookupAccountSidW(nullptr, Sid, name_buf, &name_chars, domain_buf, &domain_chars, &name_use)) {
+        if (name_buf != nullptr) {
+            ExFreePool(name_buf);
+        }
+        if (domain_buf != nullptr) {
+            ExFreePool(domain_buf);
+        }
+        return win32_error_to_usersim_error(GetLastError());
+    }
+
+    // Copy results into caller-provided UNICODE_STRING buffers.
+    // *NameSize and *DomainSize are output-only:
+    //   - On success: set to the actual number of bytes copied.
+    //   - On truncation (buffer too small): set to the required buffer size.
+    BOOLEAN truncated = FALSE;
+    ULONG required_name_bytes = (name_chars > 0) ? (ULONG)(name_chars * sizeof(WCHAR)) : 0;
+    ULONG required_domain_bytes = (domain_chars > 0) ? (ULONG)(domain_chars * sizeof(WCHAR)) : 0;
+
+    if (NameBuffer != nullptr && NameBuffer->Buffer != nullptr && name_chars > 0) {
+        USHORT byte_len = (USHORT)required_name_bytes;
+        if (byte_len > NameBuffer->MaximumLength) {
+            byte_len = NameBuffer->MaximumLength;
+            truncated = TRUE;
+        }
+        memcpy(NameBuffer->Buffer, name_buf, byte_len);
+        NameBuffer->Length = byte_len;
+        *NameSize = required_name_bytes;
+    } else {
+        *NameSize = 0;
+    }
+
+    if (DomainBuffer != nullptr && DomainBuffer->Buffer != nullptr && domain_chars > 0) {
+        USHORT byte_len = (USHORT)required_domain_bytes;
+        if (byte_len > DomainBuffer->MaximumLength) {
+            byte_len = DomainBuffer->MaximumLength;
+            truncated = TRUE;
+        }
+        memcpy(DomainBuffer->Buffer, domain_buf, byte_len);
+        DomainBuffer->Length = byte_len;
+        *DomainSize = required_domain_bytes;
+    } else {
+        *DomainSize = 0;
+    }
+
+    *NameUse = name_use;
+
+    if (name_buf != nullptr) {
+        ExFreePool(name_buf);
+    }
+    if (domain_buf != nullptr) {
+        ExFreePool(domain_buf);
+    }
+
+    return truncated ? STATUS_BUFFER_TOO_SMALL : STATUS_SUCCESS;
+}

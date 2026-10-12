@@ -130,7 +130,7 @@ fwp_engine_t::classify_test_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_i
 
 // This is used to test the bind hook.
 FWP_ACTION_TYPE
-fwp_engine_t::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
+fwp_engine_t::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters, _In_opt_ const GUID* callout_key)
 {
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_MAX] = {};
     incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_IP_LOCAL_PORT].value.uint16 = parameters->destination_port;
@@ -138,13 +138,42 @@ fwp_engine_t::test_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
         parameters->destination_ipv4_address;
     incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_IP_PROTOCOL].value.uint8 = parameters->protocol;
     incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_ALE_APP_ID].value.byteBlob = &parameters->app_id;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_COMPARTMENT_ID].value.uint32 = parameters->compartment_id;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_IP_LOCAL_INTERFACE].value.uint64 =
+        const_cast<UINT64*>(&parameters->interface_luid);
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V4_ALE_USER_ID].value.byteBlob = &parameters->user_id;
 
     return test_callout(
         FWPS_LAYER_ALE_RESOURCE_ASSIGNMENT_V4,
         FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V4,
         _default_sublayer,
         incoming_value,
-        nullptr);
+        nullptr,
+        callout_key);
+}
+
+// This is used to test the IPv6 bind hook.
+FWP_ACTION_TYPE
+fwp_engine_t::test_bind_ipv6(_In_ fwp_classify_parameters_t* parameters, _In_opt_ const GUID* callout_key)
+{
+    FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_MAX] = {};
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_IP_LOCAL_PORT].value.uint16 = parameters->destination_port;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_IP_LOCAL_ADDRESS].value.byteArray16 =
+        &parameters->destination_ipv6_address;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_IP_PROTOCOL].value.uint8 = parameters->protocol;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_ALE_APP_ID].value.byteBlob = &parameters->app_id;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_COMPARTMENT_ID].value.uint32 = parameters->compartment_id;
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_IP_LOCAL_INTERFACE].value.uint64 =
+        const_cast<UINT64*>(&parameters->interface_luid);
+    incoming_value[FWPS_FIELD_ALE_RESOURCE_ASSIGNMENT_V6_ALE_USER_ID].value.byteBlob = &parameters->user_id;
+
+    return test_callout(
+        FWPS_LAYER_ALE_RESOURCE_ASSIGNMENT_V6,
+        FWPM_LAYER_ALE_RESOURCE_ASSIGNMENT_V6,
+        _default_sublayer,
+        incoming_value,
+        nullptr,
+        callout_key);
 }
 
 _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
@@ -152,7 +181,8 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
     _In_ const GUID& layer_guid,
     _In_ const GUID& sublayer_guid,
     _In_ FWPS_INCOMING_VALUE0* incoming_value,
-    _Out_opt_ uint64_t* flow_id)
+    _Out_opt_ uint64_t* flow_id,
+    _In_opt_ const GUID* callout_key)
 {
     FWPS_INCOMING_VALUES incoming_fixed_values = {.layerId = layer_id, .incomingValue = incoming_value};
     FWPS_INCOMING_METADATA_VALUES incoming_metadata_values = {};
@@ -161,18 +191,21 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
 
     {
         shared_lock_t l(lock);
-        const FWPM_FILTER* fwpm_filter = get_fwpm_filter_with_context_under_lock(layer_guid, sublayer_guid);
+        // When a specific callout key is requested, select the filter bound to that callout so the
+        // intended callout is exercised even if multiple callouts are registered at this layer and
+        // sublayer. Otherwise fall back to first-match by layer+sublayer.
+        const FWPM_FILTER* fwpm_filter =
+            callout_key ? get_fwpm_filter_by_callout_under_lock(layer_guid, sublayer_guid, *callout_key)
+                        : get_fwpm_filter_with_context_under_lock(layer_guid, sublayer_guid);
         if (!fwpm_filter) {
             return FWP_ACTION_CALLOUT_UNKNOWN;
         }
         fwps_filter.context = fwpm_filter->rawContext;
 
-        const GUID* callout_key = get_callout_key_from_layer_guid_under_lock(&layer_guid);
-        if (callout_key == nullptr) {
-            return FWP_ACTION_CALLOUT_UNKNOWN;
-        }
-
-        callout = get_callout_from_key_under_lock(callout_key);
+        // Look up the callout via the filter's calloutKey rather than scanning by layer.
+        // This matches real WFP behavior where each filter is bound to a specific callout
+        // and correctly handles multiple callouts registered at the same WFP layer.
+        callout = get_callout_from_key_under_lock(&fwpm_filter->action.calloutKey);
         if (callout == nullptr) {
             return FWP_ACTION_CALLOUT_UNKNOWN;
         }
@@ -323,6 +356,14 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_ALE_USER_ID].value.byteBlob = &parameters->user_id;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_INTERFACE].value.uint64 = &parameters->interface_luid;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_FLAGS].value.uint32 = parameters->reauthorization_flag;
+    
+    // Add fields for new helper functions
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_INTERFACE_TYPE].value.uint32 =
+        IF_TYPE_ETHERNET_CSMACD;                                                                 // Default to Ethernet
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_TUNNEL_TYPE].value.uint32 = TUNNEL_TYPE_NONE; // Default to no tunnel
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_NEXTHOP_INTERFACE].value.uint64 =
+        &parameters->interface_luid;                                                      // Use same as local interface
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_SUB_INTERFACE_INDEX].value.uint32 = 0; // Default sub-interface index
 
     action = test_callout(
         FWPS_LAYER_ALE_AUTH_CONNECT_V4, FWPM_LAYER_ALE_AUTH_CONNECT_V4, _default_sublayer, incoming_value2, nullptr);
@@ -393,6 +434,12 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_ALE_USER_ID].value.byteBlob = &parameters->user_id;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_LOCAL_INTERFACE].value.uint64 = &parameters->interface_luid;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_FLAGS].value.uint32 = parameters->reauthorization_flag;
+    
+    // Add fields for new helper functions
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_INTERFACE_TYPE].value.uint32 = IF_TYPE_ETHERNET_CSMACD; // Default to Ethernet
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_TUNNEL_TYPE].value.uint32 = TUNNEL_TYPE_NONE; // Default to no tunnel
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_NEXTHOP_INTERFACE].value.uint64 = &parameters->interface_luid; // Use same as local interface
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_SUB_INTERFACE_INDEX].value.uint32 = 0; // Default sub-interface index
 
     action = test_callout(
         FWPS_LAYER_ALE_AUTH_CONNECT_V6, FWPM_LAYER_ALE_AUTH_CONNECT_V6, _default_sublayer, incoming_value2, nullptr);
@@ -455,13 +502,51 @@ fwp_engine_t::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_
         FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6, _default_sublayer, incoming_value, flow_id);
 }
 
+// This is used to test the sock_addr listen hook for IPv4 traffic.
+FWP_ACTION_TYPE
+fwp_engine_t::test_cgroup_inet4_listen(_In_ fwp_classify_parameters_t* parameters)
+{
+    FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_MAX] = {};
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_IP_LOCAL_ADDRESS].value.uint32 = parameters->destination_ipv4_address;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_IP_LOCAL_PORT].value.uint16 = parameters->destination_port;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_COMPARTMENT_ID].value.uint32 = parameters->compartment_id;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_IP_LOCAL_INTERFACE].value.uint64 = &parameters->interface_luid;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V4_ALE_APP_ID].value.byteBlob = &parameters->app_id;
+
+    return test_callout(
+        FWPS_LAYER_ALE_AUTH_LISTEN_V4, FWPM_LAYER_ALE_AUTH_LISTEN_V4, _default_sublayer, incoming_value, nullptr);
+}
+
+// This is used to test the sock_addr listen hook for IPv6 traffic.
+FWP_ACTION_TYPE
+fwp_engine_t::test_cgroup_inet6_listen(_In_ fwp_classify_parameters_t* parameters)
+{
+    FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_MAX] = {};
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_IP_LOCAL_ADDRESS].value.byteArray16 =
+        &parameters->destination_ipv6_address;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_IP_LOCAL_PORT].value.uint16 = parameters->destination_port;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_COMPARTMENT_ID].value.uint32 = parameters->compartment_id;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_IP_LOCAL_INTERFACE].value.uint64 = &parameters->interface_luid;
+    incoming_value[FWPS_FIELD_ALE_AUTH_LISTEN_V6_ALE_APP_ID].value.byteBlob = &parameters->app_id;
+
+    return test_callout(
+        FWPS_LAYER_ALE_AUTH_LISTEN_V6, FWPM_LAYER_ALE_AUTH_LISTEN_V6, _default_sublayer, incoming_value, nullptr);
+}
+
+#pragma endregion fwp_engine_t
 
 #pragma region fwpm_apis
 
 _IRQL_requires_max_(PASSIVE_LEVEL) NTSTATUS FwpmFilterDeleteById0(_In_ HANDLE engine_handle, _In_ uint64_t id)
 {
-    // Skip fault injection for this API because return failure status requires to remove filter from the list.
     auto& engine = *reinterpret_cast<fwp_engine_t*>(engine_handle);
+
+    // Filter-delete failures are injected with a dedicated, caller-armed counter rather than the generic
+    // cxplat_fault_injection_inject_fault() path, so tests can fail specific deletes deterministically. See
+    // usersim_fwp_set_filter_delete_failure_count (fwp_test.h) for behavior and usage.
+    if (engine.consume_filter_delete_failure()) {
+        return (NTSTATUS)STATUS_UNSUCCESSFUL;
+    }
 
     if (engine.remove_fwpm_filter(id)) {
         return STATUS_SUCCESS;
@@ -993,6 +1078,36 @@ usersim_fwp_bind_ipv4(_In_ fwp_classify_parameters_t* parameters)
 }
 
 FWP_ACTION_TYPE
+usersim_fwp_bind_ipv6(_In_ fwp_classify_parameters_t* parameters)
+{
+    return fwp_engine_t::get()->test_bind_ipv6(parameters);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_bind_ipv4_by_callout(_In_ fwp_classify_parameters_t* parameters, _In_ const GUID* callout_key)
+{
+    CXPLAT_DEBUG_ASSERT(callout_key != nullptr);
+    if (callout_key == nullptr) {
+        // Guard release builds where the assert is compiled out: without a callout key the engine would
+        // silently fall back to layer+sublayer first-match and could exercise the wrong callout.
+        return FWP_ACTION_CALLOUT_UNKNOWN;
+    }
+    return fwp_engine_t::get()->test_bind_ipv4(parameters, callout_key);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_bind_ipv6_by_callout(_In_ fwp_classify_parameters_t* parameters, _In_ const GUID* callout_key)
+{
+    CXPLAT_DEBUG_ASSERT(callout_key != nullptr);
+    if (callout_key == nullptr) {
+        // Guard release builds where the assert is compiled out: without a callout key the engine would
+        // silently fall back to layer+sublayer first-match and could exercise the wrong callout.
+        return FWP_ACTION_CALLOUT_UNKNOWN;
+    }
+    return fwp_engine_t::get()->test_bind_ipv6(parameters, callout_key);
+}
+
+FWP_ACTION_TYPE
 usersim_fwp_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* parameters)
 {
     return fwp_engine_t::get()->test_cgroup_inet4_recv_accept(parameters);
@@ -1028,11 +1143,41 @@ usersim_fwp_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ ui
     return fwp_engine_t::get()->test_sock_ops_v6(parameters, flow_id);
 }
 
+FWP_ACTION_TYPE
+usersim_fwp_cgroup_inet4_listen(_In_ fwp_classify_parameters_t* parameters)
+{
+    return fwp_engine_t::get()->test_cgroup_inet4_listen(parameters);
+}
+
+FWP_ACTION_TYPE
+usersim_fwp_cgroup_inet6_listen(_In_ fwp_classify_parameters_t* parameters)
+{
+    return fwp_engine_t::get()->test_cgroup_inet6_listen(parameters);
+}
+
 void
 usersim_fwp_set_sublayer_guids(
     _In_ const GUID& default_sublayer, _In_ const GUID& connect_v4_sublayer, _In_ const GUID& connect_v6_sublayer)
 {
     fwp_engine_t::get()->set_sublayer_guids(default_sublayer, connect_v4_sublayer, connect_v6_sublayer);
+}
+
+void
+usersim_fwp_set_filter_delete_failure_count(uint32_t count)
+{
+    fwp_engine_t::get()->set_filter_delete_failure_count(count);
+}
+
+uint32_t
+usersim_fwp_get_fwpm_filter_count()
+{
+    return (uint32_t)fwp_engine_t::get()->get_fwpm_filter_count();
+}
+
+void
+usersim_fwp_clear_fwpm_filters()
+{
+    fwp_engine_t::get()->clear_fwpm_filters();
 }
 
 void

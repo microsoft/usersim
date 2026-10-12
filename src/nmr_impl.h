@@ -5,6 +5,7 @@
 #include "platform.h"
 
 #include <../km/netioddk.h>
+#include <algorithm>
 #include <condition_variable>
 #include <functional>
 #include <map>
@@ -28,19 +29,17 @@ typedef class nmr_t
      *
      * @param[in] characteristics Characteristics of the provider.
      * @param[in] context Context passed to the provider.
-     * @return Handle to the provider registration.
+     * @return Handle to the provider module.
      */
     nmr_provider_handle
     register_provider(_In_ const NPI_PROVIDER_CHARACTERISTICS& characteristics, _In_opt_ const void* context);
 
     /**
-     * @brief Deregister a provider.
+     * @brief Deregister a provider. The caller must wait for completion.
      *
      * @param[in] provider_handle Handle to the provider.
-     * @retval true Caller needs to wait for the deregistration to complete.
-     * @retval false Deregistration is complete.
      */
-    bool
+    void
     deregister_provider(_In_ nmr_provider_handle provider_handle);
 
     /**
@@ -56,19 +55,17 @@ typedef class nmr_t
      *
      * @param[in] characteristics Characteristics of the client.
      * @param[in] context Context passed to the client.
-     * @return Handle to the client registration.
+     * @return Handle to the client module.
      */
     nmr_client_handle
     register_client(_In_ const NPI_CLIENT_CHARACTERISTICS& characteristics, _In_opt_ const void* context);
 
     /**
-     * @brief Deregister a client.
+     * @brief Deregister a client. The caller must wait for completion.
      *
      * @param[in] client_handle Handle to the client.
-     * @retval true Caller needs to wait for the deregistration to complete.
-     * @retval false Deregistration is complete.
      */
-    bool
+    void
     deregister_client(_In_ nmr_client_handle client_handle);
 
     /**
@@ -122,19 +119,23 @@ typedef class nmr_t
     }
 
   private:
-    struct client_registration
+    struct binding;
+
+    struct client_module
     {
         const NPI_CLIENT_CHARACTERISTICS characteristics = {};
         const void* context = nullptr;
-        volatile long long binding_count = 0;
+        size_t pending_bind_ops = 0;
+        std::vector<std::shared_ptr<binding>> bindings;
         bool deregistering = false;
     };
 
-    struct provider_registration
+    struct provider_module
     {
         const NPI_PROVIDER_CHARACTERISTICS characteristics = {};
         const void* context = nullptr;
-        volatile long long binding_count = 0;
+        size_t pending_bind_ops = 0;
+        std::vector<std::shared_ptr<binding>> bindings;
         bool deregistering = false;
     };
 
@@ -142,23 +143,25 @@ typedef class nmr_t
     {
         Start = 0,   ///< Initial state. Binding has been created but ClientAttachProvider has not been called.
         Ready,       ///< ClientAttachProvider has been called and returned STATUS_SUCCESS.
+        LateBind,    ///< Attach completed after one of the modules started deregistering.
         BeginUnbind, ///< Client or provider has called NmrDeregisterClient or NmrDeregisterProvider but detach has not
                      ///< yet been called.
         UnbindPending, ///< Client or provider detach returned STATUS_PENDING.
         UnbindComplete ///< Client or provider detach returned STATUS_SUCCESS or called NmrBindingDetachClientComplete
                        ///< or NmrBindingDetachProviderComplete.
     };
-
     struct binding
     {
-        provider_registration& provider;
-        client_registration& client;
+        provider_module& provider;
+        client_module& client;
         const void* provider_binding_context = nullptr;
         const void* provider_dispatch = nullptr;
         binding_status provider_binding_status = Start;
         const void* client_binding_context = nullptr;
         const void* client_dispatch = nullptr;
         binding_status client_binding_status = Start;
+        bool attached = false;
+        bool cleanup_started = false;
     };
     typedef std::function<void()> pending_action_t;
 
@@ -219,11 +222,9 @@ typedef class nmr_t
      *
      * @param[in, out] initiator_collection Collection containing the initiator (can be either provider or client).
      * @param[in] handle Handle to the initiator (can be either provider or client).
-     * @retval true One or more bindings returned pending.
-     * @retval false All bindings where successfully removed.
      */
     template <typename initiator_collection_t>
-    bool
+    void
     perform_unbind(
         _Inout_ initiator_collection_t& initiator_collection,
         _In_ initiator_collection_t::value_type::first_type initiator_handle);
@@ -233,10 +234,10 @@ typedef class nmr_t
      *
      * @param[in, out] client Client to attempt to bind.
      * @param[in, out] provider Provider to attempt to bind to.
-     * @return Contains a function to perform the bind if successful.
+     * @return Contains a function to perform the bind if accepted.
      */
     std::optional<pending_action_t>
-    bind(_Inout_ client_registration& client, _Inout_ provider_registration& provider);
+    bind(_Inout_ client_module& client, _Inout_ provider_module& provider);
 
     /**
      * @brief Finish the process of unbinding a client from a provider.
@@ -250,26 +251,22 @@ typedef class nmr_t
      * @brief Start the process of unbinding a client from a provider.
      *
      * @param[in] binding_handle Binding handle to unbind.
-     * @retval true Either the client or provider returned pending.
-     * @retval false Both the client and provider returned successfully.
      */
-    bool
+    void
     begin_unbind(_Inout_ binding& binding);
 
     // Binding handle is a pointer to the binding.
     std::map<nmr_binding_handle, std::shared_ptr<binding>> bindings;
-    // Provider and client handles are incremented for each new provider or client.
-    std::map<nmr_provider_handle, provider_registration> providers;
-    std::map<nmr_client_handle, client_registration> clients;
+    // Provider and client handles.
+    std::map<nmr_provider_handle, provider_module> providers;
+    std::map<nmr_client_handle, client_module> clients;
 
     size_t next_handle = 1;
 
     std::condition_variable bindings_changed;
-    std::mutex lock; // Protects all of the instance variables above,
-                     // as well as the client_binding_status and provider_binding_status
-                     // of each binding.  client.binding_count and provider.binding_count
-                     // on the other hand are not protected by this lock but instead use
-                     // interlocked operations.
+    std::mutex lock; // Protects all of the instance variables above, as well as
+                     // the client_binding_status and provider_binding_status of
+                     // each binding.
 
     static nmr_t singleton;
 } nmr_t;

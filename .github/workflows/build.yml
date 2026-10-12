@@ -24,7 +24,7 @@ jobs:
       matrix:
         configurations: [Debug, Release]
         architecture: [x64, ARM64]
-    runs-on: windows-2022
+    runs-on: windows-2025-vs2026
     env:
       # Configuration type to build.
       # You can convert this to a build matrix if you need coverage of multiple configuration types.
@@ -41,13 +41,15 @@ jobs:
       uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
       with:
         egress-policy: audit
-
-    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         submodules: 'recursive'
 
     - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2.0.0
+      uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+      with:
+        msbuild-architecture: x64
 
     - name: Restore NuGet packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
@@ -55,13 +57,13 @@ jobs:
 
     - name: Generate Catch2 projects
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF -A ${{env.BUILD_PLATFORM}}
+      run: cmake -G "Visual Studio 18 2026" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF -A ${{env.BUILD_PLATFORM}}
 
     - name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} /p:RunCodeAnalysis='True' ${{env.SOLUTION_FILE_PATH}}
+      run: msbuild /m /t:Restore,Build /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} /p:RunCodeAnalysis='True' ${{env.SOLUTION_FILE_PATH}}
 
     - name: Run cxplat tests without fault injection
       if: matrix.architecture == 'x64'
@@ -89,7 +91,7 @@ jobs:
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION }}
       shell: cmd
       run: |
-        powershell ..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests.exe" 4
+        powershell ..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests.exe" 4 "~[no_fi]"
 
   build-cmake:
     timeout-minutes: 15
@@ -98,7 +100,7 @@ jobs:
       matrix:
         configurations: [Debug, Release]
         architecture: [x64, ARM64]
-    runs-on: windows-2022
+    runs-on: windows-2025-vs2026
     env:
       # Configuration type to build.
       # You can convert this to a build matrix if you need coverage of multiple configuration types.
@@ -106,8 +108,8 @@ jobs:
       BUILD_CONFIGURATION: ${{matrix.configurations}}
 
       BUILD_PLATFORM: ${{matrix.architecture}}
-      CMAKE_GENERATOR: Visual Studio 17 2022
-      PLATFORM_TOOLSET: v143
+      CMAKE_GENERATOR: Visual Studio 18 2026
+      PLATFORM_TOOLSET: v145
       CXPLAT_MEMORY_LEAK_DETECTION: true
       DUMP_PATH: c:/dumps/x64/${{matrix.configurations}}
       TEST_TIMEOUT: 900 # 15 minute timeout for tests.
@@ -118,18 +120,18 @@ jobs:
       with:
         egress-policy: audit
 
-    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         submodules: 'recursive'
 
     - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2.0.0
+      uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
     - name: Configure the project
       working-directory: ${{env.GITHUB_WORKSPACE}}
       shell: cmd
       run: |
-        cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF -A ${{env.BUILD_PLATFORM}}
+        cmake -G "Visual Studio 18 2026" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF -A ${{env.BUILD_PLATFORM}}
         cmake -S . -B build -G "${{env.CMAKE_GENERATOR}}" -A ${{env.BUILD_PLATFORM}} -T ${{env.PLATFORM_TOOLSET}}
 
     - name: Build the project
@@ -164,4 +166,4 @@ jobs:
       working-directory: ./build/bin/${{env.BUILD_CONFIGURATION}}
       shell: cmd
       run: |
-        powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests.exe" 4
+        powershell ..\..\..\scripts\Test-FaultInjection.ps1 ${{env.DUMP_PATH}} ${{env.TEST_TIMEOUT}} ".\usersim_tests.exe" 4 "~[no_fi]"

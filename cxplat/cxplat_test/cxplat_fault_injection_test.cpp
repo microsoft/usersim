@@ -102,6 +102,21 @@ TEST_CASE("fault_injection", "[fault_injection]")
     // Clear the fault injection state.
     cxplat_fault_injection_reset();
 
+    auto inject_fault_from_same_callsite = []() { return cxplat_fault_injection_inject_fault(); };
+
+    cxplat_fault_injection_suspend();
+    REQUIRE(cxplat_fault_injection_is_enabled() == true);
+    REQUIRE(inject_fault_from_same_callsite() == false);
+
+    cxplat_fault_injection_suspend();
+    cxplat_fault_injection_resume();
+    REQUIRE(inject_fault_from_same_callsite() == false);
+
+    cxplat_fault_injection_resume();
+    REQUIRE(inject_fault_from_same_callsite() == true);
+
+    cxplat_fault_injection_reset();
+
     for (_fault_injection_expected_outcome state = _fault_injection_expected_outcome::ExpectFault;
          state <= _fault_injection_expected_outcome::ExpectFaultDifferentCallsite;
          state = (_fault_injection_expected_outcome)((int)state + 1)) {

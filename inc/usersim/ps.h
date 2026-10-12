@@ -104,4 +104,18 @@ void
 usersime_invoke_process_creation_notify_routine(
     _Inout_ PEPROCESS process, _In_ HANDLE process_id, _Inout_opt_ PPS_CREATE_NOTIFY_INFO create_info);
 
+typedef PACCESS_TOKEN PEPROCESS_ACCESS_TOKEN;
+
+USERSIM_API
+PACCESS_TOKEN
+PsReferencePrimaryToken(_In_ PEPROCESS process);
+
+USERSIM_API
+VOID
+PsDereferencePrimaryToken(_In_ PACCESS_TOKEN token);
+
+USERSIM_API
+void
+usersim_clean_up_ps();
+
 CXPLAT_EXTERN_C_END

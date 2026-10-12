@@ -15,20 +15,14 @@ nmr_t::register_provider(_In_ const NPI_PROVIDER_CHARACTERISTICS& characteristic
     return provider_handle;
 }
 
-bool
+void
 nmr_t::deregister_provider(_In_ nmr_provider_handle provider_handle)
 {
     // Block new bindings.
     deactivate(providers, provider_handle);
 
-    // If the unbind returned pending, then the caller needs to wait for the unbind to complete.
-    if (perform_unbind(providers, provider_handle)) {
-        // Pending unbind.
-        return true;
-    }
-    // Unbind is complete.
-    remove(providers, provider_handle);
-    return false;
+    // The caller always waits for deregistration to complete.
+    perform_unbind(providers, provider_handle);
 }
 
 void
@@ -48,21 +42,14 @@ nmr_t::register_client(_In_ const NPI_CLIENT_CHARACTERISTICS& characteristics, _
     return client_handle;
 }
 
-bool
+void
 nmr_t::deregister_client(_In_ nmr_client_handle client_handle)
 {
     // Block new bindings.
     deactivate(clients, client_handle);
 
-    // If the unbind returned pending, then the caller needs to wait for the unbind to complete.
-    if (perform_unbind(clients, client_handle)) {
-        // Pending unbind.
-        return true;
-    }
-
-    // Unbind is complete.
-    remove(clients, client_handle);
-    return false;
+    // The caller always waits for deregistration to complete.
+    perform_unbind(clients, client_handle);
 }
 
 void
@@ -81,7 +68,8 @@ nmr_t::binding_detach_client_complete(_In_ nmr_binding_handle binding_handle)
         throw std::runtime_error("invalid handle");
     }
 
-    nmr_t::binding& binding = *it->second;
+    auto binding_reference = it->second;
+    nmr_t::binding& binding = *binding_reference;
 
     ASSERT(binding.client_binding_status == binding_status::UnbindPending);
     binding.client_binding_status = UnbindComplete;
@@ -102,7 +90,8 @@ nmr_t::binding_detach_provider_complete(_In_ nmr_binding_handle binding_handle)
         throw std::runtime_error("invalid handle");
     }
 
-    nmr_t::binding& binding = *it->second;
+    auto binding_reference = it->second;
+    nmr_t::binding& binding = *binding_reference;
 
     ASSERT(binding.provider_binding_status == binding_status::UnbindPending);
     binding.provider_binding_status = UnbindComplete;
@@ -155,7 +144,7 @@ nmr_t::client_attach_provider(
 
 // Assumes caller does NOT have the lock held since we call outside NMR.
 std::optional<nmr_t::pending_action_t>
-nmr_t::bind(_Inout_ client_registration& client, _Inout_ provider_registration& provider)
+nmr_t::bind(_Inout_ client_module& client, _Inout_ provider_module& provider)
 {
     PNPIID client_pnpi = client.characteristics.ClientRegistrationInstance.NpiId;
     PNPIID provider_pnpi = provider.characteristics.ProviderRegistrationInstance.NpiId;
@@ -170,9 +159,9 @@ nmr_t::bind(_Inout_ client_registration& client, _Inout_ provider_registration& 
         return std::nullopt;
     }
 
-    // Acquire references on both client and provider to prevent them from unloading.
-    _InterlockedIncrement64(&client.binding_count);
-    _InterlockedIncrement64(&provider.binding_count);
+    // Hold both modules while the attach action is pending.
+    client.pending_bind_ops++;
+    provider.pending_bind_ops++;
 
     nmr_t::binding binding = {provider, client};
     auto binding_ptr = std::make_shared<nmr_t::binding>(std::move(binding));
@@ -189,9 +178,24 @@ nmr_t::bind(_Inout_ client_registration& client, _Inout_ provider_registration& 
         if (!NT_SUCCESS(status)) {
             unbind_complete(*binding_ptr);
         } else {
+            bool should_begin_unbind = false;
             std::unique_lock l(lock);
             binding_ptr->client_binding_status = binding_status::Ready;
             binding_ptr->provider_binding_status = binding_status::Ready;
+            binding_ptr->attached = true;
+            client.pending_bind_ops--;
+            provider.pending_bind_ops--;
+            client.bindings.push_back(binding_ptr);
+            provider.bindings.push_back(binding_ptr);
+            should_begin_unbind = binding_ptr->client.deregistering || binding_ptr->provider.deregistering;
+            if (should_begin_unbind) {
+                binding_ptr->client_binding_status = binding_status::LateBind;
+                binding_ptr->provider_binding_status = binding_status::LateBind;
+            }
+            l.unlock();
+            if (should_begin_unbind) {
+                begin_unbind(*binding_ptr);
+            }
         }
     }};
 }
@@ -200,6 +204,11 @@ void
 nmr_t::unbind_complete(_Inout_ binding& binding)
 {
     std::unique_lock l(lock);
+    if (binding.cleanup_started) {
+        return;
+    }
+    binding.cleanup_started = true;
+
     if ((binding.client.characteristics.ClientCleanupBindingContext != nullptr) &&
         (binding.client_binding_context != nullptr)) {
         // Notify the client that that the binding context can be freed if needed.
@@ -213,21 +222,40 @@ nmr_t::unbind_complete(_Inout_ binding& binding)
             const_cast<void*>(binding.provider_binding_context));
     }
 
-    _InterlockedDecrement64(&binding.provider.binding_count);
-    _InterlockedDecrement64(&binding.client.binding_count);
+    if (binding.attached) {
+        auto remove_binding = [&binding](auto& module) {
+            auto it = std::find_if(module.bindings.begin(), module.bindings.end(), [&binding](const auto& entry) {
+                return entry.get() == &binding;
+            });
+            if (it != module.bindings.end()) {
+                module.bindings.erase(it);
+            }
+        };
+        remove_binding(binding.provider);
+        remove_binding(binding.client);
+    } else {
+        CXPLAT_DEBUG_ASSERT(binding.client.pending_bind_ops > 0);
+        CXPLAT_DEBUG_ASSERT(binding.provider.pending_bind_ops > 0);
+        binding.client.pending_bind_ops--;
+        binding.provider.pending_bind_ops--;
+    }
+
     bindings.erase(&binding);
 
     // Notify the client or provider to check if they have any pending bindings.
     bindings_changed.notify_all();
 }
 
-bool // true if pending, false if complete.
+void
 nmr_t::begin_unbind(_Inout_ binding& binding)
 {
     std::unique_lock l(lock);
-    if (binding.client_binding_status != Ready || binding.provider_binding_status != Ready) {
-        // Unbind already started.
-        return true;
+    const bool client_ready = binding.client_binding_status == Ready || binding.client_binding_status == LateBind;
+    const bool provider_ready = binding.provider_binding_status == Ready || binding.provider_binding_status == LateBind;
+    if (!client_ready || !provider_ready) {
+        // A non-ready binding is either still being attached or already being unbound.
+        // In either case, another caller must not start a second unbind operation.
+        return;
     }
     binding.client_binding_status = BeginUnbind;
     binding.provider_binding_status = BeginUnbind;
@@ -262,9 +290,7 @@ nmr_t::begin_unbind(_Inout_ binding& binding)
 
     if (complete) {
         unbind_complete(binding);
-        return false;
     }
-    return true;
 }
 
 template <typename collection_t, typename characteristics_t>
@@ -301,17 +327,18 @@ nmr_t::remove(_Inout_ collection_t& collection, _In_ collection_t::value_type::f
         throw std::runtime_error("invalid handle");
     }
 
-    // Wait for bindings to reach zero if requested.
-    if (it->second.binding_count > 0) {
+    // Wait until there are no attached bindings and no bind operations still pending
+    // before cleaning up the client or provider module.
+    if (it->second.pending_bind_ops > 0 || !it->second.bindings.empty()) {
         for (;;) {
-            // Wait NMR_WAIT_TIMEOUT_SECONDS seconds for bindings to reach zero.
+            // Wait NMR_WAIT_TIMEOUT_SECONDS seconds for all bindings to be released.
             if (bindings_changed.wait_for(l, std::chrono::seconds(NMR_WAIT_TIMEOUT_SECONDS), [&]() {
-                    return it->second.binding_count == 0;
+                    return it->second.pending_bind_ops == 0 && it->second.bindings.empty();
                 })) {
                 break;
             }
             // Assert and continue waiting if bindings are still not zero.
-            CXPLAT_DEBUG_ASSERT(it->second.binding_count == 0);
+            CXPLAT_DEBUG_ASSERT(it->second.pending_bind_ops == 0 && it->second.bindings.empty());
         }
     }
 
@@ -335,14 +362,14 @@ nmr_t::perform_bind(
     auto& initiator = it->second;
     for (auto& [target_handle, target] : target_collection) {
         // If the initiator is a client, then the target must be a provider.
-        if constexpr (std::is_same<initiator_collection_t::value_type::second_type, client_registration>::value) {
+        if constexpr (std::is_same<initiator_collection_t::value_type::second_type, client_module>::value) {
             auto result = bind(initiator, target);
             if (result.has_value()) {
                 pending_actions.push_back(result.value());
             }
         }
         // If the initiator is a provider, then the target must be a client.
-        if constexpr (std::is_same<initiator_collection_t::value_type::second_type, provider_registration>::value) {
+        if constexpr (std::is_same<initiator_collection_t::value_type::second_type, provider_module>::value) {
             auto result = bind(target, initiator);
             if (result.has_value()) {
                 pending_actions.push_back(result.value());
@@ -356,12 +383,11 @@ nmr_t::perform_bind(
 }
 
 template <typename initiator_collection_t>
-bool // true if pending, false if complete
+void
 nmr_t::perform_unbind(
     _Inout_ initiator_collection_t& initiator_collection,
     _In_ initiator_collection_t::value_type::first_type initiator_handle)
 {
-    bool pending = false;
     std::vector<std::shared_ptr<binding>> bindings_to_unbind;
     std::unique_lock l(lock);
     auto it = initiator_collection.find(initiator_handle);
@@ -374,13 +400,13 @@ nmr_t::perform_unbind(
         auto& binding = *binding_reference;
 
         // If the initiator is a client, then the target must be a provider.
-        if constexpr (std::is_same<initiator_collection_t::value_type::second_type, client_registration>::value) {
+        if constexpr (std::is_same<initiator_collection_t::value_type::second_type, client_module>::value) {
             if (&binding.client == &initiator) {
                 bindings_to_unbind.push_back(binding_reference);
             }
         }
         // If the initiator is a provider, then the target must be a client.
-        if constexpr (std::is_same<initiator_collection_t::value_type::second_type, provider_registration>::value) {
+        if constexpr (std::is_same<initiator_collection_t::value_type::second_type, provider_module>::value) {
             if (&binding.provider == &initiator) {
                 bindings_to_unbind.push_back(binding_reference);
             }
@@ -389,7 +415,6 @@ nmr_t::perform_unbind(
     l.unlock();
     for (auto& binding_reference : bindings_to_unbind) {
         auto& binding = *binding_reference;
-        pending |= begin_unbind(binding);
+        begin_unbind(binding);
     }
-    return pending;
 }

@@ -3,6 +3,7 @@
 #pragma once
 
 // Pool tags used by the usersim library.
+#define USERSIM_TAG_ACCOUNT_NAME 'ansu'
 #define USERSIM_TAG_ETW_PROVIDER 'pesu'
 #define USERSIM_TAG_FWPS_CONNECT_REQUEST0 'cfsu'
 #define USERSIM_TAG_HANDLE 'ahsu'

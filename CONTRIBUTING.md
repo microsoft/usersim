@@ -75,7 +75,7 @@ To set up your development environment:
    git submodule update --init --recursive
    ```
 
-2. Open the solution in Visual Studio 2022 or use CMake to build:
+2. Open the solution in Visual Studio 2022 or Visual Studio 2026, or use CMake to build:
    - Visual Studio: Open `usersim.sln`
    - CMake: Follow the CMake build instructions in the README
 

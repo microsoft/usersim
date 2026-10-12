@@ -36,6 +36,11 @@ RtlValidSid(_In_ PSID sid);
 
 USERSIM_API
 NTSTATUS
+RtlCopySid(
+    _In_ ULONG DestinationSidLength, _Out_writes_bytes_(DestinationSidLength) PSID DestinationSid, _In_ PSID SourceSid);
+
+USERSIM_API
+NTSTATUS
 NTAPI
 RtlAddAccessAllowedAce(_Inout_ PACL Acl, _In_ unsigned long AceRevision, _In_ ACCESS_MASK AccessMask, _In_ PSID Sid);
 

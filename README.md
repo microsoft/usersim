@@ -14,7 +14,7 @@ To use this repository from another project:
    [KMDF sample driver](https://learn.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/writing-a-very-small-kmdf--driver)
    as a DLL (the sample project can be built either using Visual Studio or using cmake).
 3. Set the following property on the project: Configuration Properties -> General -> Platform Toolset to
-   Visual Studio 2022 (v143).
+   Visual Studio 2022 (v143) or Visual Studio 2026 (v145).
 4. Add a reference from your DLL project to the usersim project and the usersim_dll_skeleton project.
 5. Define `_AMD64_;_WIN32_WINNT=0x0a00` in the project properties preprocessor defines.
 6. Add to AdditionalIncludeDirectories: `$(WindowsSdkDir)Include\10.0.22621.0\km;$(WindowsSdkDir)Include\10.0.26100.0\km;;$(WindowsSdkDir)Include\wdf\kmdf\1.15`
@@ -84,6 +84,7 @@ can be built and tested as follows.
 
 1. As a one-time step, from a Visual Studio Developer Command Prompt, do:
    `cmake -G "Visual Studio 17 2022" -S external\catch2 -B external\catch2\build -DBUILD_TESTING=OFF`
+   (use `-G "Visual Studio 18 2026"` when building with Visual Studio 2026).
 2. Build usersim.sln from the Visual Studio UI or using msbuild.
 3. `cxplat_test.exe -d yes` and `usersim_tests.exe -d yes` can then be executed to run the standard tests.
 

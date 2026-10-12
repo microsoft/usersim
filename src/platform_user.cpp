@@ -4,9 +4,11 @@
 #include "cxplat.h"
 #include "cxplat_fault_injection.h"
 #include "tracelog.h"
+#include "usersim/common.h"
 #include "usersim/ex.h"
 #include "usersim/ke.h"
 #include "usersim/mm.h"
+#include "usersim/ps.h"
 #include "usersim/se.h"
 #include "usersim/wdf.h"
 #include "utilities.h"
@@ -43,6 +45,18 @@ static bool _cxplat_initialized = false;
 // The starting index of the first processor in each group.
 // Used to compute the current CPU index.
 static std::vector<uint32_t> _usersim_platform_group_to_index_map;
+
+void
+usersim_fault_injection_suspend()
+{
+    cxplat_fault_injection_suspend();
+}
+
+void
+usersim_fault_injection_resume()
+{
+    cxplat_fault_injection_resume();
+}
 
 _Must_inspect_result_ usersim_result_t
 usersim_platform_initiate()
@@ -104,6 +118,7 @@ usersim_platform_terminate()
 
     usersim_free_semaphores();
     usersim_free_threadpool_timers();
+    usersim_clean_up_ps();
     usersim_clean_up_dpcs();
     usersim_clean_up_irql();
     if (_cxplat_initialized) {

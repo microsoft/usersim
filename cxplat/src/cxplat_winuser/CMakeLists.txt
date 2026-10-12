@@ -19,7 +19,7 @@ add_library(cxplat_winuser STATIC
   module_winuser.cpp
   processor_winuser.cpp
   rundown_winuser.cpp
-  size_winuser.c
+  size_winuser.cpp
   workitem_winuser.cpp
   symbol_decoder.h
   time_winuser.cpp
@@ -31,7 +31,7 @@ target_include_directories(cxplat_winuser PRIVATE
   "../../inc"
   "../../inc/winuser"
   "${WindowsSdkDir}include/10.0.22621.0"
-  "${WindowsSdkDir}include/10.0.26100.0"
+  "${WindowsSdkDir}include/${WDK_VERSION}"
 )
 
 set(defs UNICODE _UNICODE CXPLAT_SOURCE)

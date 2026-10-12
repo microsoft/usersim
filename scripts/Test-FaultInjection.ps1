@@ -12,7 +12,7 @@
 param ($OutputFolder, $Timeout, $TestProgram, $StackDepth)
 
 # Gather list of all possible tests
-$tests = & $TestProgram "--list-tests" "--verbosity=quiet"
+$tests = & $TestProgram "--list-tests" "--verbosity=quiet" "~[no_fi]"
 
 $env:CXPLAT_FAULT_INJECTION_SIMULATION = $StackDepth
 
