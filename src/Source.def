@@ -9,11 +9,18 @@ EXPORTS
     IoFileObjectType DATA
 
     FwpmCalloutAdd0
+    FwpmCalloutCreateEnumHandle0
     FwpmCalloutDeleteByKey0
+    FwpmCalloutDestroyEnumHandle0
+    FwpmCalloutEnum0
     FwpmEngineClose0
     FwpmEngineOpen0
     FwpmFilterAdd0
+    FwpmFilterCreateEnumHandle0
     FwpmFilterDeleteById0
+    FwpmFilterDestroyEnumHandle0
+    FwpmFilterEnum0
+    FwpmFreeMemory0
     FwpmProviderAdd0
     FwpmProviderDeleteByKey0
     FwpmSubLayerAdd0
