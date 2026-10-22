@@ -617,3 +617,24 @@ TEST_CASE("event", "[ke]")
     REQUIRE(wait_status == STATUS_TIMEOUT);
     REQUIRE(end_time - start_time >= 1000);
 }
+
+TEST_CASE("KeDelayExecutionThread", "[ke]")
+{
+    // A negative interval is a relative delay; the call should block for at least the requested duration.
+    LARGE_INTEGER interval = {0};
+    interval.QuadPart = -10 * 1000 * 10ll; // 10 ms, expressed in 100-ns units.
+
+    uint64_t qpc_time;
+    uint64_t start_time = KeQueryUnbiasedInterruptTimePrecise(&qpc_time);
+
+    REQUIRE(KeDelayExecutionThread(KernelMode, FALSE, &interval) == STATUS_SUCCESS);
+
+    uint64_t end_time = KeQueryUnbiasedInterruptTimePrecise(&qpc_time);
+
+    // Returned time is in 100-ns units. Assert a conservative lower bound (1 ms) to avoid timer-granularity flakiness.
+    REQUIRE(end_time - start_time >= 10000);
+
+    // A zero interval must return immediately without blocking.
+    interval.QuadPart = 0;
+    REQUIRE(KeDelayExecutionThread(KernelMode, FALSE, &interval) == STATUS_SUCCESS);
+}
