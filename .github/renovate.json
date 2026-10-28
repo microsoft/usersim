@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "enabledManagers": ["github-actions", "git-submodules"],
+  "schedule": ["* * * * 6"],
+  "git-submodules": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "matchManagers": ["git-submodules"],
+      "matchDepNames": ["external/**"],
+      "groupName": "git-submodules"
+    }
+  ]
+}
