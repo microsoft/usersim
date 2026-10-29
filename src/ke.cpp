@@ -285,9 +285,9 @@ KeRaiseIrql(_In_ KIRQL new_irql, _Out_ PKIRQL old_irql)
 _IRQL_requires_max_(HIGH_LEVEL) _IRQL_raises_(new_irql) _IRQL_saves_ KIRQL KfRaiseIrql(_In_ KIRQL new_irql)
 {
     KIRQL old_irql = KeGetCurrentIrql();
-    _usersim_current_irql = new_irql;
     BOOL result = _set_current_thread_priority_by_irql(new_irql);
     ASSERT(result);
+    _usersim_current_irql = new_irql;
 
     if (new_irql >= DISPATCH_LEVEL && old_irql < DISPATCH_LEVEL) {
         PROCESSOR_NUMBER processor;
@@ -321,9 +321,9 @@ KeLowerIrql(_In_ KIRQL new_irql)
         result = usersim_set_current_thread_affinity(&_usersim_group_before_raise_irql, nullptr);
         ASSERT(result);
     }
-    _usersim_current_irql = new_irql;
     result = _set_current_thread_priority_by_irql(new_irql);
     ASSERT(result);
+    _usersim_current_irql = new_irql;
 }
 
 void
