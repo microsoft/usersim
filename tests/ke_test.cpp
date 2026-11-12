@@ -39,6 +39,32 @@ TEST_CASE("irql", "[ke]")
     REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
 }
 
+TEST_CASE("irql thread priority", "[ke]")
+{
+    REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
+
+    int original_priority;
+    REQUIRE(usersim_set_current_thread_priority(THREAD_PRIORITY_ABOVE_NORMAL, &original_priority));
+
+    const KIRQL old_irql = KfRaiseIrql(DISPATCH_LEVEL);
+    CHECK(old_irql == PASSIVE_LEVEL);
+    CHECK(GetThreadPriority(GetCurrentThread()) == THREAD_PRIORITY_TIME_CRITICAL);
+
+    const KIRQL nested_irql = KfRaiseIrql(DISPATCH_LEVEL);
+    CHECK(nested_irql == DISPATCH_LEVEL);
+    CHECK(GetThreadPriority(GetCurrentThread()) == THREAD_PRIORITY_TIME_CRITICAL);
+
+    KeLowerIrql(nested_irql);
+    CHECK(GetThreadPriority(GetCurrentThread()) == THREAD_PRIORITY_TIME_CRITICAL);
+
+    KfLowerIrql(old_irql);
+    CHECK(KeGetCurrentIrql() == PASSIVE_LEVEL);
+    CHECK(GetThreadPriority(GetCurrentThread()) == THREAD_PRIORITY_ABOVE_NORMAL);
+
+    REQUIRE(usersim_set_current_thread_priority(original_priority, nullptr));
+    CHECK(GetThreadPriority(GetCurrentThread()) == original_priority);
+}
+
 TEST_CASE("irql_perf_override", "[ke]")
 {
     REQUIRE(KeGetCurrentIrql() == PASSIVE_LEVEL);
