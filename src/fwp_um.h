@@ -5,6 +5,7 @@
 #include "net_platform.h"
 #include "usersim/fwp_test.h"
 
+#include <memory>
 #include <shared_mutex>
 #include <unordered_map>
 
@@ -13,6 +14,25 @@ typedef std::shared_lock<std::shared_mutex> shared_lock_t;
 
 typedef class fwp_engine_t
 {
+    struct filter_state_t
+    {
+        explicit filter_state_t(const FWPM_FILTER0& value) : filter(value) {}
+
+        ~filter_state_t()
+        {
+            // Deletion arms this notification; the last admitted classify releases it outside the engine lock.
+            if (delete_callout.notifyFn != nullptr) {
+                FWPS_FILTER fwps_filter = {};
+                fwps_filter.filterId = filter.filterId;
+                fwps_filter.context = filter.rawContext;
+                delete_callout.notifyFn(FWPS_CALLOUT_NOTIFY_DELETE_FILTER, &delete_callout.calloutKey, &fwps_filter);
+            }
+        }
+
+        FWPM_FILTER0 filter;
+        FWPS_CALLOUT3 delete_callout = {};
+    };
+
   public:
     fwp_engine_t() = default;
 
@@ -99,85 +119,80 @@ typedef class fwp_engine_t
         fwpm_flow_contexts.insert({flow_id, flow_context});
     }
 
-    _Requires_lock_not_held_(this->lock) void delete_flow_context(
-        uint64_t flow_id, uint16_t layer_id, uint32_t callout_id)
+    _Requires_lock_not_held_(this->lock) NTSTATUS
+        delete_flow_context(uint64_t flow_id, uint16_t layer_id, uint32_t callout_id)
     {
-        FWPS_CALLOUT3* callout = nullptr;
-        FWPS_FILTER fwps_filter = {};
+        FWPS_CALLOUT3 callout = {};
         uint64_t flow_context = 0;
 
         {
             exclusive_lock_t l(lock);
-            for (auto& it : fwpm_flow_contexts) {
-                if (it.first == flow_id) {
-                    callout = get_fwps_callout(callout_id);
-                    CXPLAT_DEBUG_ASSERT(callout != nullptr);
-                    flow_context = it.second;
-                    break;
-                }
+            auto it = fwpm_flow_contexts.find(flow_id);
+            if (it == fwpm_flow_contexts.end()) {
+                // Repeated or concurrent removal must not deliver another flow-delete notification.
+                return STATUS_NOT_FOUND;
             }
 
-            fwpm_flow_contexts.erase(flow_id);
+            const auto* registered_callout = get_fwps_callout(callout_id);
+            if (registered_callout == nullptr || registered_callout->flowDeleteFn == nullptr) {
+                return STATUS_INVALID_PARAMETER;
+            }
+            callout = *registered_callout;
+            flow_context = it->second;
+            fwpm_flow_contexts.erase(it);
         }
 
-        CXPLAT_DEBUG_ASSERT(callout != nullptr);
-        __analysis_assume(callout != nullptr);
-        // Invoke flow delete notification callback.
-        callout->flowDeleteFn(layer_id, callout_id, flow_context);
+        callout.flowDeleteFn(layer_id, callout_id, flow_context);
+        return STATUS_SUCCESS;
     }
 
     _Requires_lock_not_held_(this->lock) uint32_t add_fwpm_filter(_In_ const FWPM_FILTER0* filter)
     {
-        FWPS_CALLOUT3* callout = nullptr;
+        auto state = std::make_shared<filter_state_t>(*filter);
+        FWPS_CALLOUT3 callout = {};
         FWPS_FILTER fwps_filter = {};
         uint32_t id;
 
         {
             exclusive_lock_t l(lock);
             id = next_id++;
-            fwpm_filters.insert({id, *filter});
+            state->filter.filterId = id;
+            fwpm_filters.insert({id, state});
 
-            callout = get_fwps_callout(&filter->action.calloutKey);
-            CXPLAT_DEBUG_ASSERT(callout != nullptr);
+            const auto* registered_callout = get_fwps_callout(&filter->action.calloutKey);
+            CXPLAT_DEBUG_ASSERT(registered_callout != nullptr);
+            __analysis_assume(registered_callout != nullptr);
+            callout = *registered_callout;
             fwps_filter.filterId = id;
             fwps_filter.context = filter->rawContext;
         }
 
-        __analysis_assume(callout != nullptr);
         // Invoke filter add notification callback.
-        callout->notifyFn(FWPS_CALLOUT_NOTIFY_ADD_FILTER, &filter->action.calloutKey, &fwps_filter);
+        callout.notifyFn(FWPS_CALLOUT_NOTIFY_ADD_FILTER, &filter->action.calloutKey, &fwps_filter);
 
         return id;
     }
 
     _Requires_lock_not_held_(this->lock) bool remove_fwpm_filter(size_t id)
     {
-        FWPS_CALLOUT3* callout = nullptr;
-        FWPS_FILTER fwps_filter = {};
-        bool return_value = false;
+        std::shared_ptr<filter_state_t> state;
         {
             exclusive_lock_t l(lock);
-            for (auto& it : fwpm_filters) {
-                if (it.first == id) {
-                    // May be null if the callout function has already been unregistered (e.g., during driver
-                    // unload); in that case WFP delivers no delete notification (handled below).
-                    callout = get_fwps_callout(&it.second.action.calloutKey);
-                    fwps_filter.filterId = id;
-                    fwps_filter.context = it.second.rawContext;
-                    break;
-                }
+            auto it = fwpm_filters.find(id);
+            if (it == fwpm_filters.end()) {
+                return false;
             }
 
-            return_value = fwpm_filters.erase(id) == 1;
+            state = std::move(it->second);
+            fwpm_filters.erase(it);
+            // Preserve the existing no-notification behavior when the callout is already unregistered.
+            const auto* callout = get_fwps_callout(&state->filter.action.calloutKey);
+            if (callout != nullptr) {
+                state->delete_callout = *callout;
+            }
         }
 
-        // If the callout function is still registered, deliver the delete notification as real WFP does. Once the
-        // callout has been unregistered (e.g., during driver unload), WFP delivers no delete notification.
-        if (callout != nullptr) {
-            callout->notifyFn(FWPS_CALLOUT_NOTIFY_DELETE_FILTER, &callout->calloutKey, &fwps_filter);
-        }
-
-        return return_value;
+        return true;
     }
 
     // Test-only: remove any WFP filters left in the engine (used to clean up after fault-injection tests that
@@ -283,10 +298,10 @@ typedef class fwp_engine_t
     FWP_ACTION_TYPE
     test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_opt_ uint64_t* flow_id);
 
-    void 
+    void
     test_sock_ops_v4_remove_flow_context(_In_ uint64_t flow_id);
 
-    void 
+    void
     test_sock_ops_v6_remove_flow_context(_In_ uint64_t flow_id);
 
     FWP_ACTION_TYPE
@@ -311,31 +326,20 @@ typedef class fwp_engine_t
         _In_ const GUID& sublayer_guid,
         _In_ FWPS_INCOMING_VALUE0* incoming_value,
         _Out_opt_ uint64_t* flow_handle,
-        _In_opt_ const GUID* callout_key = nullptr);
+        _In_opt_ const GUID* callout_key = nullptr,
+        _In_opt_ void* layer_data = nullptr);
 
     _Requires_lock_not_held_(this->lock) void test_remove_flow_context(
-    uint64_t flow_id,
-    uint16_t layer_id,
-    _In_ const GUID& layer_guid);
+        uint64_t flow_id, uint16_t layer_id, _In_ const GUID& layer_guid);
 
-    _Ret_maybenull_ const FWPM_FILTER*
-    get_fwpm_filter_with_context_under_lock(_In_ const GUID& layer_guid)
-    {
-        for (auto& [first, filter] : fwpm_filters) {
-            if (memcmp(&filter.layerKey, &layer_guid, sizeof(GUID)) == 0 && filter.rawContext != 0) {
-                return &filter;
-            }
-        }
-        return nullptr;
-    }
-
-    _Ret_maybenull_ const FWPM_FILTER*
+    std::shared_ptr<filter_state_t>
     get_fwpm_filter_with_context_under_lock(_In_ const GUID& layer_guid, _In_ const GUID& sublayer_guid)
     {
-        for (auto& [first, filter] : fwpm_filters) {
+        for (auto& [first, state] : fwpm_filters) {
+            const auto& filter = state->filter;
             if (memcmp(&filter.layerKey, &layer_guid, sizeof(GUID)) == 0 &&
                 memcmp(&filter.subLayerKey, &sublayer_guid, sizeof(GUID)) == 0 && filter.rawContext != 0) {
-                return &filter;
+                return state;
             }
         }
         return nullptr;
@@ -348,15 +352,16 @@ typedef class fwp_engine_t
     // callout explicitly instead of relying on layer+sublayer first-match ordering. The sublayer is
     // still matched (mirroring get_fwpm_filter_with_context_under_lock) so selection stays unambiguous
     // even if a callout ever owns filters on more than one sublayer.
-    _Ret_maybenull_ const FWPM_FILTER*
+    std::shared_ptr<filter_state_t>
     get_fwpm_filter_by_callout_under_lock(
         _In_ const GUID& layer_guid, _In_ const GUID& sublayer_guid, _In_ const GUID& callout_key)
     {
-        for (auto& [first, filter] : fwpm_filters) {
+        for (auto& [first, state] : fwpm_filters) {
+            const auto& filter = state->filter;
             if (memcmp(&filter.layerKey, &layer_guid, sizeof(GUID)) == 0 &&
                 memcmp(&filter.subLayerKey, &sublayer_guid, sizeof(GUID)) == 0 &&
                 memcmp(&filter.action.calloutKey, &callout_key, sizeof(GUID)) == 0 && filter.rawContext != 0) {
-                return &filter;
+                return state;
             }
         }
         return nullptr;
@@ -384,8 +389,8 @@ typedef class fwp_engine_t
         return nullptr;
     }
 
-    _Ret_maybenull_
-    size_t get_callout_id_from_key_under_lock(_In_ const GUID* callout_key)
+    _Ret_maybenull_ size_t
+    get_callout_id_from_key_under_lock(_In_ const GUID* callout_key)
     {
         for (auto& [first, callout] : fwps_callouts) {
             if (callout.calloutKey == *callout_key) {
@@ -403,7 +408,7 @@ typedef class fwp_engine_t
     uint32_t _filter_delete_failure_count = 0; // Test-only WFP filter delete fault-injection counter.
     std::unordered_map<size_t, FWPS_CALLOUT3> fwps_callouts;
     std::unordered_map<size_t, FWPM_CALLOUT0> fwpm_callouts;
-    std::unordered_map<size_t, FWPM_FILTER0> fwpm_filters;
+    std::unordered_map<size_t, std::shared_ptr<filter_state_t>> fwpm_filters;
     std::unordered_map<size_t, FWPM_SUBLAYER0> fwpm_sub_layers;
     std::unordered_map<uint64_t, uint64_t> fwpm_flow_contexts;
     GUID _default_sublayer = {};

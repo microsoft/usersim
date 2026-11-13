@@ -70,25 +70,8 @@ std::unique_ptr<fwp_engine_t> fwp_engine_t::_engine;
 FWP_ACTION_TYPE
 fwp_engine_t::classify_test_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_index)
 {
-    shared_lock_t l(lock);
-    const GUID* callout_key = get_callout_key_from_layer_guid_under_lock(layer_guid);
-    if (callout_key == nullptr) {
-        return FWP_ACTION_CALLOUT_UNKNOWN;
-    }
-    const FWPS_CALLOUT3* callout = get_callout_from_key_under_lock(callout_key);
-    if (callout == nullptr) {
-        return FWP_ACTION_CALLOUT_UNKNOWN;
-    }
-    FWPS_CLASSIFY_OUT0 result = {};
     FWPS_INCOMING_VALUE0 incoming_value[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_MAX] = {};
-    FWPS_INCOMING_VALUES incoming_fixed_values = {.incomingValue = incoming_value};
-    incoming_fixed_values.incomingValue[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_INTERFACE_INDEX].value.uint32 = if_index;
-    FWPS_INCOMING_METADATA_VALUES incoming_metadata_values = {};
-    const FWPM_FILTER* fwpm_filter = get_fwpm_filter_with_context_under_lock(*layer_guid);
-    if (!fwpm_filter) {
-        return FWP_ACTION_CALLOUT_UNKNOWN;
-    }
-    FWPS_FILTER fwps_filter = {.context = fwpm_filter->rawContext};
+    incoming_value[FWPS_FIELD_INBOUND_MAC_FRAME_NATIVE_INTERFACE_INDEX].value.uint32 = if_index;
     NET_BUFFER_LIST_POOL_PARAMETERS pool_parameters = {};
     std::unique_ptr<void, decltype(&NdisFreeNetBufferListPool)> nbl_pool_handle(
         NdisAllocateNetBufferListPool(nullptr, &pool_parameters), NdisFreeNetBufferListPool);
@@ -116,16 +99,7 @@ fwp_engine_t::classify_test_packet(_In_ const GUID* layer_guid, NET_IFINDEX if_i
     }
 
     nbl->FirstNetBuffer = nb.get();
-    callout->classifyFn(
-        &incoming_fixed_values,
-        &incoming_metadata_values,
-        nbl.get(),
-        nullptr, // classifyContext,
-        &fwps_filter,
-        0, // flowContext,
-        &result);
-
-    return result.actionType;
+    return test_callout(0, *layer_guid, _default_sublayer, incoming_value, nullptr, nullptr, nbl.get());
 }
 
 // This is used to test the bind hook.
@@ -182,47 +156,52 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
     _In_ const GUID& sublayer_guid,
     _In_ FWPS_INCOMING_VALUE0* incoming_value,
     _Out_opt_ uint64_t* flow_id,
-    _In_opt_ const GUID* callout_key)
+    _In_opt_ const GUID* callout_key,
+    _In_opt_ void* layer_data)
 {
     FWPS_INCOMING_VALUES incoming_fixed_values = {.layerId = layer_id, .incomingValue = incoming_value};
+    FWPS_CLASSIFY_OUT0 result = {};
+    result.rights = FWPS_RIGHT_ACTION_WRITE;
     FWPS_INCOMING_METADATA_VALUES incoming_metadata_values = {};
     FWPS_FILTER fwps_filter = {};
-    const FWPS_CALLOUT3* callout = nullptr;
+    std::shared_ptr<filter_state_t> state;
+    FWPS_CALLOUT3 callout = {};
 
     {
         shared_lock_t l(lock);
-        // When a specific callout key is requested, select the filter bound to that callout so the
-        // intended callout is exercised even if multiple callouts are registered at this layer and
-        // sublayer. Otherwise fall back to first-match by layer+sublayer.
-        const FWPM_FILTER* fwpm_filter =
-            callout_key ? get_fwpm_filter_by_callout_under_lock(layer_guid, sublayer_guid, *callout_key)
-                        : get_fwpm_filter_with_context_under_lock(layer_guid, sublayer_guid);
-        if (!fwpm_filter) {
+        // Retain the selected filter under the lock through classifyFn completion. Concurrent deletion
+        // removes it from lookup but defers its delete notification until this reference is released.
+        // A specific callout key disambiguates filters sharing a layer and sublayer.
+        state = callout_key ? get_fwpm_filter_by_callout_under_lock(layer_guid, sublayer_guid, *callout_key)
+                            : get_fwpm_filter_with_context_under_lock(layer_guid, sublayer_guid);
+        if (!state) {
             return FWP_ACTION_CALLOUT_UNKNOWN;
         }
-        fwps_filter.context = fwpm_filter->rawContext;
+        fwps_filter.filterId = state->filter.filterId;
+        fwps_filter.context = state->filter.rawContext;
 
         // Look up the callout via the filter's calloutKey rather than scanning by layer.
         // This matches real WFP behavior where each filter is bound to a specific callout
         // and correctly handles multiple callouts registered at the same WFP layer.
-        callout = get_callout_from_key_under_lock(&fwpm_filter->action.calloutKey);
-        if (callout == nullptr) {
+        const auto* registered_callout = get_callout_from_key_under_lock(&state->filter.action.calloutKey);
+        if (registered_callout == nullptr) {
             return FWP_ACTION_CALLOUT_UNKNOWN;
         }
+        callout = *registered_callout;
 
-        incoming_metadata_values.flowHandle = InterlockedIncrement(&next_flow_id);
+        if (layer_data == nullptr) {
+            incoming_metadata_values.flowHandle = InterlockedIncrement(&next_flow_id);
+        }
     }
 
     if (flow_id) {
         *flow_id = incoming_metadata_values.flowHandle;
     }
 
-    FWPS_CLASSIFY_OUT0 result = {};
-    result.rights = FWPS_RIGHT_ACTION_WRITE;
-    callout->classifyFn(
+    callout.classifyFn(
         &incoming_fixed_values,
         &incoming_metadata_values,
-        nullptr, // layer_data
+        layer_data,
         nullptr, // classify_context,
         &fwps_filter,
         0, // flow_context,
@@ -231,21 +210,21 @@ _Requires_lock_not_held_(this->lock) FWP_ACTION_TYPE fwp_engine_t::test_callout(
     return result.actionType;
 }
 
-void fwp_engine_t::test_sock_ops_v4_remove_flow_context(_In_ uint64_t flow_id)
+void
+fwp_engine_t::test_sock_ops_v4_remove_flow_context(_In_ uint64_t flow_id)
 {
     test_remove_flow_context(flow_id, FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V4);
 }
 
-void fwp_engine_t::test_sock_ops_v6_remove_flow_context(_In_ uint64_t flow_id)
+void
+fwp_engine_t::test_sock_ops_v6_remove_flow_context(_In_ uint64_t flow_id)
 {
     test_remove_flow_context(flow_id, FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6);
 }
 
 // This will delete the flow context for the given flow_id only if the flow context exists.
 _Requires_lock_not_held_(this->lock) void fwp_engine_t::test_remove_flow_context(
-    _In_ uint64_t flow_id,
-    _In_ uint16_t layer_id,
-    _In_ const GUID& layer_guid)
+    _In_ uint64_t flow_id, _In_ uint16_t layer_id, _In_ const GUID& layer_guid)
 {
     uint32_t callout_id = 0;
     {
@@ -255,13 +234,11 @@ _Requires_lock_not_held_(this->lock) void fwp_engine_t::test_remove_flow_context
         if (callout_key != nullptr) {
             callout_id = static_cast<uint32_t>(get_callout_id_from_key_under_lock(callout_key));
         }
-        CXPLAT_DEBUG_ASSERT(callout_id != 0);
-        if (fwpm_flow_contexts.find(flow_id) == fwpm_flow_contexts.end()) {
-            return;
-        }
     }
 
-    delete_flow_context(flow_id, layer_id, callout_id);
+    if (callout_id != 0) {
+        delete_flow_context(flow_id, layer_id, callout_id);
+    }
 }
 
 // This is used to test the INET4_RECV_ACCEPT hook.
@@ -285,7 +262,11 @@ fwp_engine_t::test_cgroup_inet4_recv_accept(_In_ fwp_classify_parameters_t* para
     incoming_value[FWPS_FIELD_ALE_AUTH_CONNECT_V4_FLAGS].value.uint32 = parameters->reauthorization_flag;
 
     return test_callout(
-        FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V4, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4, _default_sublayer, incoming_value, nullptr);
+        FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V4,
+        FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4,
+        _default_sublayer,
+        incoming_value,
+        nullptr);
 }
 
 // This is used to test the INET6_RECV_ACCEPT hook.
@@ -307,7 +288,11 @@ fwp_engine_t::test_cgroup_inet6_recv_accept(_In_ fwp_classify_parameters_t* para
     incoming_value[FWPS_FIELD_ALE_AUTH_CONNECT_V6_FLAGS].value.uint32 = parameters->reauthorization_flag;
 
     return test_callout(
-        FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6, _default_sublayer, incoming_value, nullptr);
+        FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6,
+        FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6,
+        _default_sublayer,
+        incoming_value,
+        nullptr);
 }
 
 // This is used to test the INET4_CONNECT hook.
@@ -336,7 +321,11 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
     incoming_value[FWPS_FIELD_ALE_CONNECT_REDIRECT_V4_ALE_USER_ID].value.byteBlob = &parameters->user_id;
 
     action = test_callout(
-        FWPS_LAYER_ALE_CONNECT_REDIRECT_V4, FWPM_LAYER_ALE_CONNECT_REDIRECT_V4, _default_sublayer, incoming_value, nullptr);
+        FWPS_LAYER_ALE_CONNECT_REDIRECT_V4,
+        FWPM_LAYER_ALE_CONNECT_REDIRECT_V4,
+        _default_sublayer,
+        incoming_value,
+        nullptr);
     CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || action == FWP_ACTION_CONTINUE || fault_injection_enabled);
 
     if (_fwp_um_connect_request != nullptr) {
@@ -356,7 +345,7 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_ALE_USER_ID].value.byteBlob = &parameters->user_id;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_INTERFACE].value.uint64 = &parameters->interface_luid;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_FLAGS].value.uint32 = parameters->reauthorization_flag;
-    
+
     // Add fields for new helper functions
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V4_INTERFACE_TYPE].value.uint32 =
         IF_TYPE_ETHERNET_CSMACD;                                                                 // Default to Ethernet
@@ -377,7 +366,11 @@ fwp_engine_t::test_cgroup_inet4_connect(_In_ fwp_classify_parameters_t* paramete
             ntohl(*((uint32_t*)redirected_address));
 
         action = test_callout(
-            FWPS_LAYER_ALE_AUTH_CONNECT_V4, FWPM_LAYER_ALE_AUTH_CONNECT_V4, _default_sublayer, incoming_value2, nullptr);
+            FWPS_LAYER_ALE_AUTH_CONNECT_V4,
+            FWPM_LAYER_ALE_AUTH_CONNECT_V4,
+            _default_sublayer,
+            incoming_value2,
+            nullptr);
     }
 
     _free_connection_request();
@@ -413,7 +406,11 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
 
     // TODO: why does this use _connect_v6_sublayer but test_cgroup_inet4_connect uses _default_sublayer?
     action = test_callout(
-        FWPS_LAYER_ALE_CONNECT_REDIRECT_V6, FWPM_LAYER_ALE_CONNECT_REDIRECT_V6, _connect_v6_sublayer, incoming_value, nullptr);
+        FWPS_LAYER_ALE_CONNECT_REDIRECT_V6,
+        FWPM_LAYER_ALE_CONNECT_REDIRECT_V6,
+        _connect_v6_sublayer,
+        incoming_value,
+        nullptr);
     CXPLAT_DEBUG_ASSERT(action == FWP_ACTION_PERMIT || action == FWP_ACTION_CONTINUE || fault_injection_enabled);
 
     if (_fwp_um_connect_request != nullptr) {
@@ -434,11 +431,13 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_ALE_USER_ID].value.byteBlob = &parameters->user_id;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_LOCAL_INTERFACE].value.uint64 = &parameters->interface_luid;
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_FLAGS].value.uint32 = parameters->reauthorization_flag;
-    
+
     // Add fields for new helper functions
-    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_INTERFACE_TYPE].value.uint32 = IF_TYPE_ETHERNET_CSMACD; // Default to Ethernet
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_INTERFACE_TYPE].value.uint32 =
+        IF_TYPE_ETHERNET_CSMACD;                                                                 // Default to Ethernet
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_TUNNEL_TYPE].value.uint32 = TUNNEL_TYPE_NONE; // Default to no tunnel
-    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_NEXTHOP_INTERFACE].value.uint64 = &parameters->interface_luid; // Use same as local interface
+    incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_NEXTHOP_INTERFACE].value.uint64 =
+        &parameters->interface_luid;                                                      // Use same as local interface
     incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_SUB_INTERFACE_INDEX].value.uint32 = 0; // Default sub-interface index
 
     action = test_callout(
@@ -455,7 +454,11 @@ fwp_engine_t::test_cgroup_inet6_connect(_In_ fwp_classify_parameters_t* paramete
         incoming_value2[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS].value.byteArray16 = &destination_ip;
 
         action = test_callout(
-            FWPS_LAYER_ALE_AUTH_CONNECT_V6, FWPM_LAYER_ALE_AUTH_CONNECT_V6, _default_sublayer, incoming_value2, nullptr);
+            FWPS_LAYER_ALE_AUTH_CONNECT_V6,
+            FWPM_LAYER_ALE_AUTH_CONNECT_V6,
+            _default_sublayer,
+            incoming_value2,
+            nullptr);
     }
 
     _free_connection_request();
@@ -479,7 +482,11 @@ fwp_engine_t::test_sock_ops_v4(_In_ fwp_classify_parameters_t* parameters, _Out_
     incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID].value.byteBlob = &parameters->app_id;
 
     return test_callout(
-        FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V4, _default_sublayer, incoming_value, flow_id);
+        FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4,
+        FWPM_LAYER_ALE_FLOW_ESTABLISHED_V4,
+        _default_sublayer,
+        incoming_value,
+        flow_id);
 }
 
 // This is used to test the SOCK_OPS hook for IPv6 traffic.
@@ -499,7 +506,11 @@ fwp_engine_t::test_sock_ops_v6(_In_ fwp_classify_parameters_t* parameters, _Out_
     incoming_value[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_ALE_APP_ID].value.byteBlob = &parameters->app_id;
 
     return test_callout(
-        FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6, FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6, _default_sublayer, incoming_value, flow_id);
+        FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6,
+        FWPM_LAYER_ALE_FLOW_ESTABLISHED_V6,
+        _default_sublayer,
+        incoming_value,
+        flow_id);
 }
 
 // This is used to test the sock_addr listen hook for IPv4 traffic.
@@ -812,9 +823,7 @@ _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS
 {
     // Skip fault injection.
     auto& engine = *fwp_engine_t::get()->get();
-    engine.delete_flow_context(flow_id, layer_id, callout_id);
-
-    return STATUS_SUCCESS;
+    return engine.delete_flow_context(flow_id, layer_id, callout_id);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL) NTSTATUS FwpsFlowAssociateContext0(
@@ -1181,15 +1190,13 @@ usersim_fwp_clear_fwpm_filters()
 }
 
 void
-usersim_fwp_sock_ops_v4_remove_flow_context(
-    _In_ uint64_t flow_id)
+usersim_fwp_sock_ops_v4_remove_flow_context(_In_ uint64_t flow_id)
 {
     fwp_engine_t::get()->test_sock_ops_v4_remove_flow_context(flow_id);
 }
 
 void
-usersim_fwp_sock_ops_v6_remove_flow_context(
-   _In_ uint64_t flow_id)
+usersim_fwp_sock_ops_v6_remove_flow_context(_In_ uint64_t flow_id)
 {
     fwp_engine_t::get()->test_sock_ops_v6_remove_flow_context(flow_id);
 }
