@@ -15,6 +15,7 @@ add_executable(usersim_tests
   etw_test.cpp
   ex_test.cpp
   fault_injection_test.cpp
+  fwp_test.cpp
   ke_test.cpp
   mm_test.cpp
   nmr_test.cpp
@@ -28,6 +29,7 @@ add_executable(usersim_tests
 target_include_directories(usersim_tests PRIVATE
   "${CMAKE_BINARY_DIR}/generated-includes/"
   "${CMAKE_BINARY_DIR}/_deps/catch2-src/src/"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/"
   "${CMAKE_CURRENT_SOURCE_DIR}/../inc/"
   "${CMAKE_CURRENT_SOURCE_DIR}/../cxplat/inc/"
   "${CMAKE_CURRENT_SOURCE_DIR}/../cxplat/inc/winuser"
