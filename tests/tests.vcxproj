@@ -43,7 +43,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\external\catch2\src;$(ProjectDir)..\external\catch2\build\generated-includes;$(ProjectDir)..\inc;$(SolutionDir)cxplat\inc;$(SolutionDir)cxplat\inc\winuser;$(WdkContentRoot)\Include\$(WindowsTargetPlatformVersion)\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\src;$(ProjectDir)..\external\catch2\src;$(ProjectDir)..\external\catch2\build\generated-includes;$(ProjectDir)..\inc;$(SolutionDir)cxplat\inc;$(SolutionDir)cxplat\inc\winuser;$(WdkContentRoot)\Include\$(WindowsTargetPlatformVersion)\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -60,7 +60,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\external\catch2\src;$(ProjectDir)..\external\catch2\build\generated-includes;$(ProjectDir)..\inc;$(SolutionDir)cxplat\inc;$(SolutionDir)cxplat\inc\winuser;$(WdkContentRoot)\Include\$(WindowsTargetPlatformVersion)\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\src;$(ProjectDir)..\external\catch2\src;$(ProjectDir)..\external\catch2\build\generated-includes;$(ProjectDir)..\inc;$(SolutionDir)cxplat\inc;$(SolutionDir)cxplat\inc\winuser;$(WdkContentRoot)\Include\$(WindowsTargetPlatformVersion)\km;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -75,6 +75,7 @@
     <ClCompile Include="etw_test.cpp" />
     <ClCompile Include="ex_test.cpp" />
     <ClCompile Include="fault_injection_test.cpp" />
+    <ClCompile Include="fwp_test.cpp" />
     <ClCompile Include="io_test.cpp" />
     <ClCompile Include="ke_test.cpp" />
     <ClCompile Include="mm_test.cpp" />
