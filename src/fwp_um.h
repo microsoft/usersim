@@ -130,7 +130,7 @@ typedef class fwp_engine_t
             auto it = fwpm_flow_contexts.find(flow_id);
             if (it == fwpm_flow_contexts.end()) {
                 // Repeated or concurrent removal must not deliver another flow-delete notification.
-                return STATUS_NOT_FOUND;
+                return STATUS_UNSUCCESSFUL;
             }
 
             const auto* registered_callout = get_fwps_callout(callout_id);
