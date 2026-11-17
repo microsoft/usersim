@@ -186,13 +186,13 @@ TEST_CASE("wfp_flow_context_removal", "[fwp]")
         cleanup.join();
         external_delete.join();
 
-        REQUIRE((remove_status == STATUS_SUCCESS || remove_status == STATUS_NOT_FOUND));
+        REQUIRE((remove_status == STATUS_SUCCESS || remove_status == STATUS_UNSUCCESSFUL));
         REQUIRE(fixture.context.flow_delete_count == iteration);
         REQUIRE(fixture.context.flow_arguments_valid);
-        REQUIRE(fixture.context.reentrant_remove_status == STATUS_NOT_FOUND);
+        REQUIRE(fixture.context.reentrant_remove_status == STATUS_UNSUCCESSFUL);
         REQUIRE(
             FwpsFlowRemoveContext0(iteration, FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4, fixture.context.callout_id) ==
-            STATUS_NOT_FOUND);
+            STATUS_UNSUCCESSFUL);
         usersim_fwp_sock_ops_v4_remove_flow_context(iteration);
         REQUIRE(fixture.context.flow_delete_count == iteration);
     }
