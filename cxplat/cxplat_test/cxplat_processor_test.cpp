@@ -44,7 +44,7 @@ TEST_CASE("spin_lock", "[processor]")
 {
     REQUIRE(cxplat_initialize() == CXPLAT_STATUS_SUCCESS);
     cxplat_irql_t irql;
-    cxplat_spin_lock_t lock;
+    cxplat_spin_lock_t lock{};
     REQUIRE(cxplat_get_current_irql() == PASSIVE_LEVEL);
     irql = cxplat_acquire_spin_lock(&lock);
     REQUIRE(cxplat_get_current_irql() == DISPATCH_LEVEL);
