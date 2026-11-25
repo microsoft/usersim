@@ -330,6 +330,13 @@ _IRQL_requires_min_(PASSIVE_LEVEL) _When_((timeout == NULL || timeout->QuadPart 
         _In_opt_ PLARGE_INTEGER timeout);
 
 USERSIM_API
+_IRQL_requires_min_(PASSIVE_LEVEL) _IRQL_requires_max_(APC_LEVEL) NTKERNELAPI NTSTATUS
+    KeDelayExecutionThread(
+        _In_ __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE wait_mode,
+        _In_ BOOLEAN alertable,
+        _In_ PLARGE_INTEGER interval);
+
+USERSIM_API
 _IRQL_requires_same_ ULONG64
 KeQueryUnbiasedInterruptTimePrecise(_Out_ PULONG64 qpc_time_stamp);
 
