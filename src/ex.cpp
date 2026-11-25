@@ -50,7 +50,7 @@ ExAllocateCacheAwareRundownProtection(
     _In_ __drv_strictTypeMatch(__drv_typeExpr) POOL_TYPE PoolType, unsigned long PoolTag)
 {
     EX_RUNDOWN_REF_CACHE_AWARE* rundown_reference =
-        (EX_RUNDOWN_REF_CACHE_AWARE*)ExAllocatePoolWithTag(PoolType, sizeof(EX_RUNDOWN_REF_CACHE_AWARE), PoolTag);
+        (EX_RUNDOWN_REF_CACHE_AWARE*)ExAllocatePoolUninitialized(PoolType, sizeof(EX_RUNDOWN_REF_CACHE_AWARE), PoolTag);
 
     if (rundown_reference != nullptr) {
         cxplat_initialize_rundown_protection(rundown_reference);
